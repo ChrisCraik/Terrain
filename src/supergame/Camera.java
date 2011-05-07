@@ -6,6 +6,10 @@ import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
 
 public class Camera {
+	public final boolean FRUSTUM_CULLING = true; //enable frustum culling
+	public final boolean FRUSTUM_CULL_COLORS = true;
+	public final boolean FROZEN_FRUSTUM = false; //used to test view frustum culling
+	
 	Vec3 pos;
 	private float pitch, heading;
 	public static Vec3 forward, right, up;
@@ -14,8 +18,8 @@ public class Camera {
 
 	Camera() {
 		pos = new Vec3(0, 0, 0);
-		pitch = 0;//-40;
-		heading = 0;//-222;
+		pitch = -40;
+		heading = -222;
 		cameraSetup();
 		Mouse.setGrabbed(true);
 		pl = new Plane[6];
@@ -29,19 +33,15 @@ public class Camera {
 		Mouse.setCursorPosition(width / 2, height / 2);
 	}
 
-	static enum inclusion {
-		OUTSIDE, INTERSECT, INSIDE
-	};
-
 	private final int TOP = 0;
 	private final int BOTTOM = 1;
 	private final int LEFT = 2;
 	private final int RIGHT = 3;
 	private final int NEARP = 4;
 	private final int FARP = 5;
-	Plane pl[];
+	static Plane pl[];
 	Vec3 ntl, ntr, nbl, nbr, ftl, ftr, fbl, fbr;
-	private final static float angle = 40.0f;
+	private final static float angle = 60.0f;
 	private final static float ratio = 1;
 	private final static float nearD = 2;
 	private final static float farD = 60;
@@ -57,14 +57,20 @@ public class Camera {
 
 	private class Plane {
 		Vec3 normal, point;
+		float d;
 
 		public void setNormalAndPoint(Vec3 normal, Vec3 point) {
 			this.normal = normal;
 			this.point = point;
+			this.d = - this.normal.innerProduct(this.point);
 		}
 
 		public String toString() {
-			return "Normal:" + normal + ", point:" + point;
+			return "Normal:" + normal + ", point:" + point + ", d=" + d;
+		}
+		
+		public float distance(Vec3 p) {
+			return this.d + this.normal.innerProduct(p);
 		}
 		
 		public void draw(float[] color) {
@@ -74,8 +80,11 @@ public class Camera {
 			Vec3 a,b,c;
 			
 			Vec3 up = new Vec3(0,1,0);//Camera.up;
+
+			if (!FROZEN_FRUSTUM)
+				up = Camera.up;
 			
-			a = this.point;
+			a = new Vec3(0,0,0);
 			b = up.cross(normal); // relative horizontal vector
 			c = b.cross(this.normal);
 
@@ -85,14 +94,15 @@ public class Camera {
 				System.out.println(b);
 				System.out.println(c);
 			}
-			b = b.multiply(5).add(this.point);
-			c = c.multiply(5).add(this.point);
+			b = b.multiply(5);
+			c = c.multiply(5);
 			
-			/*
-			a = a.add(this.point);
-			b = b.add(this.point);
-			c = c.add(this.point);
-			*/
+			if (!FROZEN_FRUSTUM) {
+				a = a.add(this.point);
+				b = b.add(this.point);
+				c = c.add(this.point);
+			}
+			
 			GL11.glColor3f(color[0], color[1], color[2]);
 			
 			a.GLdraw();
@@ -114,17 +124,22 @@ public class Camera {
 	public void updateFrustum() {
 		Vec3 dir, nc, fc;
 		
-		float heading = 0, pitch = 0;
+		float heading = -222, pitch = 0;
+		Vec3 offset = new Vec3(0,0,0);
+		if (!FROZEN_FRUSTUM) {
+			heading = this.heading;
+			pitch = this.pitch;
+			offset = this.pos;
+		}
 
 		Vec3 Z = forward = new Vec3(heading, pitch);
 		Vec3 negZ = new Vec3(-Z.getX(), -Z.getY(), -Z.getZ());
 		Vec3 X = right = new Vec3(heading + 90, pitch);
 		Vec3 Y = up = new Vec3(heading, pitch - 90);
-		Vec3 offset = new Vec3(0,0,0); //this.pos;
 
 		// compute the centers of the near and far planes
-		nc = Z.multiply(-nearD);//.subtract(pos);
-		fc = Z.multiply(-farD);//.subtract(pos);
+		nc = Z.multiply(-nearD).subtract(offset);
+		fc = Z.multiply(-farD).subtract(offset);
 		//nc = pos.subtract(Z.multiply(-nearD)).multiply(-1);
 		//fc = pos.subtract(Z.multiply(-farD)).multiply(-1);
 
@@ -217,13 +232,50 @@ public class Camera {
 		updateFrustum();
 	}
 
-	public boolean frustrumTest(Vec3 point) {
+
+	public static enum Inclusion {
+		OUTSIDE, INTERSECT, INSIDE
+	};
+	
+	interface Frustrumable {
+		Vec3 getVertexP(Vec3 n);
+		Vec3 getVertexN(Vec3 n);
+	}
+
+	public Inclusion frustrumTest(Frustrumable f) {
+		Inclusion incl = Inclusion.INSIDE;
+		
+		if (!FRUSTUM_CULLING)
+			return incl;
+		
+		for (int i=0; i<6; i++) {
+			Vec3 p = f.getVertexP(pl[i].normal);
+			float dist = pl[i].distance(p);
+			
+			if (dist < 0)
+				return Inclusion.OUTSIDE;
+			
+			
+			p = f.getVertexN(pl[i].normal);
+			dist = pl[i].distance(p);
+
+			if (dist < 0)
+				incl = Inclusion.INTERSECT;
+		}
+		return incl;
+				/*
+		// is the positive vertex outside?
+		if (pl[i].distance(b.getVertexP(pl[i].normal)) < 0)
+			return OUTSIDE;
+		// is the negative vertex outside?
+		else if (pl[i].distance(b.getVertexN(pl[i].normal)) < 0)
+			result =  INTERSECT;
+		*/
 		/*
 		for (int i = 0; i<6 ; i++) {
 			if (pl[i].distance(point) < 0)
 				return false;
 		}*/
-		return true;
 	}
 
 	public void apply() {
@@ -233,9 +285,9 @@ public class Camera {
 		
 
 		pl[FARP].draw(Chunk.colors[0][0]);
-		pl[LEFT].draw(Chunk.colors[1][0]);
+		pl[LEFT].draw(Chunk.colors[1][1]);
 		pl[RIGHT].draw(Chunk.colors[1][0]);
-		pl[TOP].draw(Chunk.colors[2][0]);
+		pl[TOP].draw(Chunk.colors[2][1]);
 		pl[BOTTOM].draw(Chunk.colors[2][0]);
 	}
 }

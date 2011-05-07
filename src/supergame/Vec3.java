@@ -73,4 +73,13 @@ public class Vec3 {
 	public String toString() {
 		return String.format("Vec3: (%3f %3f %3f)", data[0], data[1], data[2]);
 	}
+
+	public float innerProduct(Vec3 point) {
+		return point.getX()*getX() + point.getY()*getY() + point.getZ()*getZ();
+	}
+
+	//Into functions - change internal vector state
+	public void addInto(int index, float offset) {
+		data[index] += offset;
+	}
 }

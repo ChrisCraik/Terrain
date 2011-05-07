@@ -3,10 +3,13 @@ package supergame;
 import java.util.ArrayList;
 import org.lwjgl.opengl.GL11;
 
-public class Chunk implements Comparable<Chunk> {
-	private static final int size = 8;
-	private static final float metersPerCube = 1;
-	public static final float MPC = metersPerCube;
+import supergame.Camera.Frustrumable;
+import supergame.Camera.Inclusion;
+
+public class Chunk implements Comparable<Chunk>, Frustrumable {
+	public static final int size = 8;
+	public static final float metersPerCube = 1;
+	//public static final float MPC = metersPerCube;
 
 	private boolean initialized = false;
 	private ArrayList<Vec3> triangles;
@@ -15,12 +18,27 @@ public class Chunk implements Comparable<Chunk> {
 	private long xid, yid, zid;
 	private Vec3 pos;
 
-	public Vec3 getPos() {
-		return new Vec3(pos);
+	public Vec3 getVertexP(Vec3 n) {
+		Vec3 res = new Vec3(pos);
+
+		if (n.getX() > 0)
+			res.addInto(0, size*metersPerCube);
+		if (n.getY() > 0)
+			res.addInto(1, size*metersPerCube);
+		if (n.getZ() > 0)
+			res.addInto(2, size*metersPerCube);
+		return res;
 	}
-	
-	public Vec3 getPosOppositeCorner() {
-		return new Vec3(1,1,1).multiply(size*metersPerCube).add(pos);
+	public Vec3 getVertexN(Vec3 n) {
+		Vec3 res = new Vec3(pos);
+
+		if (n.getX() < 0)
+			res.addInto(0, size*metersPerCube);
+		if (n.getY() < 0)
+			res.addInto(1, size*metersPerCube);
+		if (n.getZ() < 0)
+			res.addInto(2, size*metersPerCube);
+		return res;
 	}
 	
 	private float getDensity(float x, float y, float z) {
@@ -90,17 +108,21 @@ public class Chunk implements Comparable<Chunk> {
 	}
 
 	public static final float colors[][][] = { { { 0, 1, 0 }, { 1, 0, 0 } }, { { 1, 0.5f, 0 }, { 0.5f, 0, 1 } },
-			{ { 0.9f, 0.9f, 0.9f }, { 0.5f, 0.5f, 0.5f } } };
-
+			{ { 0.9f, 0.9f, 0.9f }, { 0.4f, 0.4f, 0.4f } } };
+	
 	public void render(Camera cam) {
 		if (triangles == null)
 			return;
-
-		if ((cam.pos.add(pos)).length() > 100) // NOTE: CAMERA POSITIONS ARE NEGATIVE
-			return;
-
 		int chunkColorIndex = (int) ((xid + yid + zid) % 2);
 
+		
+	    Inclusion FrustumInclusion = cam.frustrumTest(this);
+	    
+	    if (FrustumInclusion == Inclusion.OUTSIDE)
+	    	return;
+	    else if (cam.FRUSTUM_CULL_COLORS && FrustumInclusion == Inclusion.INTERSECT)
+			chunkColorIndex = 2;
+		
 		for (int i = 0; i < triangles.size(); i += 3) {
 			int subChunkColorIndex = i % 2;
 			GL11.glColor3f(colors[chunkColorIndex][subChunkColorIndex][0],
@@ -113,6 +135,7 @@ public class Chunk implements Comparable<Chunk> {
 
 	@Override
 	public int compareTo(Chunk b) {
+		//TODO: prioritize near camera (or better: in frustum too)
 		return (int) ((xid * xid + yid * yid + zid * zid) - (b.xid * b.xid + b.yid * b.yid + b.zid * b.zid));
 	}
 }

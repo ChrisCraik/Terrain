@@ -11,6 +11,9 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.input.Keyboard;
 
 public class Game {
+	private final int MAX_CHUNKS = 10;
+	private final int MS_PER_HEARTBEAT = 1000;
+
 	private boolean done = false;
 	private boolean fullscreen = false;
 	private Camera camera = null;
@@ -27,12 +30,10 @@ public class Game {
 	public static int delta = 0;
 	public static boolean heartbeatFrame = false;
 	private static int msSinceLastHeartbeat = 0;
-	private final int msPerHeartbeat = 1000;
 
 	private long lastFrame = 0;
 	private int fps = 0;
 	private long lastFPS = 0;
-	private final int maxChunks = 6;
 
 	private void updateDelta() {
 		long time = getTime();
@@ -41,7 +42,7 @@ public class Game {
 
 		// compute heartbeat
 		msSinceLastHeartbeat += delta;
-		if (msSinceLastHeartbeat > msPerHeartbeat) {
+		if (msSinceLastHeartbeat > MS_PER_HEARTBEAT) {
 			heartbeatFrame = true;
 			msSinceLastHeartbeat = 0;
 		} else
@@ -159,9 +160,9 @@ public class Game {
 		chunks = new Vector<Chunk>();
 		dirtyChunks = new PriorityQueue<Chunk>();
 		long x, y, z;
-		for (x = 0; x < maxChunks; x++)
-			for (y = 0; y < maxChunks; y++)
-				for (z = 0; z < maxChunks; z++)
+		for (x = 0; x < MAX_CHUNKS; x++)
+			for (y = 0; y < MAX_CHUNKS; y++)
+				for (z = 0; z < MAX_CHUNKS; z++)
 					dirtyChunks.add(new Chunk(x, y, z));
 
 		bakerThreads = new ArrayList<ChunkBakerThread>();
