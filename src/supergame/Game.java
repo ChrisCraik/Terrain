@@ -90,7 +90,7 @@ public class Game {
 				camera.pollInput();
 				render();
 				Display.update();
-				Display.sync(60);
+				Display.sync(120);
 			}
 			cleanup();
 		} catch (Exception e) {
