@@ -1,3 +1,5 @@
+package supergame;
+
 import org.lwjgl.opengl.GL11;
 
 public class Vec3 {

@@ -1,3 +1,5 @@
+package supergame;
+
 import java.util.PriorityQueue;
 import java.util.Vector;
 

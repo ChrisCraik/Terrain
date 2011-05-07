@@ -1,3 +1,5 @@
+package supergame;
+
 //JAVA REFERENCE IMPLEMENTATION OF IMPROVED NOISE - COPYRIGHT 2002 KEN PERLIN.
 
 public final class Perlin {
