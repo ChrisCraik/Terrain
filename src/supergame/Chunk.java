@@ -81,7 +81,8 @@ public class Chunk implements Comparable<Chunk> {
 		initialized = true;
 	}
 
-	private static final float colors[][][] = { { { 0, 1, 0 }, { 1, 0, 0 } }, { { 1, 0.5f, 0 }, { 0.5f, 0, 1 } }, { { 0.9f, 0.9f, 0.9f }, { 0.5f, 0.5f, 0.5f } } };
+	public static final float colors[][][] = { { { 0, 1, 0 }, { 1, 0, 0 } }, { { 1, 0.5f, 0 }, { 0.5f, 0, 1 } },
+			{ { 0.9f, 0.9f, 0.9f }, { 0.5f, 0.5f, 0.5f } } };
 
 	public void render(Camera cam) {
 		if (triangles == null)
@@ -91,7 +92,7 @@ public class Chunk implements Comparable<Chunk> {
 			return;
 
 		int chunkColorIndex = (int) ((xid + yid + zid) % 2);
-		
+
 		for (int i = 0; i < triangles.size(); i += 3) {
 			int subChunkColorIndex = i % 2;
 			GL11.glColor3f(colors[chunkColorIndex][subChunkColorIndex][0],

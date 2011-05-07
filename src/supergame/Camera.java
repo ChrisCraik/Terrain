@@ -67,23 +67,36 @@ public class Camera {
 			return "Normal:" + normal + ", point:" + point;
 		}
 		
-		public void draw() {
+		public void draw(float[] color) {
 
 			GL11.glBegin(GL11.GL_TRIANGLES); // Draw some triangles
 
 			Vec3 a,b,c;
+			
 			a = this.point;
-			b = Camera.up;
-			c = a.cross(b).normalize();
+			b = Camera.up.cross(normal); // relative horizontal vector
+			c = b.cross(this.normal);
+
 			
-			b.multiply(10);
-			c.multiply(10);
+			if (Game.heartbeatFrame) {
+				System.out.println("color:"+color[0]+" "+color[1]+" "+color[2]);
+				System.out.println(b);
+				System.out.println(c);
+			}
+			b = b.multiply(5).add(this.point);
+			c = c.multiply(5).add(this.point);
 			
-			b = b.add(a);
-			c = c.add(a);
+			/*
+			a = a.add(this.point);
+			b = b.add(this.point);
+			c = c.add(this.point);
+			*/
+			GL11.glColor3f(color[0], color[1], color[2]);
 			
 			a.GLdraw();
+			GL11.glColor3f(0.1f, 0.1f, 0.1f);
 			c.GLdraw();
+			GL11.glColor3f(color[0], color[1], color[2]);
 			b.GLdraw();
 
 			if (Game.heartbeatFrame) {
@@ -118,7 +131,7 @@ public class Camera {
 		pl[BOTTOM].setNormalAndPoint(X.cross(aux), nc.subtract(Y.multiply(nh)));
 
 		aux = (nc.subtract(X.multiply(nw)).subtract(pos)).normalize();
-		pl[LEFT].setNormalAndPoint(aux.cross(Y), nc.add(X.multiply(nw)));
+		pl[LEFT].setNormalAndPoint(aux.cross(Y), nc.subtract(X.multiply(nw)));
 		aux = (nc.add(X.multiply(nw)).subtract(pos)).normalize();
 		pl[RIGHT].setNormalAndPoint(Y.cross(aux), nc.add(X.multiply(nw)));
 
@@ -126,13 +139,10 @@ public class Camera {
 			System.out.println(Y.multiply(nh));
 			System.out.println(pl[NEARP]);
 			System.out.println(pl[FARP]);
-			
-			/*
-			System.out.println(pl[TOP]);
-			System.out.println(pl[BOTTOM]);
 			System.out.println(pl[LEFT]);
 			System.out.println(pl[RIGHT]);
-			*/
+			System.out.println(pl[TOP]);
+			System.out.println(pl[BOTTOM]);
 		}
 		/*
 		aux = (nc + Y*nh) - p;
@@ -209,9 +219,11 @@ public class Camera {
 		GL11.glTranslatef(pos.getX(), pos.getY(), pos.getZ());
 		
 
-		pl[FARP].draw();
+		pl[FARP].draw(Chunk.colors[0][0]);
 		//pl[NEARP].draw();
-		pl[LEFT].draw();
-		pl[RIGHT].draw();
+		pl[LEFT].draw(Chunk.colors[1][0]);
+		pl[RIGHT].draw(Chunk.colors[2][0]);
+		pl[TOP].draw(Chunk.colors[1][0]);
+		pl[BOTTOM].draw(Chunk.colors[2][0]);
 	}
 }
