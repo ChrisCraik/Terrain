@@ -5,18 +5,25 @@ import org.lwjgl.opengl.GL11;
 public class Vec3 {
 	float data[];
 
-	Vec3(float x, float y, float z) {
+	public Vec3(float x, float y, float z) {
 		data = new float[3];
 		data[0] = x;
 		data[1] = y;
 		data[2] = z;
 	}
 
-	Vec3(float heading, float pitch) {
+	public Vec3(float heading, float pitch) {
 		data = new float[3];
 		data[0] = -(float) (Math.sin(heading * Math.PI / 180.0) * Math.cos(pitch * Math.PI / 180.0));
 		data[2] = (float) (Math.cos(heading * Math.PI / 180.0) * Math.cos(pitch * Math.PI / 180.0));
 		data[1] = (float) (Math.sin(pitch * Math.PI / 180.0));
+	}
+
+	public Vec3(Vec3 pos) {
+		data = new float[3];
+		data[0] = pos.getX();
+		data[1] = pos.getY();
+		data[2] = pos.getZ();
 	}
 
 	public void GLdraw() {

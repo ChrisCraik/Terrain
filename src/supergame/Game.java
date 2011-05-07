@@ -178,7 +178,7 @@ public class Game {
 		GL11.glClearDepth(1.0); // Depth Buffer Setup
 		GL11.glEnable(GL11.GL_DEPTH_TEST); // Enables Depth Testing
 		GL11.glDepthFunc(GL11.GL_LEQUAL); // The Type Of Depth Testing To Do
-		GL11.glEnable(GL11.GL_CULL_FACE); // Don't render the backs of triangles
+		//GL11.glEnable(GL11.GL_CULL_FACE); // Don't render the backs of triangles
 
 		GL11.glMatrixMode(GL11.GL_PROJECTION); // Select The Projection Matrix
 		GL11.glLoadIdentity(); // Reset The Projection Matrix

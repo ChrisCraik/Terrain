@@ -73,8 +73,10 @@ public class Camera {
 
 			Vec3 a,b,c;
 			
+			Vec3 up = new Vec3(0,1,0);//Camera.up;
+			
 			a = this.point;
-			b = Camera.up.cross(normal); // relative horizontal vector
+			b = up.cross(normal); // relative horizontal vector
 			c = b.cross(this.normal);
 
 			
@@ -111,37 +113,48 @@ public class Camera {
 
 	public void updateFrustum() {
 		Vec3 dir, nc, fc;
+		
+		float heading = 0, pitch = 0;
 
 		Vec3 Z = forward = new Vec3(heading, pitch);
 		Vec3 negZ = new Vec3(-Z.getX(), -Z.getY(), -Z.getZ());
 		Vec3 X = right = new Vec3(heading + 90, pitch);
 		Vec3 Y = up = new Vec3(heading, pitch - 90);
+		Vec3 offset = new Vec3(0,0,0); //this.pos;
 
 		// compute the centers of the near and far planes
-		nc = pos.subtract(Z.multiply(nearD));
-		fc = pos.subtract(Z.multiply(farD));
+		nc = Z.multiply(-nearD);//.subtract(pos);
+		fc = Z.multiply(-farD);//.subtract(pos);
+		//nc = pos.subtract(Z.multiply(-nearD)).multiply(-1);
+		//fc = pos.subtract(Z.multiply(-farD)).multiply(-1);
 
 		pl[NEARP].setNormalAndPoint(negZ, nc);
 		pl[FARP].setNormalAndPoint(Z, fc);
 
 		Vec3 aux, normal;
-		aux = (nc.add(Y.multiply(nh)).subtract(pos)).normalize();
+		aux = (nc.add(Y.multiply(nh)).add(offset)).normalize();
 		pl[TOP].setNormalAndPoint(aux.cross(X), nc.add(Y.multiply(nh)));
-		aux = (nc.subtract(Y.multiply(nh)).subtract(pos)).normalize();
+		aux = (nc.subtract(Y.multiply(nh)).add(offset)).normalize();
 		pl[BOTTOM].setNormalAndPoint(X.cross(aux), nc.subtract(Y.multiply(nh)));
 
-		aux = (nc.subtract(X.multiply(nw)).subtract(pos)).normalize();
+		aux = (nc.subtract(X.multiply(nw)).add(offset)).normalize();
 		pl[LEFT].setNormalAndPoint(aux.cross(Y), nc.subtract(X.multiply(nw)));
-		aux = (nc.add(X.multiply(nw)).subtract(pos)).normalize();
+		aux = (nc.add(X.multiply(nw)).add(offset)).normalize();
 		pl[RIGHT].setNormalAndPoint(Y.cross(aux), nc.add(X.multiply(nw)));
 
 		if (Game.heartbeatFrame) {
+			System.out.println("frustum");
+			System.out.println(X);
+			System.out.println(Y);
+			System.out.println(Z);
+			System.out.println(pos);
+			System.out.println(nc);
 			System.out.println(Y.multiply(nh));
-			System.out.println(pl[NEARP]);
+			//System.out.println(pl[NEARP]);
 			System.out.println(pl[FARP]);
-			System.out.println(pl[LEFT]);
+			//System.out.println(pl[LEFT]);
 			System.out.println(pl[RIGHT]);
-			System.out.println(pl[TOP]);
+			//System.out.println(pl[TOP]);
 			System.out.println(pl[BOTTOM]);
 		}
 		/*
@@ -220,10 +233,9 @@ public class Camera {
 		
 
 		pl[FARP].draw(Chunk.colors[0][0]);
-		//pl[NEARP].draw();
 		pl[LEFT].draw(Chunk.colors[1][0]);
-		pl[RIGHT].draw(Chunk.colors[2][0]);
-		pl[TOP].draw(Chunk.colors[1][0]);
+		pl[RIGHT].draw(Chunk.colors[1][0]);
+		pl[TOP].draw(Chunk.colors[2][0]);
 		pl[BOTTOM].draw(Chunk.colors[2][0]);
 	}
 }

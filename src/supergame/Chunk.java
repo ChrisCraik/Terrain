@@ -13,8 +13,16 @@ public class Chunk implements Comparable<Chunk> {
 	private float[][][] weights;
 
 	private long xid, yid, zid;
-	public Vec3 pos;
+	private Vec3 pos;
 
+	public Vec3 getPos() {
+		return new Vec3(pos);
+	}
+	
+	public Vec3 getPosOppositeCorner() {
+		return new Vec3(1,1,1).multiply(size*metersPerCube).add(pos);
+	}
+	
 	private float getDensity(float x, float y, float z) {
 		return (float) Perlin.noise(x / 10, y / 10, z / 10);
 		/*
