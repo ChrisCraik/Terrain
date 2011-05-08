@@ -191,8 +191,8 @@ public class Game {
 
 	private void initGL() {
 		GL11.glEnable(GL11.GL_TEXTURE_2D); // Enable Texture Mapping
-		//GL11.glShadeModel(GL11.GL_SMOOTH); // Enable Smooth Shading
-		GL11.glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Black Background
+		GL11.glShadeModel(GL11.GL_SMOOTH); // Enable Smooth Shading
+		GL11.glClearColor(0.6f, 0.6f, 0.9f, 0.0f); // Black Background
 		GL11.glClearDepth(1.0); // Depth Buffer Setup
 		GL11.glEnable(GL11.GL_DEPTH_TEST); // Enables Depth Testing
 		GL11.glDepthFunc(GL11.GL_LEQUAL); // The Type Of Depth Testing To Do
@@ -210,14 +210,15 @@ public class Game {
 		GL11.glHint(GL11.GL_PERSPECTIVE_CORRECTION_HINT, GL11.GL_NICEST);
 
 		//Fog!
-		GL11.glFogi(GL11.GL_FOG_MODE, GL11.GL_EXP);
-		GL11.glFogf(GL11.GL_FOG_DENSITY, 0.03f);
-		GL11.glFogf(GL11.GL_FOG_START, 80.0f);
+		GL11.glFogi(GL11.GL_FOG_MODE, GL11.GL_LINEAR);
+		GL11.glFog(GL11.GL_FOG_COLOR, makeFB(new float[] {0.6f, 0.6f, 0.9f, 1 }));
+		GL11.glFogf(GL11.GL_FOG_DENSITY, 0.1f);
+		GL11.glFogf(GL11.GL_FOG_START, 100.0f);
 		GL11.glFogf(GL11.GL_FOG_END, 150.0f);
 		GL11.glEnable(GL11.GL_FOG);
 
 		//Lighting!
-		makeLight(GL11.GL_LIGHT0, new float[] { 0, 1, 0, 1 }, new float[] { 0, 1, 0, 1 }, new float[] { 0, 1, 0, 1 },
+		makeLight(GL11.GL_LIGHT0, new float[] { 0.7f, 0.5f, 0, 1 }, new float[] { 0.7f, 0.5f, 0, 1 }, new float[] { 0, 0, 0, 1 },
 				new float[] { 0, 1, 0, 0 });
 		GL11.glEnable(GL11.GL_NORMALIZE);
 		//GL11.glMaterial(GL11.GL_FRONT, GL11.GL_DIFFUSE, makeFB(new float[] { 0.8f, 0.8f, 0.8f, 1f }));

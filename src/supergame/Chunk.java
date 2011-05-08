@@ -47,6 +47,17 @@ public class Chunk implements Comparable<Chunk>, Frustrumable {
 		return res;
 	}
 
+	private Vec3 getNormal(float x, float y, float z) {
+		//first attempt: brute force
+		float delta = 0.01f, origin, deltaX, deltaY, deltaZ;
+		origin = getDensity(x,y,z);
+		deltaX = origin-getDensity(x+delta,y,z);
+		deltaY = origin-getDensity(x,y+delta,z);
+		deltaZ = origin-getDensity(x,y,z+delta);
+	
+		return new Vec3(deltaX, deltaY, deltaZ).normalize();
+	}
+	
 	private float getDensity(float x, float y, float z) {
 		return (float) Perlin.noise(x / 10, y / 10, z / 10) + 1.0f - y * 0.06f;
 		/*
@@ -145,14 +156,10 @@ public class Chunk implements Comparable<Chunk>, Frustrumable {
 				}
 				Vec3[] points = new Vec3[] { triangles.get(i), triangles.get(i + 1), triangles.get(i + 2) };
 
-				//register the normal
-				Vec3 a = points[2].subtract(points[0]);
-				Vec3 b = points[1].subtract(points[0]);
-				Vec3 norm = (b.cross(a)).normalize();
-				norm.GLnormal();
-
-				for (Vec3 p : points)
-					p.GLdraw();
+				for (Vec3 p : points) {
+					getNormal(p.getX(),p.getY(),p.getZ()).GLnormal(); //apply the vertex normal (for lighting/smoothing)
+					p.GLdraw(); //draw the vertex
+				}
 			}
 			GL11.glEnd();
 			GL11.glEndList();
