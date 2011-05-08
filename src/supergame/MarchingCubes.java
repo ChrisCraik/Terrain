@@ -2,8 +2,6 @@ package supergame;
 
 import java.util.ArrayList;
 
-import org.lwjgl.opengl.GL11;
-
 public class MarchingCubes {
 
 	static int edgeTable[] = { 0x0, 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c, 0x80c, 0x905, 0xa0f, 0xb06, 0xc0a,
@@ -309,7 +307,8 @@ public class MarchingCubes {
 			points[i] = points[i].multiply(Chunk.metersPerCube);
 	}
 
-	public static int makeMesh(Vec3 blockPos, int x, int y , int z, float[][][] weights, double isolevel, ArrayList<Vec3> triangleList) {
+	public static int makeMesh(Vec3 blockPos, int x, int y, int z, float[][][] weights, double isolevel,
+			ArrayList<Vec3> triangleList) {
 		Vec3 grid[] = new Vec3[12];
 		double val[] = new double[12];
 		Vec3 vertlist[] = new Vec3[12];
@@ -323,9 +322,9 @@ public class MarchingCubes {
 			//val[i] = Game.meshpoints[(int) grid[i].getX()][(int) grid[i].getY()][(int) grid[i].getZ()];
 			// val[i] = Perlin.noise(grid[i].getX() / 20.0, grid[i].getY() / 10.0, grid[i].getZ() / 20.0);
 			// System.out.println("vert " + i + " is " + val[i]);
-			
+
 			grid[i] = blockPos.add(points[i]);
-			val[i] = weights[x+offsets[i][0]][y+offsets[i][1]][z+offsets[i][2]]; 
+			val[i] = weights[x + offsets[i][0]][y + offsets[i][1]][z + offsets[i][2]];
 			if (val[i] > isolevel)
 				cubeindex |= 1 << i;
 		}

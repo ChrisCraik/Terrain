@@ -14,6 +14,7 @@ public class Chunk implements Comparable<Chunk>, Frustrumable {
 	private boolean initialized = false;
 	private ArrayList<Vec3> triangles;
 	private float[][][] weights;
+	private int displayList;
 
 	private long xid, yid, zid;
 	private Vec3 pos;
@@ -22,27 +23,30 @@ public class Chunk implements Comparable<Chunk>, Frustrumable {
 		Vec3 res = new Vec3(pos);
 
 		if (n.getX() > 0)
-			res.addInto(0, size*metersPerCube);
+			res.addInto(0, size * metersPerCube);
 		if (n.getY() > 0)
-			res.addInto(1, size*metersPerCube);
+			res.addInto(1, size * metersPerCube);
 		if (n.getZ() > 0)
-			res.addInto(2, size*metersPerCube);
+			res.addInto(2, size * metersPerCube);
+
 		return res;
 	}
+
 	public Vec3 getVertexN(Vec3 n) {
 		Vec3 res = new Vec3(pos);
-
+		/*
 		if (n.getX() < 0)
 			res.addInto(0, size*metersPerCube);
 		if (n.getY() < 0)
 			res.addInto(1, size*metersPerCube);
 		if (n.getZ() < 0)
 			res.addInto(2, size*metersPerCube);
+		*/
 		return res;
 	}
-	
+
 	private float getDensity(float x, float y, float z) {
-		return (float) Perlin.noise(x / 10, y / 10, z / 10);
+		return (float) Perlin.noise(x / 10, y / 10, z / 10) + 1.0f - y * 0.06f;
 		/*
 		float caves, center_falloff, plateau_falloff, density;
 		if (y <= 0.8)
@@ -95,7 +99,7 @@ public class Chunk implements Comparable<Chunk>, Frustrumable {
 				for (z = 0; z < size; z++) {
 					Vec3 blockPos = new Vec3(pos.getX() + x * metersPerCube, pos.getY() + y * metersPerCube, pos.getZ()
 							+ z * metersPerCube);
-					MarchingCubes.makeMesh(blockPos, x, y, z, weights, 0.25f, triangles);// (float) noise);
+					MarchingCubes.makeMesh(blockPos, x, y, z, weights, 0.0f, triangles);// (float) noise);
 				}
 
 		if (triangles.size() == 0) {
@@ -103,34 +107,41 @@ public class Chunk implements Comparable<Chunk>, Frustrumable {
 			weights = null; //save memory on 'empty' chunks?
 		} else {
 			System.out.println(xid + " " + yid + " " + zid + " has " + triangles.size() / 3 + " polys");
+			displayList = -1;
 		}
 		initialized = true;
 	}
 
 	public static final float colors[][][] = { { { 0, 1, 0 }, { 1, 0, 0 } }, { { 1, 0.5f, 0 }, { 0.5f, 0, 1 } },
 			{ { 0.9f, 0.9f, 0.9f }, { 0.4f, 0.4f, 0.4f } } };
-	
+
 	public void render(Camera cam) {
 		if (triangles == null)
 			return;
-		int chunkColorIndex = (int) ((xid + yid + zid) % 2);
 
-		
-	    Inclusion FrustumInclusion = cam.frustrumTest(this);
-	    
-	    if (FrustumInclusion == Inclusion.OUTSIDE)
-	    	return;
-	    else if (cam.FRUSTUM_CULL_COLORS && FrustumInclusion == Inclusion.INTERSECT)
-			chunkColorIndex = 2;
-		
-		for (int i = 0; i < triangles.size(); i += 3) {
-			int subChunkColorIndex = i % 2;
-			GL11.glColor3f(colors[chunkColorIndex][subChunkColorIndex][0],
-					colors[chunkColorIndex][subChunkColorIndex][1], colors[chunkColorIndex][subChunkColorIndex][2]);
-			triangles.get(i).GLdraw();
-			triangles.get(i + 1).GLdraw();
-			triangles.get(i + 2).GLdraw();
-		}
+		Inclusion FrustumInclusion = cam.frustrumTest(this);
+
+		if (FrustumInclusion == Inclusion.OUTSIDE)
+			return;
+
+		if (displayList == -1) {
+			int chunkColorIndex = (int) ((xid + yid + zid) % 2);
+
+			displayList = GL11.glGenLists(1);
+			GL11.glNewList(displayList, GL11.GL_COMPILE_AND_EXECUTE);
+			GL11.glBegin(GL11.GL_TRIANGLES); // Draw some triangles
+			for (int i = 0; i < triangles.size(); i += 3) {
+				int subChunkColorIndex = i % 2;
+				GL11.glColor3f(colors[chunkColorIndex][subChunkColorIndex][0],
+						colors[chunkColorIndex][subChunkColorIndex][1], colors[chunkColorIndex][subChunkColorIndex][2]);
+				triangles.get(i).GLdraw();
+				triangles.get(i + 1).GLdraw();
+				triangles.get(i + 2).GLdraw();
+			}
+			GL11.glEnd();
+			GL11.glEndList();
+		} else
+			GL11.glCallList(displayList);
 	}
 
 	@Override

@@ -11,7 +11,7 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.input.Keyboard;
 
 public class Game {
-	private final int MAX_CHUNKS = 10;
+	private final int MAX_CHUNKS = 20;
 	private final int MS_PER_HEARTBEAT = 1000;
 
 	private boolean done = false;
@@ -127,24 +127,21 @@ public class Game {
 	private boolean render() {
 		if (Game.heartbeatFrame)
 			System.out.println("Clearing buffer, rendering chunks");
-		
+
 		GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT); // Clear the screen and the depth buffer
 		GL11.glLoadIdentity(); // Reset The Current Modelview Matrix
 		camera.apply();
 
-		GL11.glBegin(GL11.GL_TRIANGLES); // Draw some triangles
-
 		for (Chunk c : chunks)
 			c.render(camera);
 
-		GL11.glEnd();
 		return true;
 	}
 
 	private void createWindow() throws Exception {
 		Display.setFullscreen(fullscreen);
 		for (DisplayMode d : Display.getAvailableDisplayModes()) {
-			if (d.getWidth() == 800 && d.getHeight() == 600 && d.getBitsPerPixel() == 32) {
+			if (d.getWidth() == 1280 && d.getHeight() == 1024 && d.getBitsPerPixel() == 32) {
 				displayMode = d;
 				break;
 			}
@@ -179,14 +176,14 @@ public class Game {
 		GL11.glClearDepth(1.0); // Depth Buffer Setup
 		GL11.glEnable(GL11.GL_DEPTH_TEST); // Enables Depth Testing
 		GL11.glDepthFunc(GL11.GL_LEQUAL); // The Type Of Depth Testing To Do
-		//GL11.glEnable(GL11.GL_CULL_FACE); // Don't render the backs of triangles
+		GL11.glEnable(GL11.GL_CULL_FACE); // Don't render the backs of triangles
 
 		GL11.glMatrixMode(GL11.GL_PROJECTION); // Select The Projection Matrix
 		GL11.glLoadIdentity(); // Reset The Projection Matrix
 
 		// Calculate The Aspect Ratio Of The Window
-		org.lwjgl.util.glu.GLU.gluPerspective(45.0f, (float) displayMode.getWidth() / (float) displayMode.getHeight(),
-				0.1f, 100.0f);
+		org.lwjgl.util.glu.GLU.gluPerspective(Camera.angle,
+				(float) displayMode.getWidth() / (float) displayMode.getHeight(), 0.1f, 200.0f);
 		GL11.glMatrixMode(GL11.GL_MODELVIEW); // Select The Modelview Matrix
 
 		// Really Nice Perspective Calculations

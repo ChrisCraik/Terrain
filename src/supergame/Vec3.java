@@ -43,10 +43,8 @@ public class Vec3 {
 	}
 
 	public Vec3 cross(Vec3 b) {
-		return new Vec3(
-				getY() * b.getZ() - b.getY() * getZ(),
-				getZ() * b.getX() - b.getZ() * getX(),
-				getX() * b.getY() - b.getX() * getY());
+		return new Vec3(getY() * b.getZ() - b.getY() * getZ(), getZ() * b.getX() - b.getZ() * getX(), getX() * b.getY()
+				- b.getX() * getY());
 	}
 
 	public Vec3 normalize() {
@@ -75,7 +73,7 @@ public class Vec3 {
 	}
 
 	public float innerProduct(Vec3 point) {
-		return point.getX()*getX() + point.getY()*getY() + point.getZ()*getZ();
+		return point.getX() * getX() + point.getY() * getY() + point.getZ() * getZ();
 	}
 
 	//Into functions - change internal vector state
