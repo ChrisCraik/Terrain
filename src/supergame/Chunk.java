@@ -7,11 +7,13 @@ import supergame.Camera.Frustrumable;
 import supergame.Camera.Inclusion;
 
 public class Chunk implements Comparable<Chunk>, Frustrumable {
+	public static final boolean USE_DEBUG_COLORS = false;
 	public static final int size = 8;
 	public static final float metersPerCube = 1;
 	//public static final float MPC = metersPerCube;
 
 	private boolean initialized = false;
+	private boolean empty = true;
 	private ArrayList<Vec3> triangles;
 	private float[][][] weights;
 	private int displayList;
@@ -34,14 +36,14 @@ public class Chunk implements Comparable<Chunk>, Frustrumable {
 
 	public Vec3 getVertexN(Vec3 n) {
 		Vec3 res = new Vec3(pos);
-		/*
+
 		if (n.getX() < 0)
-			res.addInto(0, size*metersPerCube);
+			res.addInto(0, size * metersPerCube);
 		if (n.getY() < 0)
-			res.addInto(1, size*metersPerCube);
+			res.addInto(1, size * metersPerCube);
 		if (n.getZ() < 0)
-			res.addInto(2, size*metersPerCube);
-		*/
+			res.addInto(2, size * metersPerCube);
+
 		return res;
 	}
 
@@ -105,9 +107,11 @@ public class Chunk implements Comparable<Chunk>, Frustrumable {
 		if (triangles.size() == 0) {
 			triangles = null;
 			weights = null; //save memory on 'empty' chunks?
+			empty = true;
 		} else {
-			System.out.println(xid + " " + yid + " " + zid + " has " + triangles.size() / 3 + " polys");
+			//System.out.println(xid + " " + yid + " " + zid + " has " + triangles.size() / 3 + " polys");
 			displayList = -1;
+			empty = false;
 		}
 		initialized = true;
 	}
@@ -116,7 +120,7 @@ public class Chunk implements Comparable<Chunk>, Frustrumable {
 			{ { 0.9f, 0.9f, 0.9f }, { 0.4f, 0.4f, 0.4f } } };
 
 	public void render(Camera cam) {
-		if (triangles == null)
+		if (empty)
 			return;
 
 		Inclusion FrustumInclusion = cam.frustrumTest(this);
@@ -130,10 +134,15 @@ public class Chunk implements Comparable<Chunk>, Frustrumable {
 			displayList = GL11.glGenLists(1);
 			GL11.glNewList(displayList, GL11.GL_COMPILE_AND_EXECUTE);
 			GL11.glBegin(GL11.GL_TRIANGLES); // Draw some triangles
+			if (!USE_DEBUG_COLORS)
+				GL11.glColor3f(0.2f, 0.5f, 0.1f);
 			for (int i = 0; i < triangles.size(); i += 3) {
-				int subChunkColorIndex = i % 2;
-				GL11.glColor3f(colors[chunkColorIndex][subChunkColorIndex][0],
-						colors[chunkColorIndex][subChunkColorIndex][1], colors[chunkColorIndex][subChunkColorIndex][2]);
+				if (USE_DEBUG_COLORS) {
+					int subChunkColorIndex = i % 2;
+					GL11.glColor3f(colors[chunkColorIndex][subChunkColorIndex][0],
+							colors[chunkColorIndex][subChunkColorIndex][1],
+							colors[chunkColorIndex][subChunkColorIndex][2]);
+				}
 				triangles.get(i).GLdraw();
 				triangles.get(i + 1).GLdraw();
 				triangles.get(i + 2).GLdraw();

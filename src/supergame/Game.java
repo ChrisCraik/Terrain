@@ -11,7 +11,7 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.input.Keyboard;
 
 public class Game {
-	private final int MAX_CHUNKS = 20;
+	private final int MAX_CHUNKS = 40;
 	private final int MS_PER_HEARTBEAT = 1000;
 
 	private boolean done = false;
@@ -158,7 +158,7 @@ public class Game {
 		dirtyChunks = new PriorityQueue<Chunk>();
 		long x, y, z;
 		for (x = 0; x < MAX_CHUNKS; x++)
-			for (y = 0; y < MAX_CHUNKS; y++)
+			for (y = 0; y < Math.min(5, MAX_CHUNKS); y++)
 				for (z = 0; z < MAX_CHUNKS; z++)
 					dirtyChunks.add(new Chunk(x, y, z));
 
@@ -171,8 +171,8 @@ public class Game {
 
 	private void initGL() {
 		GL11.glEnable(GL11.GL_TEXTURE_2D); // Enable Texture Mapping
+
 		GL11.glShadeModel(GL11.GL_SMOOTH); // Enable Smooth Shading
-		GL11.glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Black Background
 		GL11.glClearDepth(1.0); // Depth Buffer Setup
 		GL11.glEnable(GL11.GL_DEPTH_TEST); // Enables Depth Testing
 		GL11.glDepthFunc(GL11.GL_LEQUAL); // The Type Of Depth Testing To Do
@@ -185,6 +185,14 @@ public class Game {
 		org.lwjgl.util.glu.GLU.gluPerspective(Camera.angle,
 				(float) displayMode.getWidth() / (float) displayMode.getHeight(), 0.1f, 200.0f);
 		GL11.glMatrixMode(GL11.GL_MODELVIEW); // Select The Modelview Matrix
+
+		//Fog!
+		GL11.glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Black Background
+		GL11.glFogi(GL11.GL_FOG_MODE, GL11.GL_EXP);
+		GL11.glFogf(GL11.GL_FOG_DENSITY, 0.03f);
+		GL11.glFogf(GL11.GL_FOG_START, 20.0f);
+		GL11.glFogf(GL11.GL_FOG_END, 150.0f);
+		GL11.glEnable(GL11.GL_FOG);
 
 		// Really Nice Perspective Calculations
 		GL11.glHint(GL11.GL_PERSPECTIVE_CORRECTION_HINT, GL11.GL_NICEST);
