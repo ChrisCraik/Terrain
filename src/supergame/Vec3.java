@@ -29,6 +29,9 @@ public class Vec3 {
 	public void GLdraw() {
 		GL11.glVertex3f(data[0], data[1], data[2]);
 	}
+	public void GLnormal() {
+		GL11.glNormal3f(data[0], data[1], data[2]);
+	}
 
 	public Vec3 multiply(float f) {
 		return new Vec3(data[0] * f, data[1] * f, data[2] * f);

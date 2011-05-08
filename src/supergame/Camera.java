@@ -177,7 +177,7 @@ public class Camera {
 
 		msSinceHeartbeat += Game.delta;
 		if (msSinceHeartbeat > 1000) {
-			System.out.println(pos.toString());
+			System.out.println("pos:" + pos.toString());
 			System.out.println("pitch:" + pitch + ", heading:" + heading);
 			msSinceHeartbeat = 0;
 		}

@@ -143,9 +143,16 @@ public class Chunk implements Comparable<Chunk>, Frustrumable {
 							colors[chunkColorIndex][subChunkColorIndex][1],
 							colors[chunkColorIndex][subChunkColorIndex][2]);
 				}
-				triangles.get(i).GLdraw();
-				triangles.get(i + 1).GLdraw();
-				triangles.get(i + 2).GLdraw();
+				Vec3[] points = new Vec3[] { triangles.get(i), triangles.get(i + 1), triangles.get(i + 2) };
+
+				//register the normal
+				Vec3 a = points[2].subtract(points[0]);
+				Vec3 b = points[1].subtract(points[0]);
+				Vec3 norm = (b.cross(a)).normalize();
+				norm.GLnormal();
+
+				for (Vec3 p : points)
+					p.GLdraw();
 			}
 			GL11.glEnd();
 			GL11.glEndList();

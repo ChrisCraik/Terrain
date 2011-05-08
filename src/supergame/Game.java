@@ -1,5 +1,8 @@
 package supergame;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.PriorityQueue;
 import java.util.Vector;
@@ -169,10 +172,27 @@ public class Game {
 		initGL();
 	}
 
+	public static final int FLOAT_SIZE = 4;
+
+	private FloatBuffer makeFB(float[] floatarray) {
+		FloatBuffer fb = ByteBuffer.allocateDirect(floatarray.length * FLOAT_SIZE).order(ByteOrder.nativeOrder())
+				.asFloatBuffer();
+		fb.put(floatarray).flip();
+		return fb;
+	}
+
+	private void makeLight(int light, float[] diffuse, float[] specular, float[] ambient, float[] position) {
+		GL11.glLight(light, GL11.GL_DIFFUSE, makeFB(diffuse)); // color of the direct illumination
+		GL11.glLight(light, GL11.GL_SPECULAR, makeFB(specular)); // color of the highlight
+		GL11.glLight(light, GL11.GL_AMBIENT, makeFB(ambient)); // color of the reflected light
+		GL11.glLight(light, GL11.GL_POSITION, makeFB(position));
+		GL11.glEnable(light);
+	}
+
 	private void initGL() {
 		GL11.glEnable(GL11.GL_TEXTURE_2D); // Enable Texture Mapping
-
-		GL11.glShadeModel(GL11.GL_SMOOTH); // Enable Smooth Shading
+		//GL11.glShadeModel(GL11.GL_SMOOTH); // Enable Smooth Shading
+		GL11.glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Black Background
 		GL11.glClearDepth(1.0); // Depth Buffer Setup
 		GL11.glEnable(GL11.GL_DEPTH_TEST); // Enables Depth Testing
 		GL11.glDepthFunc(GL11.GL_LEQUAL); // The Type Of Depth Testing To Do
@@ -186,16 +206,22 @@ public class Game {
 				(float) displayMode.getWidth() / (float) displayMode.getHeight(), 0.1f, 200.0f);
 		GL11.glMatrixMode(GL11.GL_MODELVIEW); // Select The Modelview Matrix
 
+		// Really Nice Perspective Calculations
+		GL11.glHint(GL11.GL_PERSPECTIVE_CORRECTION_HINT, GL11.GL_NICEST);
+
 		//Fog!
-		GL11.glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Black Background
 		GL11.glFogi(GL11.GL_FOG_MODE, GL11.GL_EXP);
 		GL11.glFogf(GL11.GL_FOG_DENSITY, 0.03f);
-		GL11.glFogf(GL11.GL_FOG_START, 20.0f);
+		GL11.glFogf(GL11.GL_FOG_START, 80.0f);
 		GL11.glFogf(GL11.GL_FOG_END, 150.0f);
 		GL11.glEnable(GL11.GL_FOG);
 
-		// Really Nice Perspective Calculations
-		GL11.glHint(GL11.GL_PERSPECTIVE_CORRECTION_HINT, GL11.GL_NICEST);
+		//Lighting!
+		makeLight(GL11.GL_LIGHT0, new float[] { 0, 1, 0, 1 }, new float[] { 0, 1, 0, 1 }, new float[] { 0, 1, 0, 1 },
+				new float[] { 0, 1, 0, 0 });
+		GL11.glEnable(GL11.GL_NORMALIZE);
+		//GL11.glMaterial(GL11.GL_FRONT, GL11.GL_DIFFUSE, makeFB(new float[] { 0.8f, 0.8f, 0.8f, 1f }));
+		GL11.glEnable(GL11.GL_LIGHTING);
 	}
 
 	private static void cleanup() {
