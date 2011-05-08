@@ -203,7 +203,7 @@ public class Game {
 
 		// Calculate The Aspect Ratio Of The Window
 		org.lwjgl.util.glu.GLU.gluPerspective(Camera.angle,
-				(float) displayMode.getWidth() / (float) displayMode.getHeight(), 0.1f, 200.0f);
+				(float) displayMode.getWidth() / (float) displayMode.getHeight(), 0.1f, Camera.farD);
 		GL11.glMatrixMode(GL11.GL_MODELVIEW); // Select The Modelview Matrix
 
 		// Really Nice Perspective Calculations
@@ -213,8 +213,8 @@ public class Game {
 		GL11.glFogi(GL11.GL_FOG_MODE, GL11.GL_LINEAR);
 		GL11.glFog(GL11.GL_FOG_COLOR, makeFB(new float[] {0.6f, 0.6f, 0.9f, 1 }));
 		GL11.glFogf(GL11.GL_FOG_DENSITY, 0.1f);
-		GL11.glFogf(GL11.GL_FOG_START, 100.0f);
-		GL11.glFogf(GL11.GL_FOG_END, 150.0f);
+		GL11.glFogf(GL11.GL_FOG_START, 0.75f * Camera.farD);
+		GL11.glFogf(GL11.GL_FOG_END, Camera.farD);
 		GL11.glEnable(GL11.GL_FOG);
 
 		//Lighting!

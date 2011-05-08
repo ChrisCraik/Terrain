@@ -46,7 +46,7 @@ public class Camera {
 	public final static float angle = 60.0f;
 	private final static float ratio = 1;
 	private final static float nearD = 0.1f;
-	private final static float farD = 150;
+	public final static float farD = 200;
 	private float tang, nh, nw;
 
 	public void cameraSetup() {
