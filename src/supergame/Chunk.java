@@ -11,9 +11,16 @@ public class Chunk implements Frustrumable {
 	public static final int size = 8;
 	public static final float metersPerCube = 1;
 
+	public static Vec3[] rayDistribution;
+	public static final int RAY_COUNT = 16;
+	private static final int RAY_BIG_STEPS = 4;
+	private static final float RAY_BIG_STEP_SIZE = 1f;
+
 	private boolean initialized = false;
 	private boolean empty = true;
 	private ArrayList<Vec3> triangles;
+	private ArrayList<Vec3> normals;
+	private ArrayList<Float> occlusion;
 	private float[][][] weights;
 	private int displayList;
 
@@ -49,14 +56,14 @@ public class Chunk implements Frustrumable {
 	private Vec3 getNormal(float x, float y, float z) {
 		//first attempt: brute force
 		float delta = 0.01f, origin, deltaX, deltaY, deltaZ;
-		origin = getDensity(x,y,z);
-		deltaX = origin-getDensity(x+delta,y,z);
-		deltaY = origin-getDensity(x,y+delta,z);
-		deltaZ = origin-getDensity(x,y,z+delta);
-	
+		origin = getDensity(x, y, z);
+		deltaX = origin - getDensity(x + delta, y, z);
+		deltaY = origin - getDensity(x, y + delta, z);
+		deltaZ = origin - getDensity(x, y, z + delta);
+
 		return new Vec3(deltaX, deltaY, deltaZ).normalize();
 	}
-	
+
 	private float getDensity(float x, float y, float z) {
 		return (float) Perlin.noise(x / 10, y / 10, z / 10) + 1.0f - y * 0.06f;
 		/*
@@ -82,6 +89,7 @@ public class Chunk implements Frustrumable {
 		this.xid = xid;
 		this.yid = yid;
 		this.zid = zid;
+		displayList = -1;
 	}
 
 	public void initialize() { //todo: split into initialization-done once and baking-may need to be redone
@@ -120,8 +128,26 @@ public class Chunk implements Frustrumable {
 			empty = true;
 		} else {
 			//System.out.println(xid + " " + yid + " " + zid + " has " + triangles.size() / 3 + " polys");
-			displayList = -1;
 			empty = false;
+			normals = new ArrayList<Vec3>(triangles.size());
+			occlusion = new ArrayList<Float>(triangles.size());
+			for (Vec3 p : triangles) {
+				normals.add(getNormal(p.getX(), p.getY(), p.getZ()));
+
+				float visibility = 0;
+				for (Vec3 ray : rayDistribution) {
+					boolean isOccluded = false;
+					for (int step = 1; step < RAY_BIG_STEPS && !isOccluded; step++) {
+						Vec3 rp = p.add(ray.multiply(RAY_BIG_STEP_SIZE*step));
+						if (getDensity(rp.getX(), rp.getY(), rp.getZ()) > 0)
+							isOccluded = true;
+					}
+					if (!isOccluded)
+						visibility += 1.0f / RAY_COUNT;
+				}
+				occlusion.add(Math.min(0.1f, 0.4f * visibility - 0.1f));
+			}
+
 		}
 		initialized = true;
 	}
@@ -146,19 +172,21 @@ public class Chunk implements Frustrumable {
 			GL11.glBegin(GL11.GL_TRIANGLES); // Draw some triangles
 			if (!USE_DEBUG_COLORS)
 				GL11.glColor3f(0.2f, 0.5f, 0.1f);
-			for (int i = 0; i < triangles.size(); i += 3) {
-				if (USE_DEBUG_COLORS) {
+
+			for (int i = 0; i < triangles.size(); i++) {
+				if (USE_DEBUG_COLORS && (i % 3 == 0)) {
 					int subChunkColorIndex = i % 2;
 					GL11.glColor3f(colors[chunkColorIndex][subChunkColorIndex][0],
 							colors[chunkColorIndex][subChunkColorIndex][1],
 							colors[chunkColorIndex][subChunkColorIndex][2]);
 				}
-				Vec3[] points = new Vec3[] { triangles.get(i), triangles.get(i + 1), triangles.get(i + 2) };
 
-				for (Vec3 p : points) {
-					getNormal(p.getX(),p.getY(),p.getZ()).GLnormal(); //apply the vertex normal (for lighting/smoothing)
-					p.GLdraw(); //draw the vertex
-				}
+				float ambOcc = occlusion.get(i);
+				GL11.glMaterial(GL11.GL_FRONT, GL11.GL_AMBIENT, Game.makeFB(new float[] { ambOcc, ambOcc, ambOcc, 1 }));
+				//System.out.println(visibility+"->"+ambOcc);
+
+				normals.get(i).GLnormal();
+				triangles.get(i).GLdraw();
 			}
 			GL11.glEnd();
 			GL11.glEndList();

@@ -3,10 +3,9 @@ package supergame;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
-import java.util.ArrayList;
 import java.util.LinkedList;
-import java.util.PriorityQueue;
-import java.util.Vector;
+import java.util.Random;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.lwjgl.Sys;
 import org.lwjgl.opengl.Display;
@@ -16,7 +15,7 @@ import org.lwjgl.input.Keyboard;
 
 public class Game {
 	private final int MAX_CHUNKS = 40;
-	private final int MS_PER_HEARTBEAT = 1000;
+	private final int MS_PER_HEARTBEAT = 3000;
 	private final int WORKER_THREADS = 4;
 
 	public static boolean isRunning() {
@@ -31,7 +30,9 @@ public class Game {
 
 	private DisplayMode displayMode;
 
-	private LinkedList<Chunk> chunks, dirtyChunks;
+	private LinkedBlockingQueue<Chunk> dirtyChunks;
+	private LinkedBlockingQueue<Chunk> cleanChunks;
+	private LinkedList<Chunk> chunks;
 
 	/* TIMING */
 	public static int delta = 0;
@@ -141,10 +142,21 @@ public class Game {
 		GL11.glLoadIdentity(); // Reset The Current Modelview Matrix
 		camera.apply();
 
-		synchronized (chunks) {
-			for (Chunk c : chunks)
-				c.render(camera);
+		/*
+		Chunk nextChunk;
+		//do {
+			nextChunk = cleanChunks.poll();
+			if (nextChunk != null)
+				chunks.add(nextChunk);
+		//} while (nextChunk != null);
+		*/
+
+		synchronized (cleanChunks) {
+			cleanChunks.drainTo(chunks, 4);
 		}
+
+		for (Chunk c : chunks)
+			c.render(camera);
 
 		return true;
 	}
@@ -166,19 +178,22 @@ public class Game {
 		createWindow();
 
 		chunks = new LinkedList<Chunk>();
-		dirtyChunks = new LinkedList<Chunk>();
+		dirtyChunks = new LinkedBlockingQueue<Chunk>();
+		cleanChunks = new LinkedBlockingQueue<Chunk>();
 		long x, y, z;
 		for (x = 0; x < MAX_CHUNKS; x++)
 			for (y = 0; y < Math.min(5, MAX_CHUNKS); y++)
-				for (z = 0; z < MAX_CHUNKS; z++) {
-					synchronized (dirtyChunks) {
-						dirtyChunks.add(new Chunk(x, y, z));
-						dirtyChunks.notifyAll();
-					}
-				}
+				for (z = 0; z < MAX_CHUNKS; z++)
+					dirtyChunks.offer(new Chunk(x, y, z));
 
 		for (int i = 0; i < WORKER_THREADS; i++)
-			new ChunkBakerThread(i, dirtyChunks, chunks).start();
+			new ChunkBakerThread(i, dirtyChunks, cleanChunks).start();
+
+		Chunk.rayDistribution = new Vec3[Chunk.RAY_COUNT];
+		Random gen = new Random(0);
+		for (int i = 0; i < Chunk.RAY_COUNT; i++)
+			Chunk.rayDistribution[i] = new Vec3(gen.nextFloat() - 0.5f, gen.nextFloat() - 0.5f, gen.nextFloat() - 0.5f)
+					.normalize();
 
 		System.out.println("have the threads!");
 		initGL();
@@ -186,7 +201,7 @@ public class Game {
 
 	public static final int FLOAT_SIZE = 4;
 
-	private FloatBuffer makeFB(float[] floatarray) {
+	public static FloatBuffer makeFB(float[] floatarray) {
 		FloatBuffer fb = ByteBuffer.allocateDirect(floatarray.length * FLOAT_SIZE).order(ByteOrder.nativeOrder())
 				.asFloatBuffer();
 		fb.put(floatarray).flip();
@@ -230,10 +245,13 @@ public class Game {
 		GL11.glEnable(GL11.GL_FOG);
 
 		//Lighting!
-		makeLight(GL11.GL_LIGHT0, new float[] { 0.7f, 0.5f, 0, 1 }, new float[] { 0.7f, 0.5f, 0, 1 }, new float[] { 0,
-				0, 0, 1 }, new float[] { 0, 1, 0, 0 });
+		makeLight(GL11.GL_LIGHT0, new float[] { 1, 1, 1, 1 }, new float[] { 1, 1, 1, 1 }, new float[] { 1, 1, 1, 1 },
+				new float[] { 0, 1, 0, 0 });
 		GL11.glEnable(GL11.GL_NORMALIZE);
-		//GL11.glMaterial(GL11.GL_FRONT, GL11.GL_DIFFUSE, makeFB(new float[] { 0.8f, 0.8f, 0.8f, 1f }));
+		GL11.glMaterial(GL11.GL_FRONT, GL11.GL_DIFFUSE, makeFB(new float[] { 0.4f, 0.3f, 0.0f, 1 }));
+		//GL11.glMaterial(GL11.GL_FRONT, GL11.GL_DIFFUSE, makeFB(new float[] { 0, 0, 0, 1 }));
+		GL11.glMaterial(GL11.GL_FRONT, GL11.GL_SPECULAR, makeFB(new float[] { 0, 0, 0, 1 }));
+		GL11.glMaterial(GL11.GL_FRONT, GL11.GL_AMBIENT, makeFB(new float[] { 0, 0, 0, 1 }));
 		GL11.glEnable(GL11.GL_LIGHTING);
 	}
 

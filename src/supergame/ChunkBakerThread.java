@@ -1,16 +1,16 @@
 package supergame;
 
-import java.util.LinkedList;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /*
  * Thread that aids in rendering volume data to polygons
  */
 public class ChunkBakerThread extends Thread {
 	private int id;
-	private LinkedList<Chunk> dirtyChunks;
-	private LinkedList<Chunk> cleanChunks;
+	private LinkedBlockingQueue<Chunk> dirtyChunks;
+	private LinkedBlockingQueue<Chunk> cleanChunks;
 
-	ChunkBakerThread(int id, LinkedList<Chunk> dirtyChunks, LinkedList<Chunk> cleanChunks) {
+	ChunkBakerThread(int id, LinkedBlockingQueue<Chunk> dirtyChunks, LinkedBlockingQueue<Chunk> cleanChunks) {
 		this.id = id;
 		this.dirtyChunks = dirtyChunks;
 		this.cleanChunks = cleanChunks;
@@ -22,21 +22,13 @@ public class ChunkBakerThread extends Thread {
 	public void run() {
 		Chunk current;
 		while (Game.isRunning()) {
-			synchronized (dirtyChunks) {
-				//System.out.println(id + "trying to poll, count=" + dirtyChunks.size());
-				while (dirtyChunks.isEmpty()) {
-					try {
-						dirtyChunks.wait();
-					} catch (InterruptedException ignored) {
-						System.out.println("exception ignored");
-					}
-				}
-				current = dirtyChunks.removeFirst();
-			}
-			//System.out.println(id + "got one!");
-			current.initialize();
-			synchronized (cleanChunks) {
-				cleanChunks.add(current);
+			try {
+				current = dirtyChunks.take();
+				//System.out.println(id+"took chunk"+current);
+				current.initialize();
+				cleanChunks.offer(current);
+			} catch (InterruptedException e) {
+				System.out.println("interruptedexception ignored");
 			}
 		}
 	}
