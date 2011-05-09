@@ -6,11 +6,10 @@ import org.lwjgl.opengl.GL11;
 import supergame.Camera.Frustrumable;
 import supergame.Camera.Inclusion;
 
-public class Chunk implements Comparable<Chunk>, Frustrumable {
+public class Chunk implements Frustrumable {
 	public static final boolean USE_DEBUG_COLORS = false;
 	public static final int size = 8;
 	public static final float metersPerCube = 1;
-	//public static final float MPC = metersPerCube;
 
 	private boolean initialized = false;
 	private boolean empty = true;
@@ -165,11 +164,5 @@ public class Chunk implements Comparable<Chunk>, Frustrumable {
 			GL11.glEndList();
 		} else
 			GL11.glCallList(displayList);
-	}
-
-	@Override
-	public int compareTo(Chunk b) {
-		//TODO: prioritize near camera (or better: in frustum too)
-		return (int) ((xid * xid + yid * yid + zid * zid) - (b.xid * b.xid + b.yid * b.yid + b.zid * b.zid));
 	}
 }

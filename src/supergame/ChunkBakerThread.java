@@ -1,16 +1,17 @@
 package supergame;
 
-import java.util.PriorityQueue;
-import java.util.Vector;
+import java.util.LinkedList;
 
 /*
  * Thread that aids in rendering volume data to polygons
  */
-public class ChunkBakerThread implements Runnable {
-	private PriorityQueue<Chunk> dirtyChunks;
-	private Vector<Chunk> cleanChunks;
+public class ChunkBakerThread extends Thread {
+	private int id;
+	private LinkedList<Chunk> dirtyChunks;
+	private LinkedList<Chunk> cleanChunks;
 
-	ChunkBakerThread(PriorityQueue<Chunk> dirtyChunks, Vector<Chunk> cleanChunks) {
+	ChunkBakerThread(int id, LinkedList<Chunk> dirtyChunks, LinkedList<Chunk> cleanChunks) {
+		this.id = id;
 		this.dirtyChunks = dirtyChunks;
 		this.cleanChunks = cleanChunks;
 	}
@@ -19,10 +20,24 @@ public class ChunkBakerThread implements Runnable {
 	 * Take one dirty chunk(for now) and clean it by re-initializing it 
 	 */
 	public void run() {
-		Chunk c = dirtyChunks.poll();
-		if (c != null) {
-			c.initialize();
-			cleanChunks.add(c);
+		Chunk current;
+		while (Game.isRunning()) {
+			synchronized (dirtyChunks) {
+				//System.out.println(id + "trying to poll, count=" + dirtyChunks.size());
+				while (dirtyChunks.isEmpty()) {
+					try {
+						dirtyChunks.wait();
+					} catch (InterruptedException ignored) {
+						System.out.println("exception ignored");
+					}
+				}
+				current = dirtyChunks.removeFirst();
+			}
+			//System.out.println(id + "got one!");
+			current.initialize();
+			synchronized (cleanChunks) {
+				cleanChunks.add(current);
+			}
 		}
 	}
 }
