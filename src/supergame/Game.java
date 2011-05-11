@@ -7,6 +7,8 @@ import java.util.LinkedList;
 import java.util.Random;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import java.util.Iterator;
+
 import org.lwjgl.Sys;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
@@ -14,13 +16,13 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.input.Keyboard;
 
 public class Game {
-	private final int MAX_CHUNKS = 40;
-	private final int MS_PER_HEARTBEAT = 3000;
-	private final int WORKER_THREADS = 4;
-
+	public static final int FLOAT_SIZE = 4;
+	
 	public static boolean isRunning() {
 		return !done;
 	}
+	
+	public static Config config;
 
 	private static boolean done = false;
 	private boolean fullscreen = false;
@@ -50,7 +52,7 @@ public class Game {
 
 		// compute heartbeat
 		msSinceLastHeartbeat += delta;
-		if (msSinceLastHeartbeat > MS_PER_HEARTBEAT) {
+		if (msSinceLastHeartbeat > Config.MS_PER_HEARTBEAT) {
 			heartbeatFrame = true;
 			msSinceLastHeartbeat = 0;
 		} else
@@ -70,18 +72,6 @@ public class Game {
 		return (Sys.getTime() * 1000) / Sys.getTimerResolution();
 	}
 
-	public static void main(String args[]) {
-		boolean fullscreen = false;
-		if (args.length > 0) {
-			if (args[0].equalsIgnoreCase("fullscreen")) {
-				fullscreen = true;
-			}
-		}
-
-		Game thegame = new Game();
-		thegame.run(fullscreen);
-	}
-
 	public void run(boolean fullscreen) {
 		updateDelta();
 
@@ -90,15 +80,16 @@ public class Game {
 			this.fullscreen = fullscreen;
 			this.camera = new Camera();
 
-			/*
-			for (ChunkBakerThread c : bakerThreads)
-				c.run();
-			*/
 			while (!done) {
+				//long tempTime = getTime();System.out.println("actual update took: "+(tempTime-endTime)); endTime = tempTime;
 				updateDelta();
+				//tempTime = getTime();System.out.println("updatedelta took:   "+(tempTime-endTime)); endTime = tempTime;
 				pollVideo();
+				//tempTime = getTime();System.out.println("pollvideo took:     "+(tempTime-endTime)); endTime = tempTime;
 				camera.pollInput();
+				//tempTime = getTime();System.out.println("pollinput took:     "+(tempTime-endTime)); endTime = tempTime;
 				render();
+				//tempTime = getTime();System.out.println("render took:        "+(tempTime-endTime)); endTime = tempTime;
 				Display.update();
 				Display.sync(120);
 			}
@@ -134,6 +125,7 @@ public class Game {
 		}
 	}
 
+	private long endTime;
 	private boolean render() {
 		if (Game.heartbeatFrame)
 			System.out.println("Clearing buffer, rendering chunks");
@@ -143,6 +135,11 @@ public class Game {
 		camera.apply();
 
 		/*
+		long tempTime = getTime();
+		System.out.println("rest       took: "+(tempTime-endTime));
+		endTime = tempTime;
+		*/
+		/*
 		Chunk nextChunk;
 		//do {
 			nextChunk = cleanChunks.poll();
@@ -150,14 +147,31 @@ public class Game {
 				chunks.add(nextChunk);
 		//} while (nextChunk != null);
 		*/
-
+		/*
 		synchronized (cleanChunks) {
 			cleanChunks.drainTo(chunks, 4);
 		}
-
 		for (Chunk c : chunks)
 			c.render(camera);
+		 */
 
+		/*
+		int newRenderCount = 0;
+		Iterator<Chunk> i = cleanChunks.iterator();
+		while(i.hasNext()) {
+			if(i.next().render(camera, newRenderCount < 5))
+				newRenderCount++;
+		}
+		*/
+		
+		for (Chunk c : cleanChunks)
+			c.render(camera, true);
+	
+		/*
+		tempTime = getTime();
+		System.out.println("poly splat took: "+(tempTime-endTime));
+		endTime = tempTime;
+		*/
 		return true;
 	}
 
@@ -181,17 +195,17 @@ public class Game {
 		dirtyChunks = new LinkedBlockingQueue<Chunk>();
 		cleanChunks = new LinkedBlockingQueue<Chunk>();
 		long x, y, z;
-		for (x = 0; x < MAX_CHUNKS; x++)
-			for (y = 0; y < Math.min(5, MAX_CHUNKS); y++)
-				for (z = 0; z < MAX_CHUNKS; z++)
+		for (x = 0; x < Config.CHUNK_COUNT; x++)
+			for (y = 0; y < Math.min(5, Config.CHUNK_COUNT); y++)
+				for (z = 0; z < Config.CHUNK_COUNT; z++)
 					dirtyChunks.offer(new Chunk(x, y, z));
 
-		for (int i = 0; i < WORKER_THREADS; i++)
+		for (int i = 0; i < Config.WORKER_THREADS; i++)
 			new ChunkBakerThread(i, dirtyChunks, cleanChunks).start();
 
-		Chunk.rayDistribution = new Vec3[Chunk.RAY_COUNT];
+		Chunk.rayDistribution = new Vec3[Config.AMB_OCC_RAY_COUNT];
 		Random gen = new Random(0);
-		for (int i = 0; i < Chunk.RAY_COUNT; i++)
+		for (int i = 0; i < Config.AMB_OCC_RAY_COUNT; i++)
 			Chunk.rayDistribution[i] = new Vec3(gen.nextFloat() - 0.5f, gen.nextFloat() - 0.5f, gen.nextFloat() - 0.5f)
 					.normalize();
 
@@ -199,21 +213,11 @@ public class Game {
 		initGL();
 	}
 
-	public static final int FLOAT_SIZE = 4;
-
 	public static FloatBuffer makeFB(float[] floatarray) {
 		FloatBuffer fb = ByteBuffer.allocateDirect(floatarray.length * FLOAT_SIZE).order(ByteOrder.nativeOrder())
 				.asFloatBuffer();
 		fb.put(floatarray).flip();
 		return fb;
-	}
-
-	private void makeLight(int light, float[] diffuse, float[] specular, float[] ambient, float[] position) {
-		GL11.glLight(light, GL11.GL_DIFFUSE, makeFB(diffuse)); // color of the direct illumination
-		GL11.glLight(light, GL11.GL_SPECULAR, makeFB(specular)); // color of the highlight
-		GL11.glLight(light, GL11.GL_AMBIENT, makeFB(ambient)); // color of the reflected light
-		GL11.glLight(light, GL11.GL_POSITION, makeFB(position));
-		GL11.glEnable(light);
 	}
 
 	private void initGL() {
@@ -245,8 +249,12 @@ public class Game {
 		GL11.glEnable(GL11.GL_FOG);
 
 		//Lighting!
-		makeLight(GL11.GL_LIGHT0, new float[] { 1, 1, 1, 1 }, new float[] { 1, 1, 1, 1 }, new float[] { 1, 1, 1, 1 },
-				new float[] { 0, 1, 0, 0 });
+		int light = GL11.GL_LIGHT0;
+		GL11.glLight(light, GL11.GL_DIFFUSE, makeFB(new float[] { 1, 1, 1, 1 })); // color of the direct illumination
+		GL11.glLight(light, GL11.GL_SPECULAR, makeFB(new float[] { 1, 1, 1, 1 })); // color of the highlight
+		GL11.glLight(light, GL11.GL_AMBIENT, makeFB(new float[] { 1, 1, 1, 1 })); // color of the reflected light
+		GL11.glLight(light, GL11.GL_POSITION, makeFB(new float[] { 0, 1, 0, 0 })); // from above!
+		GL11.glEnable(light);
 		GL11.glEnable(GL11.GL_NORMALIZE);
 		GL11.glMaterial(GL11.GL_FRONT, GL11.GL_DIFFUSE, makeFB(new float[] { 0.4f, 0.3f, 0.0f, 1 }));
 		//GL11.glMaterial(GL11.GL_FRONT, GL11.GL_DIFFUSE, makeFB(new float[] { 0, 0, 0, 1 }));
@@ -257,5 +265,17 @@ public class Game {
 
 	private static void cleanup() {
 		Display.destroy();
+	}
+
+	public static void main(String args[]) {
+		boolean fullscreen = false;
+		if (args.length > 0) {
+			if (args[0].equalsIgnoreCase("fullscreen")) {
+				fullscreen = true;
+			}
+		}
+
+		Game thegame = new Game();
+		thegame.run(fullscreen);
 	}
 }

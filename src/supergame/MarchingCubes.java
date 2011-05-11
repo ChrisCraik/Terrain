@@ -304,7 +304,7 @@ public class MarchingCubes {
 	static {
 		int i;
 		for (i = 0; i < 8; i++)
-			points[i] = points[i].multiply(Chunk.metersPerCube);
+			points[i] = points[i].multiply(Config.METERS_PER_SUBCHUNK);
 	}
 
 	public static int makeMesh(Vec3 blockPos, int x, int y, int z, float[][][] weights, double isolevel,

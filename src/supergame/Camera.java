@@ -6,15 +6,9 @@ import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
 
 public class Camera {
-	public final boolean FRUSTUM_CULLING = true; //enable frustum culling
-
-	public final boolean FROZEN_FRUSTUM_POS = false; //used to test view frustum culling
-	public final boolean FROZEN_FRUSTUM_HEAD = false;
-	public final boolean FROZEN_FRUSTUM_PITCH = false;
-
 	Vec3 pos;
 	private float pitch, heading;
-	public static Vec3 forward, right, up;
+	public Vec3 forward, right, up;
 
 	long msSinceHeartbeat = 0;
 
@@ -78,10 +72,8 @@ public class Camera {
 
 			Vec3 a, b, c, d;
 
-			Vec3 up = FROZEN_FRUSTUM_PITCH ? new Vec3(0, 1, 0) : Camera.up;
-
 			a = new Vec3(0, 0, 0);
-			b = up.cross(this.normal); // relative horizontal vector
+			b = new Vec3(0,1,0).cross(this.normal); // relative horizontal vector
 			c = b.cross(this.normal);
 			d = b.add(c);
 
@@ -117,11 +109,11 @@ public class Camera {
 
 		float heading = 0, pitch = 0;
 		Vec3 offset = new Vec3(0, 0, 0);
-		if (!FROZEN_FRUSTUM_HEAD)
+		if (!Config.FROZEN_FRUSTUM_HEAD)
 			heading = this.heading;
-		if (!FROZEN_FRUSTUM_PITCH)
+		if (!Config.FROZEN_FRUSTUM_PITCH)
 			pitch = this.pitch;
-		if (!FROZEN_FRUSTUM_POS)
+		if (!Config.FROZEN_FRUSTUM_POS)
 			offset = this.pos;
 
 		Vec3 Z = forward = new Vec3(heading, pitch);
@@ -198,7 +190,7 @@ public class Camera {
 	public Inclusion frustrumTest(Frustrumable f) {
 		Inclusion incl = Inclusion.INSIDE;
 
-		if (!FRUSTUM_CULLING)
+		if (!Config.FRUSTUM_CULLING)
 			return incl;
 
 		for (int i = 0; i < 6; i++) {
