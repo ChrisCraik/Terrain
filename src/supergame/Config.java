@@ -3,11 +3,13 @@ package supergame;
 import java.lang.reflect.*;
 
 public class Config {
-	public static int MS_PER_HEARTBEAT = 3000;
+	public static int MS_PER_HEARTBEAT = 1000;
 	public static int WORKER_THREADS = 4;
+	public static int RESOLUTION_X = 1024;
+	public static int RESOLUTION_Y = 768;
 	
 	// CHUNKS
-	public static int CHUNK_COUNT = 40;
+	public static int CHUNK_COUNT = 10;
 	public static float METERS_PER_SUBCHUNK = 1;
 	public static int CHUNK_DIVISION = 8;
 	
@@ -26,6 +28,9 @@ public class Config {
 	public static boolean FROZEN_FRUSTUM_POS = false; //used to test view frustum culling
 	public static boolean FROZEN_FRUSTUM_HEAD = false;
 	public static boolean FROZEN_FRUSTUM_PITCH = false;
+	
+	//CONTROL
+	public static boolean MIDAIR_CONTROL = false;
 	
 	public static void setOption(String fieldname, String value) {
 		try {

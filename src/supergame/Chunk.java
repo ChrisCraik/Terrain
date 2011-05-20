@@ -1,7 +1,20 @@
 package supergame;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
+
+import javax.vecmath.Vector3f;
+
 import org.lwjgl.opengl.GL11;
+
+import com.bulletphysics.BulletGlobals;
+import com.bulletphysics.collision.shapes.BvhTriangleMeshShape;
+import com.bulletphysics.collision.shapes.TriangleIndexVertexArray;
+import com.bulletphysics.dynamics.RigidBody;
+import com.bulletphysics.dynamics.RigidBodyConstructionInfo;
+import com.bulletphysics.linearmath.DefaultMotionState;
+import com.bulletphysics.linearmath.Transform;
 
 import supergame.Camera.Frustrumable;
 import supergame.Camera.Inclusion;
@@ -58,7 +71,9 @@ public class Chunk implements Frustrumable {
 	}
 
 	private float getDensity(float x, float y, float z) {
-		return (float) Perlin.noise(x / 10, y / 10, z / 10) + 1.0f - y * 0.06f;
+		//return (float) Perlin.noise(x / 10, y / 10, z / 10);
+		return (float) Perlin.noise(x / 10, y / 10, z / 10) + 1.0f - y * 0.05f;
+		//return (float) Perlin.noise(x / 10, 0, z / 10) + 1.0f - y * 0.05f;
 		/*
 		float caves, center_falloff, plateau_falloff, density;
 		if (y <= 0.8)
@@ -75,7 +90,7 @@ public class Chunk implements Frustrumable {
 		density *= Math.pow(Perlin.noise((x + 1) * 3.0, (y + 1) * 3.0, (z + 1) * 3.0) + 0.4, 1.8);
 		if (caves < 0.5)density = 0;
 		return density;
-		**/
+		*/
 	}
 
 	Chunk(long xid, long yid, long zid) {
@@ -169,6 +184,7 @@ public class Chunk implements Frustrumable {
 		if (displayList >= 0) {
 			GL11.glCallList(displayList);
 		} else if (allowBruteForceRender) {
+			initPhysics();
 			int chunkColorIndex = (int) ((xid + yid + zid) % 2);
 
 			displayList = GL11.glGenLists(1);
@@ -200,5 +216,75 @@ public class Chunk implements Frustrumable {
 			return true;
 		}
 		return false;
+	}
+	
+	public void initPhysics() {
+		final float TRISIZE = 10f;
+
+		//BulletGlobals.setContactAddedCallback(new CustomMaterialCombinerCallback());
+
+		//#define USE_TRIMESH_SHAPE 1
+		//#ifdef USE_TRIMESH_SHAPE
+
+		int vertStride = 3 * 4;
+		int indexStride = 3 * 4;
+
+		int totalTriangles = triangles.size()/3;
+
+		ByteBuffer gVertices = ByteBuffer.allocateDirect(triangles.size() * 3 * 4).order(ByteOrder.nativeOrder());
+		ByteBuffer gIndices = ByteBuffer.allocateDirect(triangles.size() * 3 * 4).order(ByteOrder.nativeOrder());
+
+		int i;
+
+		//setVertexPositions(waveheight, 0.f);
+
+		//int index=0;
+		gIndices.clear();
+		int index = 0;
+		for (Vec3 p : triangles) {
+			gVertices.putFloat(p.getX());
+			gVertices.putFloat(p.getY());
+			gVertices.putFloat(p.getZ());
+			gIndices.putInt(index++);
+			gIndices.putInt(index++);
+			gIndices.putInt(index++);
+		}
+		//gIndices.flip();
+
+		TriangleIndexVertexArray indexVertexArrays = new TriangleIndexVertexArray(totalTriangles,
+				gIndices,
+				indexStride,
+				totalTriangles*3, gVertices, vertStride);
+
+		boolean useQuantizedAabbCompression = true;
+		BvhTriangleMeshShape trimeshShape = new BvhTriangleMeshShape(indexVertexArrays, useQuantizedAabbCompression);
+		Game.collision.collisionShapes.add(trimeshShape);
+		
+		{
+			Transform groundTransform = new Transform();
+			groundTransform.setIdentity();
+			groundTransform.origin.set(new Vector3f(0.f, 0.f, 0.f));
+			
+			float mass = 0f;
+
+			// rigidbody is dynamic if and only if mass is non zero,
+			// otherwise static
+			boolean isDynamic = (mass != 0f);
+
+			Vector3f localInertia = new Vector3f(0, 0, 0);
+			if (isDynamic) {
+				trimeshShape.calculateLocalInertia(mass, localInertia);
+			}
+
+			// using motionstate is recommended, it provides interpolation
+			// capabilities, and only synchronizes 'active' objects
+			DefaultMotionState myMotionState = new DefaultMotionState(groundTransform);
+			RigidBodyConstructionInfo rbInfo = new RigidBodyConstructionInfo(mass, myMotionState, trimeshShape,
+					localInertia);
+			RigidBody body = new RigidBody(rbInfo);
+
+			// add the body to the dynamics world
+			Game.collision.dynamicsWorld.addRigidBody(body);
+		}
 	}
 }

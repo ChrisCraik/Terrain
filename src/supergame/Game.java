@@ -35,6 +35,8 @@ public class Game {
 	private LinkedBlockingQueue<Chunk> dirtyChunks;
 	private LinkedBlockingQueue<Chunk> cleanChunks;
 	private LinkedList<Chunk> chunks;
+	
+	public static Collision collision;
 
 	/* TIMING */
 	public static int delta = 0;
@@ -79,7 +81,8 @@ public class Game {
 			init();
 			this.fullscreen = fullscreen;
 			this.camera = new Camera();
-
+			this.collision = new Collision();
+			
 			while (!done) {
 				//long tempTime = getTime();System.out.println("actual update took: "+(tempTime-endTime)); endTime = tempTime;
 				updateDelta();
@@ -133,6 +136,8 @@ public class Game {
 		GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT); // Clear the screen and the depth buffer
 		GL11.glLoadIdentity(); // Reset The Current Modelview Matrix
 		camera.apply();
+		
+		collision.stepSimulation(delta / 1000f);
 
 		/*
 		long tempTime = getTime();
@@ -178,7 +183,7 @@ public class Game {
 	private void createWindow() throws Exception {
 		Display.setFullscreen(fullscreen);
 		for (DisplayMode d : Display.getAvailableDisplayModes()) {
-			if (d.getWidth() == 1280 && d.getHeight() == 1024 && d.getBitsPerPixel() == 32) {
+			if (d.getWidth() == Config.RESOLUTION_X && d.getHeight() == Config.RESOLUTION_Y && d.getBitsPerPixel() == 32) {
 				displayMode = d;
 				break;
 			}

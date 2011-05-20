@@ -1,5 +1,6 @@
 package supergame;
 
+import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
@@ -13,9 +14,9 @@ public class Camera {
 	long msSinceHeartbeat = 0;
 
 	Camera() {
-		pos = new Vec3(0, 0, 0);
-		pitch = -40;
-		heading = -222;
+		pos = new Vec3(-15, -40, -8);
+		pitch = 20;
+		heading = -200;
 		cameraSetup();
 		Mouse.setGrabbed(true);
 		pl = new Plane[6];
@@ -40,7 +41,7 @@ public class Camera {
 	public final static float angle = 60.0f;
 	private final static float ratio = 1;
 	private final static float nearD = 0.1f;
-	public final static float farD = 100;
+	public final static float farD = 150;
 	private float tang, nh, nw;
 
 	public void cameraSetup() {
@@ -144,7 +145,6 @@ public class Camera {
 		float speed = (float) (0.01 * Game.delta);
 
 		Vec3 deltaPos = new Vec3(heading, pitch).multiply(speed);
-
 		if (Mouse.isButtonDown(0))
 			pos = pos.add(deltaPos);
 		if (Mouse.isButtonDown(1))
@@ -169,8 +169,7 @@ public class Camera {
 
 		msSinceHeartbeat += Game.delta;
 		if (msSinceHeartbeat > 1000) {
-			System.out.println("pos:" + pos.toString());
-			System.out.println("pitch:" + pitch + ", heading:" + heading);
+			System.out.println("pos:" + pos.toString() + ", pitch:" + pitch + ", heading:" + heading);
 			msSinceHeartbeat = 0;
 		}
 
@@ -183,7 +182,6 @@ public class Camera {
 
 	interface Frustrumable {
 		Vec3 getVertexP(Vec3 n);
-
 		Vec3 getVertexN(Vec3 n);
 	}
 
@@ -213,5 +211,6 @@ public class Camera {
 		GL11.glRotatef(pitch, 1, 0, 0);
 		GL11.glRotatef(heading, 0, 1, 0);
 		GL11.glTranslatef(pos.getX(), pos.getY(), pos.getZ());
+		GL11.glLight(GL11.GL_LIGHT0, GL11.GL_POSITION, Game.makeFB(new float[] { 0, 1, 0, 0 })); // from above!
 	}
 }
