@@ -53,8 +53,8 @@ import org.lwjgl.opengl.GL11;
 public class Collision {
 	
 	// create 125 (5x5x5) dynamic object
-	private static final int ARRAY_SIZE_X = 1;
-	private static final int ARRAY_SIZE_Y = 1;
+	private static final int ARRAY_SIZE_X = 4;
+	private static final int ARRAY_SIZE_Y = 4;
 	private static final int ARRAY_SIZE_Z = 4;
 
 	// maximum number of objects (and allow user to shoot additional boxes)
@@ -70,7 +70,7 @@ public class Collision {
 	public ObjectArrayList<CollisionShape> collisionShapes = new ObjectArrayList<CollisionShape>();
 	public DiscreteDynamicsWorld dynamicsWorld;
 	
-	private Character character;
+	public Character character;
 	
 	Collision() {
 		// collision configuration contains default setup for memory, collision
@@ -98,7 +98,7 @@ public class Collision {
 
 		dynamicsWorld = new DiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
 
-		dynamicsWorld.setGravity(new Vector3f(0, -10, 0));
+		dynamicsWorld.setGravity(new Vector3f(0, -Config.PHYSICS_GRAVITY, 0));
 
 		// create a few basic rigid bodies
 		CollisionShape groundShape = new BoxShape(new Vector3f(50.f, 50.f, 50.f));
@@ -111,15 +111,7 @@ public class Collision {
 
 		{
 			float mass = 0f;
-
-			// rigidbody is dynamic if and only if mass is non zero,
-			// otherwise static
-			boolean isDynamic = (mass != 0f);
-
 			Vector3f localInertia = new Vector3f(0, 0, 0);
-			if (isDynamic) {
-				groundShape.calculateLocalInertia(mass, localInertia);
-			}
 
 			// using motionstate is recommended, it provides interpolation
 			// capabilities, and only synchronizes 'active' objects
@@ -134,7 +126,6 @@ public class Collision {
 		{
 			// create a few dynamic rigidbodies
 			// Re-using the same collision is better for memory usage and performance
-
 			CollisionShape colShape = new BoxShape(new Vector3f(1, 1, 1));
 			//CollisionShape colShape = new SphereShape(1f);
 			collisionShapes.add(colShape);
@@ -144,14 +135,8 @@ public class Collision {
 			startTransform.setIdentity();
 
 			float mass = 1f;
-
-			// rigidbody is dynamic if and only if mass is non zero, otherwise static
-			boolean isDynamic = (mass != 0f);
-
 			Vector3f localInertia = new Vector3f(0, 0, 0);
-			if (isDynamic) {
-				colShape.calculateLocalInertia(mass, localInertia);
-			}
+			colShape.calculateLocalInertia(mass, localInertia);
 
 			float start_x = START_POS_X - ARRAY_SIZE_X / 2;
 			float start_y = START_POS_Y;
@@ -222,13 +207,15 @@ public class Collision {
 		GL11.glEnd();// Done Drawing Quads
 	}
 
-	private static float[] glMat = new float[16];
-
 	public void stepSimulation(float duration) {
 		character.move();
 		dynamicsWorld.stepSimulation(duration, 10);
+	}
 
-		// print positions of all objects
+	private static float[] glMat = new float[16];
+	public void render() {
+		// render all collision objects
+		character.render();
 		for (int j = dynamicsWorld.getNumCollisionObjects() - 1; j >= 0; j--) {
 			CollisionObject obj = dynamicsWorld.getCollisionObjectArray().getQuick(j);
 			RigidBody body = RigidBody.upcast(obj);

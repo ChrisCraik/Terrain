@@ -8,7 +8,6 @@ import javax.vecmath.Vector3f;
 
 import org.lwjgl.opengl.GL11;
 
-import com.bulletphysics.BulletGlobals;
 import com.bulletphysics.collision.shapes.BvhTriangleMeshShape;
 import com.bulletphysics.collision.shapes.TriangleIndexVertexArray;
 import com.bulletphysics.dynamics.RigidBody;
@@ -22,7 +21,8 @@ import supergame.Camera.Inclusion;
 public class Chunk implements Frustrumable {
 	public static Vec3[] rayDistribution;
 
-	private boolean initialized = false;
+	private boolean geometryInitialized = false;
+	private boolean physicsInitialized = false;
 	private boolean empty = true;
 	private ArrayList<Vec3> triangles;
 	private ArrayList<Vec3> normals;
@@ -101,9 +101,9 @@ public class Chunk implements Frustrumable {
 	}
 
 	public void initialize() { //todo: split into initialization-done once and baking-may need to be redone
-		assert initialized == false;
+		assert geometryInitialized == false;
 
-		initialized = true;
+		geometryInitialized = true;
 
 		weights = new float[Config.CHUNK_DIVISION + 1][Config.CHUNK_DIVISION + 1][Config.CHUNK_DIVISION + 1];
 		triangles = new ArrayList<Vec3>();
@@ -164,9 +164,7 @@ public class Chunk implements Frustrumable {
 					normals.add(null);
 				}
 			}
-
 		}
-		initialized = true;
 	}
 
 	public static final float colors[][][] = { { { 0, 1, 0 }, { 1, 0, 0 } }, { { 1, 0.5f, 0 }, { 0.5f, 0, 1 } },
@@ -175,16 +173,17 @@ public class Chunk implements Frustrumable {
 	public boolean render(Camera cam, boolean allowBruteForceRender) {
 		if (empty)
 			return false;
+		
+		if (!physicsInitialized)
+			initPhysics();
 
 		Inclusion FrustumInclusion = cam.frustrumTest(this);
-
 		if (FrustumInclusion == Inclusion.OUTSIDE)
 			return false;
 
 		if (displayList >= 0) {
 			GL11.glCallList(displayList);
 		} else if (allowBruteForceRender) {
-			initPhysics();
 			int chunkColorIndex = (int) ((xid + yid + zid) % 2);
 
 			displayList = GL11.glGenLists(1);
@@ -219,13 +218,7 @@ public class Chunk implements Frustrumable {
 	}
 	
 	public void initPhysics() {
-		final float TRISIZE = 10f;
-
-		//BulletGlobals.setContactAddedCallback(new CustomMaterialCombinerCallback());
-
-		//#define USE_TRIMESH_SHAPE 1
-		//#ifdef USE_TRIMESH_SHAPE
-
+		physicsInitialized = true;
 		int vertStride = 3 * 4;
 		int indexStride = 3 * 4;
 
@@ -234,11 +227,6 @@ public class Chunk implements Frustrumable {
 		ByteBuffer gVertices = ByteBuffer.allocateDirect(triangles.size() * 3 * 4).order(ByteOrder.nativeOrder());
 		ByteBuffer gIndices = ByteBuffer.allocateDirect(triangles.size() * 3 * 4).order(ByteOrder.nativeOrder());
 
-		int i;
-
-		//setVertexPositions(waveheight, 0.f);
-
-		//int index=0;
 		gIndices.clear();
 		int index = 0;
 		for (Vec3 p : triangles) {
@@ -249,7 +237,6 @@ public class Chunk implements Frustrumable {
 			gIndices.putInt(index++);
 			gIndices.putInt(index++);
 		}
-		//gIndices.flip();
 
 		TriangleIndexVertexArray indexVertexArrays = new TriangleIndexVertexArray(totalTriangles,
 				gIndices,
@@ -263,18 +250,10 @@ public class Chunk implements Frustrumable {
 		{
 			Transform groundTransform = new Transform();
 			groundTransform.setIdentity();
-			groundTransform.origin.set(new Vector3f(0.f, 0.f, 0.f));
+			groundTransform.origin.set(new Vector3f(0, 0, 0));
 			
 			float mass = 0f;
-
-			// rigidbody is dynamic if and only if mass is non zero,
-			// otherwise static
-			boolean isDynamic = (mass != 0f);
-
 			Vector3f localInertia = new Vector3f(0, 0, 0);
-			if (isDynamic) {
-				trimeshShape.calculateLocalInertia(mass, localInertia);
-			}
 
 			// using motionstate is recommended, it provides interpolation
 			// capabilities, and only synchronizes 'active' objects

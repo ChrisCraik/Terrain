@@ -80,8 +80,8 @@ public class Game {
 		try {
 			init();
 			this.fullscreen = fullscreen;
-			this.camera = new Camera();
-			this.collision = new Collision();
+			collision = new Collision();
+			this.camera = new Camera(collision.character);
 			
 			while (!done) {
 				//long tempTime = getTime();System.out.println("actual update took: "+(tempTime-endTime)); endTime = tempTime;
@@ -133,12 +133,14 @@ public class Game {
 		if (Game.heartbeatFrame)
 			System.out.println("Clearing buffer, rendering chunks");
 
+		collision.stepSimulation(delta / 1000f);
+		
 		GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT); // Clear the screen and the depth buffer
 		GL11.glLoadIdentity(); // Reset The Current Modelview Matrix
 		camera.apply();
 		
-		collision.stepSimulation(delta / 1000f);
 
+		collision.render();
 		/*
 		long tempTime = getTime();
 		System.out.println("rest       took: "+(tempTime-endTime));

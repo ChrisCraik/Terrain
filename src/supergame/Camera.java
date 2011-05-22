@@ -1,27 +1,36 @@
 package supergame;
 
-import org.lwjgl.input.Keyboard;
+import javax.vecmath.Vector3f;
+
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
 
 public class Camera {
-	Vec3 pos;
+	private Vector3f pos;
 	private float pitch, heading;
 	public Vec3 forward, right, up;
 
 	long msSinceHeartbeat = 0;
 
-	Camera() {
-		pos = new Vec3(-15, -40, -8);
-		pitch = 20;
-		heading = -200;
+	public interface CameraControllable {
+		void setHeadingPitch(float heading, float pitch);
+		Vector3f getPos();
+	}
+	
+	private CameraControllable controllable;
+	Camera(CameraControllable controllable) {
+		pos = new Vector3f(15, 40, 8);
+		pitch = -20;
+		heading = 200;
 		cameraSetup();
 		Mouse.setGrabbed(true);
 		pl = new Plane[6];
 		for (int i = 0; i < 6; i++)
 			pl[i] = new Plane();
+		
+		this.controllable = controllable;
 
 		//initialize mouse position
 		DisplayMode dm = Display.getDisplayMode();
@@ -115,41 +124,42 @@ public class Camera {
 		if (!Config.FROZEN_FRUSTUM_PITCH)
 			pitch = this.pitch;
 		if (!Config.FROZEN_FRUSTUM_POS)
-			offset = this.pos;
+			offset = new Vec3(this.pos.x,this.pos.y,this.pos.z);
 
-		Vec3 Z = forward = new Vec3(heading, pitch);
-		Vec3 negZ = new Vec3(-Z.getX(), -Z.getY(), -Z.getZ());
-		Vec3 X = right = new Vec3(heading + 90, 0);
-		Vec3 Y = up = new Vec3(heading, pitch - 90);
+		Vec3 Z = forward = new Vec3(-heading, -pitch);
+		Vec3 negZ = forward.multiply(-1);
+		Vec3 X = right = new Vec3(-heading + 90, 0);
+		Vec3 Y = up = new Vec3(-heading, -pitch - 90);
 
 		// compute the centers of the near and far planes
-		nc = Z.multiply(-nearD).subtract(offset);
-		fc = Z.multiply(-farD).subtract(offset);
+		nc = Z.multiply(-nearD).add(offset);
+		fc = Z.multiply(-farD).add(offset);
 
 		pl[NEARP].setNormalAndPoint(negZ, nc);
 		pl[FARP].setNormalAndPoint(Z, fc);
 
 		Vec3 aux;
-		aux = (nc.add(Y.multiply(nh)).add(offset)).normalize();
+		aux = (nc.add(Y.multiply(nh)).subtract(offset)).normalize();
 		pl[TOP].setNormalAndPoint(aux.cross(X), nc.add(Y.multiply(nh)));
-		aux = (nc.subtract(Y.multiply(nh)).add(offset)).normalize();
+		aux = (nc.subtract(Y.multiply(nh)).subtract(offset)).normalize();
 		pl[BOTTOM].setNormalAndPoint(X.cross(aux), nc.subtract(Y.multiply(nh)));
 
-		aux = (nc.subtract(X.multiply(nw)).add(offset)).normalize();
+		aux = (nc.subtract(X.multiply(nw)).subtract(offset)).normalize();
 		pl[LEFT].setNormalAndPoint(aux.cross(Y), nc.subtract(X.multiply(nw)));
-		aux = (nc.add(X.multiply(nw)).add(offset)).normalize();
+		aux = (nc.add(X.multiply(nw)).subtract(offset)).normalize();
 		pl[RIGHT].setNormalAndPoint(Y.cross(aux), nc.add(X.multiply(nw)));
 	}
 
 	public void pollInput() {
 		float speed = (float) (0.01 * Game.delta);
 
-		Vec3 deltaPos = new Vec3(heading, pitch).multiply(speed);
+		Vec3 deltaPos = new Vec3(-heading, -pitch).multiply(speed);
+		Vector3f d = new Vector3f(deltaPos.getX(), deltaPos.getY(), deltaPos.getZ());
 		if (Mouse.isButtonDown(0))
-			pos = pos.add(deltaPos);
+			pos.sub(d);
 		if (Mouse.isButtonDown(1))
-			pos = pos.subtract(deltaPos);
-
+			pos.add(d);
+		
 		DisplayMode dm = Display.getDisplayMode();
 		int height = dm.getHeight();
 		int width = dm.getWidth();
@@ -157,23 +167,23 @@ public class Camera {
 		// System.out.println("x move:"+(Mouse.getX()-width/2)+",y move:"+(Mouse.getY()-height/2));
 
 		if (msSinceHeartbeat != 0) {
-			heading += (Mouse.getX() - width / 2) / 10.0;
-			pitch -= (Mouse.getY() - height / 2) / 10.0;
+			heading -= (Mouse.getX() - width / 2) / 10.0;
+			pitch += (Mouse.getY() - height / 2) / 10.0;
 		}
 
 		pitch = Math.min(pitch, 90);
 		pitch = Math.max(pitch, -90);
 
+		controllable.setHeadingPitch(heading, pitch);
+		
 		// System.out.println("pitch:"+Math.sin(pitch*Math.PI/180.0)+", heading:"+Math.sin(heading*Math.PI/180.0));
 		Mouse.setCursorPosition(width / 2, height / 2);
 
 		msSinceHeartbeat += Game.delta;
 		if (msSinceHeartbeat > 1000) {
-			System.out.println("pos:" + pos.toString() + ", pitch:" + pitch + ", heading:" + heading);
+			System.out.println("pos:" + pos + ", pitch:" + pitch + ", heading:" + heading);
 			msSinceHeartbeat = 0;
 		}
-
-		updateFrustum();
 	}
 
 	public static enum Inclusion {
@@ -208,9 +218,12 @@ public class Camera {
 	}
 
 	public void apply() {
-		GL11.glRotatef(pitch, 1, 0, 0);
-		GL11.glRotatef(heading, 0, 1, 0);
-		GL11.glTranslatef(pos.getX(), pos.getY(), pos.getZ());
+		pos = controllable.getPos();
+		updateFrustum();
+		
+		GL11.glRotatef(pitch, -1, 0, 0);
+		GL11.glRotatef(heading, 0, -1, 0);
+		GL11.glTranslatef(-pos.x, -pos.y, -pos.z);
 		GL11.glLight(GL11.GL_LIGHT0, GL11.GL_POSITION, Game.makeFB(new float[] { 0, 1, 0, 0 })); // from above!
 	}
 }

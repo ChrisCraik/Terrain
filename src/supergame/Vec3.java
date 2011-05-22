@@ -1,8 +1,19 @@
 package supergame;
 
+import javax.vecmath.Vector3f;
+
 import org.lwjgl.opengl.GL11;
 
 public class Vec3 {
+	public static Vector3f HPVector(float heading, float pitch) {
+		float x,y,z;
+		x = -(float) (Math.sin(heading * Math.PI / 180.0) * Math.cos(pitch * Math.PI / 180.0));
+		y = (float) (Math.sin(pitch * Math.PI / 180.0));
+		z = (float) (Math.cos(heading * Math.PI / 180.0) * Math.cos(pitch * Math.PI / 180.0));
+
+		return new Vector3f(x,y,z);
+	}
+	
 	float data[];
 
 	public Vec3(float x, float y, float z) {

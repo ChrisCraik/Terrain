@@ -30,7 +30,11 @@ public class Config {
 	public static boolean FROZEN_FRUSTUM_PITCH = false;
 	
 	//CONTROL
-	public static boolean MIDAIR_CONTROL = false;
+	public static boolean PLAYER_MIDAIR_CONTROL = false;
+	public static float PLAYER_JUMP_SPEED = 25;
+	
+	//PHYSICS
+	public static float PHYSICS_GRAVITY = 50;
 	
 	public static void setOption(String fieldname, String value) {
 		try {
