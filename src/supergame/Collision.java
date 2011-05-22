@@ -146,22 +146,23 @@ public class Collision {
 				for (int i = 0; i < ARRAY_SIZE_X; i++) {
 					for (int j = 0; j < ARRAY_SIZE_Z; j++) {
 						startTransform.origin.set(2f * i + start_x, 10f + 2f * k + start_y, 2f * j + start_z);
-
-						// using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
-						DefaultMotionState myMotionState = new DefaultMotionState(startTransform);
-						RigidBodyConstructionInfo rbInfo = new RigidBodyConstructionInfo(mass, myMotionState, colShape,
-								localInertia);
-						RigidBody body = new RigidBody(rbInfo);
-						//body.setActivationState(RigidBody.ISLAND_SLEEPING);
-
-						dynamicsWorld.addRigidBody(body);
-						//body.setActivationState(RigidBody.ISLAND_SLEEPING);
-					}
+						spawnCube(mass, colShape, startTransform, localInertia);					}
 				}
 			}
 			character = new Character(dynamicsWorld, new Vector3f(start_x, start_y, start_z));
 		}
+	}
+	
+	public RigidBody spawnCube(float mass, CollisionShape colShape, Transform startTransform, Vector3f localInertia) {
+		// using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+		DefaultMotionState myMotionState = new DefaultMotionState(startTransform);
+		RigidBodyConstructionInfo rbInfo = new RigidBodyConstructionInfo(mass, myMotionState, colShape,
+				localInertia);
+		RigidBody body = new RigidBody(rbInfo);
+		//body.setActivationState(RigidBody.ISLAND_SLEEPING);
 
+		dynamicsWorld.addRigidBody(body);
+		return body;
 	}
 
 	public void drawCube(Vector3f size) {

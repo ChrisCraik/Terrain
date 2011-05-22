@@ -3,15 +3,18 @@ package supergame;
 import javax.vecmath.Vector3f;
 
 import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 
 import supergame.Camera.CameraControllable;
 
 import com.bulletphysics.collision.dispatch.CollisionFlags;
 import com.bulletphysics.collision.dispatch.PairCachingGhostObject;
+import com.bulletphysics.collision.shapes.BoxShape;
 import com.bulletphysics.collision.shapes.CapsuleShape;
 import com.bulletphysics.collision.shapes.ConvexShape;
 import com.bulletphysics.dynamics.DiscreteDynamicsWorld;
+import com.bulletphysics.dynamics.RigidBody;
 import com.bulletphysics.dynamics.character.KinematicCharacterController;
 import com.bulletphysics.linearmath.Transform;
 
@@ -63,28 +66,48 @@ public class Character implements CameraControllable {
 		GL11.glPopMatrix();
 	}
 	
+	private static BoxShape boxShape = new BoxShape(new Vector3f(0.5f,0.5f,0.5f));
+	private static Transform startTransform = new Transform();
+	private static Vector3f localInertia = new Vector3f(0, 0, 0);
+	private static int msSinceShoot = 0;
+	
 	void move() {
 		if (Game.collision.dynamicsWorld == null)
 			return;
 
+		msSinceShoot += Game.delta;
+		if (msSinceShoot > 500 && Mouse.isButtonDown(0)) {
+			msSinceShoot = 0;
+			float mass = 0.5f;
+			Vector3f lookDir = Vec3.HPVector(180-heading, pitch);
+			
+			Transform xform = ghostObject.getWorldTransform(new Transform());
+			
+			startTransform.setIdentity();
+			startTransform.origin.set(lookDir);
+			startTransform.origin.scale(2);
+			startTransform.origin.add(xform.origin);
+			
+			boxShape.calculateLocalInertia(mass, localInertia);
+			RigidBody cube = Game.collision.spawnCube(mass, boxShape, startTransform, localInertia);
+			lookDir.scale(20);
+			cube.applyCentralImpulse(lookDir);
+		}
+			
 
 		if (character.onGround() || Config.PLAYER_MIDAIR_CONTROL) {
+			Vector3f forwardDir = Vec3.HPVector(180-heading, 0);
+			Vector3f strafeDir = Vec3.HPVector(-heading + 90, 0);
 			
 			// set walkDirection for character
-			Vector3f forwardDir = Vec3.HPVector(180-heading, -pitch);
-			Vector3f strafeDir = Vec3.HPVector(-heading + 90, 0);
-			Vector3f upDir = Vec3.HPVector(-heading, -pitch - 90);
-			
-			System.out.println("f:"+forwardDir+", u:"+upDir+", s:"+strafeDir);
-			
 			Vector3f walkDirection = new Vector3f(0, 0, 0);
-			if (Keyboard.isKeyDown(Keyboard.KEY_UP))
+			if (Keyboard.isKeyDown(Keyboard.KEY_COMMA))
 				walkDirection.add(forwardDir);
-			if (Keyboard.isKeyDown(Keyboard.KEY_DOWN))
+			if (Keyboard.isKeyDown(Keyboard.KEY_O))
 				walkDirection.sub(forwardDir);
-			if (Keyboard.isKeyDown(Keyboard.KEY_LEFT))
+			if (Keyboard.isKeyDown(Keyboard.KEY_A))
 				walkDirection.add(strafeDir);
-			if (Keyboard.isKeyDown(Keyboard.KEY_RIGHT))
+			if (Keyboard.isKeyDown(Keyboard.KEY_E))
 				walkDirection.sub(strafeDir);
 
 			if (walkDirection.length() > 1f)

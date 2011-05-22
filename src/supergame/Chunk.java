@@ -167,8 +167,8 @@ public class Chunk implements Frustrumable {
 		}
 	}
 
-	public static final float colors[][][] = { { { 0, 1, 0 }, { 1, 0, 0 } }, { { 1, 0.5f, 0 }, { 0.5f, 0, 1 } },
-			{ { 0.9f, 0.9f, 0.9f }, { 0.4f, 0.4f, 0.4f } } };
+	public static final float colors[][][] = { { { 0, 1, 0 ,1}, { 1, 0, 0,1 } }, { { 1, 0.5f, 0,1 }, { 0.5f, 0, 1,1 } },
+			{ { 0.9f, 0.9f, 0.9f,1 }, { 0.4f, 0.4f, 0.4f,1 } } };
 
 	public boolean render(Camera cam, boolean allowBruteForceRender) {
 		if (empty)
@@ -193,13 +193,6 @@ public class Chunk implements Frustrumable {
 				GL11.glColor3f(0.2f, 0.5f, 0.1f);
 
 			for (int i = 0; i < triangles.size(); i++) {
-				if (Config.USE_DEBUG_COLORS && (i % 3 == 0)) {
-					int subChunkColorIndex = i % 2;
-					GL11.glColor3f(colors[chunkColorIndex][subChunkColorIndex][0],
-							colors[chunkColorIndex][subChunkColorIndex][1],
-							colors[chunkColorIndex][subChunkColorIndex][2]);
-				}
-
 				if (Config.USE_SMOOTH_SHADE || (i % 3 == 0)) {
 					if (Config.USE_AMBIENT_OCCLUSION) {
 						float ambOcc = occlusion.get(i);
@@ -207,6 +200,11 @@ public class Chunk implements Frustrumable {
 								Game.makeFB(new float[] { ambOcc, ambOcc, ambOcc, 1 }));
 					}
 					normals.get(i).GLnormal();
+				}
+				if (Config.USE_DEBUG_COLORS && (i % 3 == 0)) {
+					int subChunkColorIndex = i % 2;
+					GL11.glMaterial(GL11.GL_FRONT, GL11.GL_DIFFUSE, 
+							Game.makeFB(colors[chunkColorIndex][subChunkColorIndex]));
 				}
 				triangles.get(i).GLdraw();
 			}
