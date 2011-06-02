@@ -3,11 +3,9 @@ package supergame;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
-import java.util.LinkedList;
 import java.util.Random;
-import java.util.concurrent.LinkedBlockingQueue;
 
-import java.util.Iterator;
+import javax.vecmath.Vector3f;
 
 import org.lwjgl.Sys;
 import org.lwjgl.opengl.Display;
@@ -17,11 +15,11 @@ import org.lwjgl.input.Keyboard;
 
 public class Game {
 	public static final int FLOAT_SIZE = 4;
-	
+
 	public static boolean isRunning() {
 		return !done;
 	}
-	
+
 	public static Config config;
 
 	private static boolean done = false;
@@ -31,13 +29,16 @@ public class Game {
 	private boolean f1 = false;
 
 	private DisplayMode displayMode;
+	/*
+		private LinkedBlockingQueue<Chunk> dirtyChunks;
+		private LinkedBlockingQueue<Chunk> cleanChunks;
+		private LinkedList<Chunk> chunks;
+		
+	*/
 
-	private LinkedBlockingQueue<Chunk> dirtyChunks;
-	private LinkedBlockingQueue<Chunk> cleanChunks;
-	private LinkedList<Chunk> chunks;
-	
+	private ChunkManager chunkManager;
+
 	public static Collision collision;
-
 	/* TIMING */
 	public static int delta = 0;
 	public static boolean heartbeatFrame = false;
@@ -81,18 +82,28 @@ public class Game {
 			init();
 			this.fullscreen = fullscreen;
 			collision = new Collision();
+			chunkManager = new ChunkManager(Collision.START_POS_X / Config.CHUNK_DIVISION, Collision.START_POS_Y
+					/ Config.CHUNK_DIVISION, Collision.START_POS_Z / Config.CHUNK_DIVISION);
 			this.camera = new Camera(collision.character);
-			
+
 			while (!done) {
-				//long tempTime = getTime();System.out.println("actual update took: "+(tempTime-endTime)); endTime = tempTime;
+				System.out.println("----------");
+				long tempTime = getTime();
+				System.out.println("actual update took: " + (tempTime - endTime));
+				endTime = tempTime;
 				updateDelta();
-				//tempTime = getTime();System.out.println("updatedelta took:   "+(tempTime-endTime)); endTime = tempTime;
+				tempTime = getTime();
+				System.out.println("updatedelta took:   " + (tempTime - endTime));
+				endTime = tempTime;
 				pollVideo();
-				//tempTime = getTime();System.out.println("pollvideo took:     "+(tempTime-endTime)); endTime = tempTime;
+				tempTime = getTime();
+				System.out.println("pollvideo took:     " + (tempTime - endTime));
+				endTime = tempTime;
 				camera.pollInput();
-				//tempTime = getTime();System.out.println("pollinput took:     "+(tempTime-endTime)); endTime = tempTime;
+				tempTime = getTime();
+				System.out.println("pollinput took:     " + (tempTime - endTime));
+				endTime = tempTime;
 				render();
-				//tempTime = getTime();System.out.println("render took:        "+(tempTime-endTime)); endTime = tempTime;
 				Display.update();
 				Display.sync(120);
 			}
@@ -129,63 +140,46 @@ public class Game {
 	}
 
 	private long endTime;
+
 	private boolean render() {
 		if (Game.heartbeatFrame)
 			System.out.println("Clearing buffer, rendering chunks");
 
 		collision.stepSimulation(delta / 1000f);
-		
+
+		long tempTime = getTime();
+		System.out.println("collision took:     " + (tempTime - endTime));
+		endTime = tempTime;
+
+		Vector3f center = collision.character.getPos();
+		chunkManager.updatePosition((long) (center.x / Config.CHUNK_DIVISION),
+				(long) (center.y / Config.CHUNK_DIVISION), (long) (center.z / Config.CHUNK_DIVISION));
+
+		tempTime = getTime();
+		System.out.println("update pos took:    " + (tempTime - endTime));
+		endTime = tempTime;
+
 		GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT); // Clear the screen and the depth buffer
 		GL11.glLoadIdentity(); // Reset The Current Modelview Matrix
 		camera.apply();
-		
+
+		tempTime = getTime();
+		System.out.println("cam stuff took:     " + (tempTime - endTime));
+		endTime = tempTime;
 
 		collision.render();
-		/*
-		long tempTime = getTime();
-		System.out.println("rest       took: "+(tempTime-endTime));
-		endTime = tempTime;
-		*/
-		/*
-		Chunk nextChunk;
-		//do {
-			nextChunk = cleanChunks.poll();
-			if (nextChunk != null)
-				chunks.add(nextChunk);
-		//} while (nextChunk != null);
-		*/
-		/*
-		synchronized (cleanChunks) {
-			cleanChunks.drainTo(chunks, 4);
-		}
-		for (Chunk c : chunks)
-			c.render(camera);
-		 */
 
-		/*
-		int newRenderCount = 0;
-		Iterator<Chunk> i = cleanChunks.iterator();
-		while(i.hasNext()) {
-			if(i.next().render(camera, newRenderCount < 5))
-				newRenderCount++;
-		}
-		*/
-		
-		for (Chunk c : cleanChunks)
-			c.render(camera, true);
-	
-		/*
 		tempTime = getTime();
-		System.out.println("poly splat took: "+(tempTime-endTime));
+		System.out.println("collid rdr took:    " + (tempTime - endTime));
 		endTime = tempTime;
-		*/
 		return true;
 	}
 
 	private void createWindow() throws Exception {
 		Display.setFullscreen(fullscreen);
 		for (DisplayMode d : Display.getAvailableDisplayModes()) {
-			if (d.getWidth() == Config.RESOLUTION_X && d.getHeight() == Config.RESOLUTION_Y && d.getBitsPerPixel() == 32) {
+			if (d.getWidth() == Config.RESOLUTION_X && d.getHeight() == Config.RESOLUTION_Y
+					&& d.getBitsPerPixel() == 32) {
 				displayMode = d;
 				break;
 			}
@@ -197,18 +191,6 @@ public class Game {
 
 	private void init() throws Exception {
 		createWindow();
-
-		chunks = new LinkedList<Chunk>();
-		dirtyChunks = new LinkedBlockingQueue<Chunk>();
-		cleanChunks = new LinkedBlockingQueue<Chunk>();
-		long x, y, z;
-		for (x = 0; x < Config.CHUNK_COUNT; x++)
-			for (y = 0; y < Math.min(5, Config.CHUNK_COUNT); y++)
-				for (z = 0; z < Config.CHUNK_COUNT; z++)
-					dirtyChunks.offer(new Chunk(x, y, z));
-
-		for (int i = 0; i < Config.WORKER_THREADS; i++)
-			new ChunkBakerThread(i, dirtyChunks, cleanChunks).start();
 
 		Chunk.rayDistribution = new Vec3[Config.AMB_OCC_RAY_COUNT];
 		Random gen = new Random(0);

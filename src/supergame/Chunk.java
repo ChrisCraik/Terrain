@@ -3,6 +3,7 @@ package supergame;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.vecmath.Vector3f;
 
@@ -28,10 +29,21 @@ public class Chunk implements Frustrumable {
 	private ArrayList<Vec3> normals;
 	private ArrayList<Float> occlusion;
 	private float[][][] weights;
-	private int displayList;
+	private int displayList = -1;
 
-	private long xid, yid, zid;
+	private ChunkIndex index;
 	private Vec3 pos;
+	private AtomicInteger state;
+	public final int INITIAL = 0, PROCESSING = 1, RENDERABLE = 2, DISCARDED = 3;
+
+	Chunk(ChunkIndex index) {
+		this.index = index;
+		state = new AtomicInteger(INITIAL);
+
+		// pos is the cube's origin
+		pos = index.getVec3();
+		pos = pos.multiply(Config.CHUNK_DIVISION * Config.METERS_PER_SUBCHUNK);
+	}
 
 	public Vec3 getVertexP(Vec3 n) {
 		Vec3 res = new Vec3(pos);
@@ -72,8 +84,8 @@ public class Chunk implements Frustrumable {
 
 	private float getDensity(float x, float y, float z) {
 		//return (float) Perlin.noise(x / 10, y / 10, z / 10);
-		return (float) Perlin.noise(x / 10, y / 10, z / 10) + 1.0f - y * 0.05f;
-		//return (float) Perlin.noise(x / 10, 0, z / 10) + 1.0f - y * 0.05f;
+		//return (float) Perlin.noise(x / 10, y / 10, z / 10) + 0.0f - y * 0.05f;
+		return (float) Perlin.noise(x / 10, 0, z / 10) + 0.0f - y * 0.10f;
 		/*
 		float caves, center_falloff, plateau_falloff, density;
 		if (y <= 0.8)
@@ -93,24 +105,21 @@ public class Chunk implements Frustrumable {
 		*/
 	}
 
-	Chunk(long xid, long yid, long zid) {
-		this.xid = xid;
-		this.yid = yid;
-		this.zid = zid;
-		displayList = -1;
+	@Override
+	public String toString() {
+		if (geometryInitialized)
+			if (empty)
+				return "Chunk " + pos + ", no polys";
+			else
+				return "Chunk " + pos + ", polys:" + triangles.size();
+		return "Chunk " + pos;
 	}
 
 	public void initialize() { //todo: split into initialization-done once and baking-may need to be redone
 		assert geometryInitialized == false;
 
-		geometryInitialized = true;
-
 		weights = new float[Config.CHUNK_DIVISION + 1][Config.CHUNK_DIVISION + 1][Config.CHUNK_DIVISION + 1];
 		triangles = new ArrayList<Vec3>();
-
-		// pos is the cube's origin
-		pos = new Vec3(this.xid, this.yid, this.zid);
-		pos = pos.multiply(Config.CHUNK_DIVISION * Config.METERS_PER_SUBCHUNK);
 
 		// cache weights 
 		int x, y, z;
@@ -165,15 +174,26 @@ public class Chunk implements Frustrumable {
 				}
 			}
 		}
+
+		geometryInitialized = true;
 	}
 
-	public static final float colors[][][] = { { { 0, 1, 0 ,1}, { 1, 0, 0,1 } }, { { 1, 0.5f, 0,1 }, { 0.5f, 0, 1,1 } },
-			{ { 0.9f, 0.9f, 0.9f,1 }, { 0.4f, 0.4f, 0.4f,1 } } };
+	public static final float colors[][][] = { { { 0, 1, 0, 1 }, { 1, 0, 0, 1 } },
+			{ { 1, 0.5f, 0, 1 }, { 0.5f, 0, 1, 1 } }, { { 0.9f, 0.9f, 0.9f, 1 }, { 0.4f, 0.4f, 0.4f, 1 } } };
 
 	public boolean render(Camera cam, boolean allowBruteForceRender) {
+		if (!geometryInitialized)
+			return false;
+
+		/*
+		if (Game.heartbeatFrame) {
+			System.out.println("Rendering chunk " + this);
+		}
+		*/
+
 		if (empty)
 			return false;
-		
+
 		if (!physicsInitialized)
 			initPhysics();
 
@@ -184,7 +204,7 @@ public class Chunk implements Frustrumable {
 		if (displayList >= 0) {
 			GL11.glCallList(displayList);
 		} else if (allowBruteForceRender) {
-			int chunkColorIndex = (int) ((xid + yid + zid) % 2);
+			int chunkColorIndex = 0;//(int) ((xid + yid + zid) % 2);
 
 			displayList = GL11.glGenLists(1);
 			GL11.glNewList(displayList, GL11.GL_COMPILE_AND_EXECUTE);
@@ -203,7 +223,7 @@ public class Chunk implements Frustrumable {
 				}
 				if (Config.USE_DEBUG_COLORS && (i % 3 == 0)) {
 					int subChunkColorIndex = i % 2;
-					GL11.glMaterial(GL11.GL_FRONT, GL11.GL_DIFFUSE, 
+					GL11.glMaterial(GL11.GL_FRONT, GL11.GL_DIFFUSE,
 							Game.makeFB(colors[chunkColorIndex][subChunkColorIndex]));
 				}
 				triangles.get(i).GLdraw();
@@ -214,13 +234,13 @@ public class Chunk implements Frustrumable {
 		}
 		return false;
 	}
-	
+
 	public void initPhysics() {
 		physicsInitialized = true;
 		int vertStride = 3 * 4;
 		int indexStride = 3 * 4;
 
-		int totalTriangles = triangles.size()/3;
+		int totalTriangles = triangles.size() / 3;
 
 		ByteBuffer gVertices = ByteBuffer.allocateDirect(triangles.size() * 3 * 4).order(ByteOrder.nativeOrder());
 		ByteBuffer gIndices = ByteBuffer.allocateDirect(triangles.size() * 3 * 4).order(ByteOrder.nativeOrder());
@@ -236,20 +256,18 @@ public class Chunk implements Frustrumable {
 			gIndices.putInt(index++);
 		}
 
-		TriangleIndexVertexArray indexVertexArrays = new TriangleIndexVertexArray(totalTriangles,
-				gIndices,
-				indexStride,
-				totalTriangles*3, gVertices, vertStride);
+		TriangleIndexVertexArray indexVertexArrays = new TriangleIndexVertexArray(totalTriangles, gIndices,
+				indexStride, totalTriangles * 3, gVertices, vertStride);
 
 		boolean useQuantizedAabbCompression = true;
 		BvhTriangleMeshShape trimeshShape = new BvhTriangleMeshShape(indexVertexArrays, useQuantizedAabbCompression);
 		Game.collision.collisionShapes.add(trimeshShape);
-		
+
 		{
 			Transform groundTransform = new Transform();
 			groundTransform.setIdentity();
 			groundTransform.origin.set(new Vector3f(0, 0, 0));
-			
+
 			float mass = 0f;
 			Vector3f localInertia = new Vector3f(0, 0, 0);
 

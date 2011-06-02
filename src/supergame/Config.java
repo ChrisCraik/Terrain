@@ -4,14 +4,16 @@ import java.lang.reflect.*;
 
 public class Config {
 	public static int MS_PER_HEARTBEAT = 1000;
-	public static int WORKER_THREADS = 4;
+	public static int WORKER_THREADS = 8;
 	public static int RESOLUTION_X = 1024;
 	public static int RESOLUTION_Y = 768;
 	
 	// CHUNKS
 	public static int CHUNK_COUNT = 10;
 	public static float METERS_PER_SUBCHUNK = 1;
-	public static int CHUNK_DIVISION = 8;
+	public static int CHUNK_DIVISION = 16;
+	public static int CHUNK_LOAD_DISTANCE = 4;
+	public static int CHUNK_CACHE_SIZE = 4096;
 	
 	// GRAPHICS
 	public static boolean USE_DEBUG_COLORS = false;
