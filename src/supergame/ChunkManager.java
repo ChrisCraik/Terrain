@@ -29,7 +29,7 @@ while LRU.length > CHUNK_CACHE_SIZE:
 	remove from dict
  */
 public class ChunkManager implements ChunkProvider {
-	
+
 	long lastx, lasty, lastz;
 
 	private HashMap<ChunkIndex, Chunk> chunks;
@@ -45,15 +45,15 @@ public class ChunkManager implements ChunkProvider {
 		lasty = y;
 		lastz = z;
 
-		System.out.printf("Chunkmanager starting at position %d %d %d\n",x,y,z);
+		System.out.printf("Chunkmanager starting at position %d %d %d\n", x, y, z);
 
 		for (int i = 0; i < Config.WORKER_THREADS; i++)
 			new ChunkBakerThread(i, this).start();
-		
+
 		for (int i = -Config.CHUNK_LOAD_DISTANCE; i <= Config.CHUNK_LOAD_DISTANCE; i++)
 			for (int j = -Config.CHUNK_LOAD_DISTANCE; j <= Config.CHUNK_LOAD_DISTANCE; j++)
 				for (int k = -Config.CHUNK_LOAD_DISTANCE; k <= Config.CHUNK_LOAD_DISTANCE; k++)
-					prioritizeChunk(x+i, y+j, z+k);
+					prioritizeChunk(x + i, y + j, z + k);
 	}
 
 	public Chunk getChunkToProcess() throws InterruptedException {
@@ -77,6 +77,7 @@ public class ChunkManager implements ChunkProvider {
 		ChunkIndex key = new ChunkIndex(x, y, z);
 		//System.out.println("DEPrioritizing chunk "+key.getVec3()+"chunkCache size is "+chunkCache.size());
 		//insert to LRU (shouldn't be present)
+		
 		if (chunkCache.contains(key))
 			System.err.println("WARNING: non-local chunk removed from local pool");
 		chunkCache.add(key); //TODO chunkCache needs only tags: use non-map
@@ -88,7 +89,7 @@ public class ChunkManager implements ChunkProvider {
 
 		if (dx == 0 && dy == 0 && dz == 0)
 			return;
-		
+
 		//prioritize chunks now within range, deprioritize those out of range
 		//moving chunks in one dimension means a 2d slice of chunks no longer in range.
 		for (int i = -Config.CHUNK_LOAD_DISTANCE; i <= Config.CHUNK_LOAD_DISTANCE; i++)
@@ -108,7 +109,7 @@ public class ChunkManager implements ChunkProvider {
 					prioritizeChunk(x + i, y - Config.CHUNK_LOAD_DISTANCE, z + j);
 					deprioritizeChunk(x + i, y + Config.CHUNK_LOAD_DISTANCE + 1, z + j);
 				}
-				
+
 				if (dz == 1) {
 					prioritizeChunk(x + i, y + j, z + Config.CHUNK_LOAD_DISTANCE);
 					deprioritizeChunk(x + i, y + j, z - Config.CHUNK_LOAD_DISTANCE - 1);
@@ -121,9 +122,12 @@ public class ChunkManager implements ChunkProvider {
 		lastx = x;
 		lasty = y;
 		lastz = z;
-		
-		Chunk localChunk = chunks.get(new ChunkIndex(x,y,z));
-		while (!localChunk.initialized()); //Stall until local chunk generated
+
+		Chunk localChunk = chunks.get(new ChunkIndex(x, y, z));
+		while (!localChunk.initialized())
+			; //Stall until local chunk generated
+
+		System.out.println("NOW " + chunks.size() + " CHUNKS EXIST.");
 	}
 
 	public void renderChunks(Camera cam) {

@@ -36,12 +36,15 @@ public class Chunk implements Frustrumable {
 	private AtomicInteger state;
 	public final int INITIAL = 0, PROCESSING = 1, RENDERABLE = 2, DISCARDED = 3;
 
+	private BvhTriangleMeshShape trimeshShape;
+	private RigidBody body;
+	
 	Chunk(ChunkIndex index) {
 		this.index = index;
 		state = new AtomicInteger(INITIAL);
 
 		// pos is the cube's origin
-		pos = index.getVec3();
+		pos = this.index.getVec3();
 		pos = pos.multiply(Config.CHUNK_DIVISION * Config.METERS_PER_SUBCHUNK);
 	}
 
@@ -231,13 +234,13 @@ public class Chunk implements Frustrumable {
 			}
 			GL11.glEnd();
 			GL11.glEndList();
+			triangles = null;
+			normals = null;
+			occlusion = null;
 			return true;
 		}
 		return false;
 	}
-
-	BvhTriangleMeshShape trimeshShape;
-	RigidBody body;
 
 	public void registerPhysics() {
 		if (trimeshShape == null || body == null)
