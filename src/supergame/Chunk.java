@@ -71,7 +71,7 @@ public class Chunk implements Frustrumable {
 		return res;
 	}
 
-	private Vec3 getNormal(float x, float y, float z) {
+	private static Vec3 getNormal(float x, float y, float z) {
 		//first attempt: brute force
 		float delta = 0.01f, origin, deltaX, deltaY, deltaZ;
 		origin = getDensity(x, y, z);
@@ -82,7 +82,7 @@ public class Chunk implements Frustrumable {
 		return new Vec3(deltaX, deltaY, deltaZ).normalize();
 	}
 
-	private float getDensity(float x, float y, float z) {
+	private static float getDensity(float x, float y, float z) {
 		//return (float) Perlin.noise(x / 10, y / 10, z / 10);
 		//return (float) Perlin.noise(x / 10, y / 10, z / 10) + 0.0f - y * 0.05f;
 		return (float) Perlin.noise(x / 10, 0, z / 10) + 0.0f - y * 0.10f;
@@ -140,14 +140,14 @@ public class Chunk implements Frustrumable {
 				}
 
 		if (triangles.size() == 0) {
-			triangles = null;
-			weights = null; //save memory on 'empty' chunks?
 			empty = true;
+			triangles = null;
+			weights = null; //save memory on 'empty' chunks
 		} else {
-			//System.out.println(xid + " " + yid + " " + zid + " has " + triangles.size() / 3 + " polys");
 			empty = false;
 			normals = new ArrayList<Vec3>(triangles.size());
-			occlusion = new ArrayList<Float>(triangles.size());
+			if (Config.USE_AMBIENT_OCCLUSION)
+				occlusion = new ArrayList<Float>(triangles.size());
 
 			for (int i = 0; i < triangles.size(); i++) {
 				if (Config.USE_SMOOTH_SHADE || (i % 3 == 0)) {
@@ -169,13 +169,20 @@ public class Chunk implements Frustrumable {
 					}
 					normals.add(getNormal(p.getX(), p.getY(), p.getZ()));
 				} else {
-					occlusion.add(null);
+					if (Config.USE_AMBIENT_OCCLUSION)
+						occlusion.add(null);
 					normals.add(null);
 				}
 			}
+
+			initPhysics();
 		}
 
 		geometryInitialized = true;
+	}
+
+	public boolean initialized() {
+		return geometryInitialized;
 	}
 
 	public static final float colors[][][] = { { { 0, 1, 0, 1 }, { 1, 0, 0, 1 } },
@@ -185,17 +192,11 @@ public class Chunk implements Frustrumable {
 		if (!geometryInitialized)
 			return false;
 
-		/*
-		if (Game.heartbeatFrame) {
-			System.out.println("Rendering chunk " + this);
-		}
-		*/
-
 		if (empty)
 			return false;
 
 		if (!physicsInitialized)
-			initPhysics();
+			registerPhysics();
 
 		Inclusion FrustumInclusion = cam.frustrumTest(this);
 		if (FrustumInclusion == Inclusion.OUTSIDE)
@@ -235,8 +236,19 @@ public class Chunk implements Frustrumable {
 		return false;
 	}
 
-	public void initPhysics() {
+	BvhTriangleMeshShape trimeshShape;
+	RigidBody body;
+
+	public void registerPhysics() {
+		if (trimeshShape == null || body == null)
+			System.exit(1);
+		Game.collision.collisionShapes.add(trimeshShape);
+		// add the body to the dynamics world
+		Game.collision.dynamicsWorld.addRigidBody(body);
 		physicsInitialized = true;
+	}
+
+	public void initPhysics() {
 		int vertStride = 3 * 4;
 		int indexStride = 3 * 4;
 
@@ -260,8 +272,7 @@ public class Chunk implements Frustrumable {
 				indexStride, totalTriangles * 3, gVertices, vertStride);
 
 		boolean useQuantizedAabbCompression = true;
-		BvhTriangleMeshShape trimeshShape = new BvhTriangleMeshShape(indexVertexArrays, useQuantizedAabbCompression);
-		Game.collision.collisionShapes.add(trimeshShape);
+		trimeshShape = new BvhTriangleMeshShape(indexVertexArrays, useQuantizedAabbCompression);
 
 		{
 			Transform groundTransform = new Transform();
@@ -276,10 +287,8 @@ public class Chunk implements Frustrumable {
 			DefaultMotionState myMotionState = new DefaultMotionState(groundTransform);
 			RigidBodyConstructionInfo rbInfo = new RigidBodyConstructionInfo(mass, myMotionState, trimeshShape,
 					localInertia);
-			RigidBody body = new RigidBody(rbInfo);
+			body = new RigidBody(rbInfo);
 
-			// add the body to the dynamics world
-			Game.collision.dynamicsWorld.addRigidBody(body);
 		}
 	}
 }

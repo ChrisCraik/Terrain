@@ -2,7 +2,6 @@ package supergame;
 
 import java.util.HashMap;
 import java.util.LinkedHashSet;
-import java.util.Map.Entry;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /*
@@ -90,7 +89,8 @@ public class ChunkManager implements ChunkProvider {
 		if (dx == 0 && dy == 0 && dz == 0)
 			return;
 		
-		
+		//prioritize chunks now within range, deprioritize those out of range
+		//moving chunks in one dimension means a 2d slice of chunks no longer in range.
 		for (int i = -Config.CHUNK_LOAD_DISTANCE; i <= Config.CHUNK_LOAD_DISTANCE; i++)
 			for (int j = -Config.CHUNK_LOAD_DISTANCE; j <= Config.CHUNK_LOAD_DISTANCE; j++) {
 				if (dx == 1) {
@@ -100,7 +100,6 @@ public class ChunkManager implements ChunkProvider {
 					prioritizeChunk(x - Config.CHUNK_LOAD_DISTANCE, y + i, z + j);
 					deprioritizeChunk(x + Config.CHUNK_LOAD_DISTANCE + 1, y + i, z + j);
 				}
-				//TODO: Y, Z
 
 				if (dy == 1) {
 					prioritizeChunk(x + i, y + Config.CHUNK_LOAD_DISTANCE, z + j);
@@ -122,10 +121,15 @@ public class ChunkManager implements ChunkProvider {
 		lastx = x;
 		lasty = y;
 		lastz = z;
+		
+		Chunk localChunk = chunks.get(new ChunkIndex(x,y,z));
+		while (!localChunk.initialized()); //Stall until local chunk generated
 	}
 
 	public void renderChunks(Camera cam) {
-		for (Entry<ChunkIndex, Chunk> s : chunks.entrySet())
-			s.getValue().render(cam, true);
+		int newRenders = 1; // only render this many NEW chunks
+		for (Chunk c : chunks.values())
+			if (c.render(cam, newRenders > 0))
+				newRenders++;
 	}
 }

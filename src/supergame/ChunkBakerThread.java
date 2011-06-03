@@ -22,6 +22,7 @@ public class ChunkBakerThread extends Thread {
 	 */
 	public void run() {
 		Chunk current;
+		Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
 		while (Game.isRunning()) {
 			try {
 				current = chunkProvider.getChunkToProcess();

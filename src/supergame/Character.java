@@ -101,13 +101,13 @@ public class Character implements CameraControllable {
 			
 			// set walkDirection for character
 			Vector3f walkDirection = new Vector3f(0, 0, 0);
-			if (Keyboard.isKeyDown(Keyboard.KEY_COMMA))
+			if (Keyboard.isKeyDown(Keyboard.KEY_W))
 				walkDirection.add(forwardDir);
-			if (Keyboard.isKeyDown(Keyboard.KEY_O))
+			if (Keyboard.isKeyDown(Keyboard.KEY_S))
 				walkDirection.sub(forwardDir);
 			if (Keyboard.isKeyDown(Keyboard.KEY_A))
 				walkDirection.add(strafeDir);
-			if (Keyboard.isKeyDown(Keyboard.KEY_E))
+			if (Keyboard.isKeyDown(Keyboard.KEY_D))
 				walkDirection.sub(strafeDir);
 
 			if (walkDirection.length() > 1f)

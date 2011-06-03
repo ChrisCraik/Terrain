@@ -15,11 +15,11 @@ import org.lwjgl.input.Keyboard;
 
 public class Game {
 	public static final int FLOAT_SIZE = 4;
-
+	
 	public static boolean isRunning() {
 		return !done;
 	}
-
+	
 	public static Config config;
 
 	private static boolean done = false;
@@ -29,15 +29,9 @@ public class Game {
 	private boolean f1 = false;
 
 	private DisplayMode displayMode;
-	/*
-		private LinkedBlockingQueue<Chunk> dirtyChunks;
-		private LinkedBlockingQueue<Chunk> cleanChunks;
-		private LinkedList<Chunk> chunks;
-		
-	*/
-
+	
 	private ChunkManager chunkManager;
-
+	
 	public static Collision collision;
 	/* TIMING */
 	public static int delta = 0;
@@ -71,41 +65,37 @@ public class Game {
 		fps++;
 	}
 
-	private long getTime() {
+	private static long getTime() {
 		return (Sys.getTime() * 1000) / Sys.getTimerResolution();
 	}
 
 	public void run(boolean fullscreen) {
 		updateDelta();
 
+		Thread.currentThread().setPriority(Thread.NORM_PRIORITY);
 		try {
 			init();
 			this.fullscreen = fullscreen;
 			collision = new Collision();
-			chunkManager = new ChunkManager(Collision.START_POS_X / Config.CHUNK_DIVISION, Collision.START_POS_Y
-					/ Config.CHUNK_DIVISION, Collision.START_POS_Z / Config.CHUNK_DIVISION);
+			chunkManager = new ChunkManager(Collision.START_POS_X/Config.CHUNK_DIVISION,
+					Collision.START_POS_Y/Config.CHUNK_DIVISION,
+					Collision.START_POS_Z/Config.CHUNK_DIVISION);
 			this.camera = new Camera(collision.character);
-
+			
 			while (!done) {
-				System.out.println("----------");
-				long tempTime = getTime();
-				System.out.println("actual update took: " + (tempTime - endTime));
-				endTime = tempTime;
+				//System.out.println("----------");
+				PROFILE("GL draw");
 				updateDelta();
-				tempTime = getTime();
-				System.out.println("updatedelta took:   " + (tempTime - endTime));
-				endTime = tempTime;
+				PROFILE("updateDelta");
 				pollVideo();
-				tempTime = getTime();
-				System.out.println("pollvideo took:     " + (tempTime - endTime));
-				endTime = tempTime;
+				PROFILE("pollVideo");
 				camera.pollInput();
-				tempTime = getTime();
-				System.out.println("pollinput took:     " + (tempTime - endTime));
-				endTime = tempTime;
+				PROFILE("pollInput");
 				render();
 				Display.update();
+				PROFILE("Display update");
 				Display.sync(120);
+				PROFILE("Display sync");
 			}
 			cleanup();
 		} catch (Exception e) {
@@ -139,47 +129,44 @@ public class Game {
 		}
 	}
 
-	private long endTime;
-
+	private static long endTime;
+	public static void PROFILE(String label) {
+		long tempTime = getTime();
+		if (tempTime-endTime > 20)
+			System.out.printf("%20s: %d\n", label+" took", (tempTime-endTime));
+		endTime = tempTime;
+	}
 	private boolean render() {
 		if (Game.heartbeatFrame)
 			System.out.println("Clearing buffer, rendering chunks");
-
+		
 		collision.stepSimulation(delta / 1000f);
-
-		long tempTime = getTime();
-		System.out.println("collision took:     " + (tempTime - endTime));
-		endTime = tempTime;
-
+		PROFILE("Collision");
+		
 		Vector3f center = collision.character.getPos();
-		chunkManager.updatePosition((long) (center.x / Config.CHUNK_DIVISION),
-				(long) (center.y / Config.CHUNK_DIVISION), (long) (center.z / Config.CHUNK_DIVISION));
-
-		tempTime = getTime();
-		System.out.println("update pos took:    " + (tempTime - endTime));
-		endTime = tempTime;
-
+		chunkManager.updatePosition((long)(center.x/Config.CHUNK_DIVISION), 
+				(long)(center.y/Config.CHUNK_DIVISION), 
+				(long)(center.z/Config.CHUNK_DIVISION));
+		PROFILE("Update pos");
+		
 		GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT); // Clear the screen and the depth buffer
 		GL11.glLoadIdentity(); // Reset The Current Modelview Matrix
 		camera.apply();
-
-		tempTime = getTime();
-		System.out.println("cam stuff took:     " + (tempTime - endTime));
-		endTime = tempTime;
-
+		PROFILE("Cam stuff");
+		
 		collision.render();
-
-		tempTime = getTime();
-		System.out.println("collid rdr took:    " + (tempTime - endTime));
-		endTime = tempTime;
+		PROFILE("Col rendr");
+		
+		chunkManager.renderChunks(camera);
+		PROFILE("chunk rdr");
+		
 		return true;
 	}
 
 	private void createWindow() throws Exception {
 		Display.setFullscreen(fullscreen);
 		for (DisplayMode d : Display.getAvailableDisplayModes()) {
-			if (d.getWidth() == Config.RESOLUTION_X && d.getHeight() == Config.RESOLUTION_Y
-					&& d.getBitsPerPixel() == 32) {
+			if (d.getWidth() == Config.RESOLUTION_X && d.getHeight() == Config.RESOLUTION_Y && d.getBitsPerPixel() == 32) {
 				displayMode = d;
 				break;
 			}
