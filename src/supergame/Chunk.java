@@ -22,8 +22,6 @@ import supergame.Camera.Inclusion;
 public class Chunk implements Frustrumable {
 	public static Vec3[] rayDistribution;
 
-	private boolean geometryInitialized = false;
-	private boolean physicsInitialized = false;
 	private boolean empty = true;
 	private ArrayList<Vec3> triangles;
 	private ArrayList<Vec3> normals;
@@ -32,20 +30,20 @@ public class Chunk implements Frustrumable {
 	private int displayList = -1;
 
 	private ChunkIndex index;
-	private Vec3 pos;
+	private Vec3 pos; //cube's origin (not center)
+
 	private AtomicInteger state;
-	public final int INITIAL = 0, PROCESSING = 1, RENDERABLE = 2, DISCARDED = 3;
+	public final int SERIAL_INITIAL = 0; // Chunk allocated, not yet processed
+	public final int PARALLEL_PROCESSING = 1; // being processed by worker thread
+	public final int PARALLEL_COMPLETE = 2; // Processing complete, render-able
+	public final int PARALLEL_GARBAGE = 3; // Processing interrupted by chunk garbage collection
 
 	private BvhTriangleMeshShape trimeshShape;
 	private RigidBody body;
-	
+
 	Chunk(ChunkIndex index) {
 		this.index = index;
-		state = new AtomicInteger(INITIAL);
-
-		// pos is the cube's origin
-		pos = this.index.getVec3();
-		pos = pos.multiply(Config.CHUNK_DIVISION * Config.METERS_PER_SUBCHUNK);
+		this.state = new AtomicInteger(SERIAL_INITIAL);
 	}
 
 	public Vec3 getVertexP(Vec3 n) {
@@ -108,18 +106,12 @@ public class Chunk implements Frustrumable {
 		*/
 	}
 
-	@Override
-	public String toString() {
-		if (geometryInitialized)
-			if (empty)
-				return "Chunk " + pos + ", no polys";
-			else
-				return "Chunk " + pos + ", polys:" + triangles.size();
-		return "Chunk " + pos;
-	}
+	public void initialize() {
+		if (!state.compareAndSet(SERIAL_INITIAL, PARALLEL_PROCESSING))
+			return;
 
-	public void initialize() { //todo: split into initialization-done once and baking-may need to be redone
-		assert geometryInitialized == false;
+		pos = this.index.getVec3();
+		pos = pos.multiply(Config.CHUNK_DIVISION * Config.METERS_PER_SUBCHUNK);
 
 		weights = new float[Config.CHUNK_DIVISION + 1][Config.CHUNK_DIVISION + 1][Config.CHUNK_DIVISION + 1];
 		triangles = new ArrayList<Vec3>();
@@ -143,11 +135,10 @@ public class Chunk implements Frustrumable {
 				}
 
 		if (triangles.size() == 0) {
-			empty = true;
 			triangles = null;
 			weights = null; //save memory on 'empty' chunks
+			empty = true;
 		} else {
-			empty = false;
 			normals = new ArrayList<Vec3>(triangles.size());
 			if (Config.USE_AMBIENT_OCCLUSION)
 				occlusion = new ArrayList<Float>(triangles.size());
@@ -177,37 +168,52 @@ public class Chunk implements Frustrumable {
 					normals.add(null);
 				}
 			}
-
 			initPhysics();
+			empty = false;
 		}
 
-		geometryInitialized = true;
+		if (!state.compareAndSet(PARALLEL_PROCESSING, PARALLEL_COMPLETE)) {
+			if (state.get() == PARALLEL_GARBAGE)
+				clean();
+			else {
+				System.err.println("Chunk parallel processing interrupted by non-garbage state");
+				System.exit(1);
+			}
+		}
 	}
 
 	public boolean initialized() {
-		return geometryInitialized;
+		return state.get() == PARALLEL_COMPLETE;
+	}
+
+	public boolean initializing() {
+		return state.get() == PARALLEL_PROCESSING;
+	}
+
+	public void cancelProcessing() {
+		if (state.compareAndSet(SERIAL_INITIAL, PARALLEL_GARBAGE))
+			return;
+		while (state.get() != PARALLEL_COMPLETE)
+			;
 	}
 
 	public static final float colors[][][] = { { { 0, 1, 0, 1 }, { 1, 0, 0, 1 } },
 			{ { 1, 0.5f, 0, 1 }, { 0.5f, 0, 1, 1 } }, { { 0.9f, 0.9f, 0.9f, 1 }, { 0.4f, 0.4f, 0.4f, 1 } } };
 
 	public boolean render(Camera cam, boolean allowBruteForceRender) {
-		if (!geometryInitialized)
-			return false;
-
 		if (empty)
 			return false;
 
-		if (!physicsInitialized)
-			registerPhysics();
-
-		Inclusion FrustumInclusion = cam.frustrumTest(this);
-		if (FrustumInclusion == Inclusion.OUTSIDE)
+		if (cam.frustrumTest(this) == Inclusion.OUTSIDE)
 			return false;
 
 		if (displayList >= 0) {
 			GL11.glCallList(displayList);
 		} else if (allowBruteForceRender) {
+			// register the terrain chunk with the physics engine
+			Game.collision.collisionShapes.add(trimeshShape);
+			Game.collision.dynamicsWorld.addRigidBody(body);
+
 			int chunkColorIndex = 0;//(int) ((xid + yid + zid) % 2);
 
 			displayList = GL11.glGenLists(1);
@@ -240,15 +246,6 @@ public class Chunk implements Frustrumable {
 			return true;
 		}
 		return false;
-	}
-
-	public void registerPhysics() {
-		if (trimeshShape == null || body == null)
-			System.exit(1);
-		Game.collision.collisionShapes.add(trimeshShape);
-		// add the body to the dynamics world
-		Game.collision.dynamicsWorld.addRigidBody(body);
-		physicsInitialized = true;
 	}
 
 	public void initPhysics() {
@@ -293,5 +290,22 @@ public class Chunk implements Frustrumable {
 			body = new RigidBody(rbInfo);
 
 		}
+	}
+
+	public void clean() {
+		if (displayList >= 0) {
+			GL11.glDeleteLists(displayList, 1);
+			displayList = -1;
+			Game.collision.collisionShapes.remove(trimeshShape);
+			trimeshShape = null;
+			Game.collision.dynamicsWorld.removeRigidBody(body);
+			body = null;
+		}
+
+		triangles = null;
+		normals = null;
+		occlusion = null;
+		weights = null;
+		pos = null;
 	}
 }

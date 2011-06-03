@@ -65,7 +65,7 @@ public class ChunkManager implements ChunkProvider {
 		//System.out.println("Prioritizing chunk " + key.getVec3());
 		if (chunks.containsKey(key)) {
 			//remove from LRU
-			chunkCache.remove(key);
+			//chunkCache.remove(key);
 		} else {
 			Chunk c = new Chunk(key);
 			dirtyChunks.add(c);
@@ -77,10 +77,19 @@ public class ChunkManager implements ChunkProvider {
 		ChunkIndex key = new ChunkIndex(x, y, z);
 		//System.out.println("DEPrioritizing chunk "+key.getVec3()+"chunkCache size is "+chunkCache.size());
 		//insert to LRU (shouldn't be present)
-		
+
+		Chunk c = chunks.get(key);
+		if (c != null) {
+			if (!c.initialized())
+				c.cancelProcessing();
+			c.clean();
+			chunks.remove(key);
+		}
+		/*
 		if (chunkCache.contains(key))
 			System.err.println("WARNING: non-local chunk removed from local pool");
 		chunkCache.add(key); //TODO chunkCache needs only tags: use non-map
+		*/
 	}
 
 	public void updatePosition(long x, long y, long z) {
@@ -124,8 +133,12 @@ public class ChunkManager implements ChunkProvider {
 		lastz = z;
 
 		Chunk localChunk = chunks.get(new ChunkIndex(x, y, z));
-		while (!localChunk.initialized())
-			; //Stall until local chunk generated
+		
+		Game.PROFILE("pos update");
+		
+		//Stall until local chunk processed
+		while (!localChunk.initialized());
+		Game.PROFILE("loc chunk stall");
 
 		System.out.println("NOW " + chunks.size() + " CHUNKS EXIST.");
 	}
