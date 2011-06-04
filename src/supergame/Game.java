@@ -144,9 +144,10 @@ public class Game {
 		PROFILE("Collision");
 		
 		Vector3f center = collision.character.getPos();
-		chunkManager.updatePosition((long)(center.x/Config.CHUNK_DIVISION), 
-				(long)(center.y/Config.CHUNK_DIVISION), 
-				(long)(center.z/Config.CHUNK_DIVISION));
+		
+		chunkManager.updatePosition((long)Math.floor(center.x/Config.CHUNK_DIVISION), 
+				(long)Math.floor(center.y/Config.CHUNK_DIVISION), 
+				(long)Math.floor(center.z/Config.CHUNK_DIVISION));
 		PROFILE("Update pos");
 		
 		GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT); // Clear the screen and the depth buffer

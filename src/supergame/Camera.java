@@ -9,7 +9,7 @@ import org.lwjgl.opengl.GL11;
 
 public class Camera {
 	private Vector3f pos;
-	private float pitch, heading;
+	private float pitch = 0, heading = 0;
 	public Vec3 forward, right, up;
 
 	long msSinceHeartbeat = 0;
@@ -22,8 +22,6 @@ public class Camera {
 	private CameraControllable controllable;
 	Camera(CameraControllable controllable) {
 		pos = new Vector3f(15, 40, 8);
-		pitch = -20;
-		heading = 200;
 		cameraSetup();
 		Mouse.setGrabbed(true);
 		pl = new Plane[6];

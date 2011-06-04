@@ -112,7 +112,7 @@ public class Character implements CameraControllable {
 
 			if (walkDirection.length() > 1f)
 				walkDirection.normalize();
-			walkDirection.scale(0.25f);
+			walkDirection.scale(0.15f);
 
 			character.setWalkDirection(walkDirection);
 			

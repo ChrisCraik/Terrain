@@ -30,7 +30,7 @@ public class Collision {
 	// maximum number of objects (and allow user to shoot additional boxes)
 	private static final int MAX_PROXIES = (ARRAY_SIZE_X * ARRAY_SIZE_Y * ARRAY_SIZE_Z + 1024 * 4);
 
-	public static final int START_POS_X = 0, START_POS_Y = 50, START_POS_Z = 0;
+	public static final int START_POS_X = 0, START_POS_Y = 20, START_POS_Z = 0;
 
 	// keep track of the shapes, we release memory at exit.
 	// make sure to re-use collision shapes among rigid bodies whenever
@@ -69,13 +69,13 @@ public class Collision {
 		dynamicsWorld.setGravity(new Vector3f(0, -Config.PHYSICS_GRAVITY, 0));
 
 		// create a few basic rigid bodies
-		CollisionShape groundShape = new BoxShape(new Vector3f(50.f, 50.f, 50.f));
+		CollisionShape groundShape = new BoxShape(new Vector3f(15.f, 15.f, 15.f));
 
 		collisionShapes.add(groundShape);
 
 		Transform groundTransform = new Transform();
 		groundTransform.setIdentity();
-		groundTransform.origin.set(new Vector3f(0.f, -56.f, 0.f));
+		groundTransform.origin.set(new Vector3f(0.f, 0.f, 0.f));
 
 		{
 			float mass = 0f;

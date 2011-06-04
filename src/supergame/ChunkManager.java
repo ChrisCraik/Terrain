@@ -50,10 +50,23 @@ public class ChunkManager implements ChunkProvider {
 		for (int i = 0; i < Config.WORKER_THREADS; i++)
 			new ChunkBakerThread(i, this).start();
 
-		for (int i = -Config.CHUNK_LOAD_DISTANCE; i <= Config.CHUNK_LOAD_DISTANCE; i++)
-			for (int j = -Config.CHUNK_LOAD_DISTANCE; j <= Config.CHUNK_LOAD_DISTANCE; j++)
-				for (int k = -Config.CHUNK_LOAD_DISTANCE; k <= Config.CHUNK_LOAD_DISTANCE; k++)
-					prioritizeChunk(x + i, y + j, z + k);
+		sweepNearby(x, y, z, 2, false);
+		sweepNearby(x, y, z, Config.CHUNK_LOAD_DISTANCE, false);
+	}
+
+	private void sweepNearby(long x, long y, long z, int limit, boolean stall) {
+		for (int i = -limit; i <= limit; i++)
+			for (int j = -limit; j <= limit; j++)
+				for (int k = -limit; k <= limit; k++)
+					if (stall) {
+						//Stall until chunk processed
+						Chunk localChunk = chunks.get(new ChunkIndex(x + i, y + j, z + k));
+						while (!localChunk.processingIsComplete());
+						localChunk.serial_render(null, true, false);
+					} else {
+						//prioritize the chunk
+						prioritizeChunk(x + i, y + j, z + k);
+					}
 	}
 
 	public Chunk getChunkToProcess() throws InterruptedException {
@@ -132,12 +145,15 @@ public class ChunkManager implements ChunkProvider {
 		lasty = y;
 		lastz = z;
 
-		Chunk localChunk = chunks.get(new ChunkIndex(x, y, z));
-		
 		Game.PROFILE("pos update");
-		
+		/*
+		Chunk localChunk = chunks.get(new ChunkIndex(x, y, z));
+
 		//Stall until local chunk processed
 		while (!localChunk.processingIsComplete());
+		localChunk.serial_render(null, true, false);
+		*/
+		sweepNearby(x, y, z, 1, true);
 		Game.PROFILE("loc chunk stall");
 
 		System.out.println("NOW " + chunks.size() + " CHUNKS EXIST.");
@@ -146,7 +162,7 @@ public class ChunkManager implements ChunkProvider {
 	public void renderChunks(Camera cam) {
 		int newRenders = 10; // only render this many NEW chunks
 		for (Chunk c : chunks.values())
-			if (c.serial_render(cam, newRenders > 0))
+			if (c.serial_render(cam, newRenders > 0, true))
 				newRenders++;
 	}
 }

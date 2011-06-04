@@ -51,15 +51,16 @@ public class Chunk implements Frustrumable {
 		this.state = new AtomicInteger(SERIAL_INITIAL);
 	}
 
-	public boolean serial_render(Camera cam, boolean allowBruteForceRender) {
+	public boolean serial_render(Camera cam, boolean allowBruteForceRender, boolean display) {
 		if (empty)
 			return false;
 
-		if (cam.frustrumTest(this) == Inclusion.OUTSIDE)
+		if (display && cam.frustrumTest(this) == Inclusion.OUTSIDE)
 			return false;
 
 		if (displayList >= 0) {
-			GL11.glCallList(displayList);
+			if (display)
+				GL11.glCallList(displayList);
 		} else if (allowBruteForceRender) {
 			// register the terrain chunk with the physics engine
 			Game.collision.collisionShapes.add(trimeshShape);
@@ -68,7 +69,7 @@ public class Chunk implements Frustrumable {
 			int chunkColorIndex = 0;//(int) ((xid + yid + zid) % 2);
 
 			displayList = GL11.glGenLists(1);
-			GL11.glNewList(displayList, GL11.GL_COMPILE_AND_EXECUTE);
+			GL11.glNewList(displayList, display ? GL11.GL_COMPILE_AND_EXECUTE : GL11.GL_COMPILE);
 			GL11.glBegin(GL11.GL_TRIANGLES); // Draw some triangles
 			if (!Config.USE_DEBUG_COLORS)
 				GL11.glColor3f(0.2f, 0.5f, 0.1f);
@@ -95,6 +96,11 @@ public class Chunk implements Frustrumable {
 			normals = null;
 			occlusion = null;
 			return true;
+			/*
+			if (!state.compareAndSet(PARALLEL_COMPLETE, SERIAL_COMPLETE)) {
+				System.err.println("Error: in");
+				System.exit(1);
+			}*/
 		}
 		return false;
 	}
@@ -162,7 +168,6 @@ public class Chunk implements Frustrumable {
 			for (int i = 0; i < triangles.size(); i++) {
 				if (Config.USE_SMOOTH_SHADE || (i % 3 == 0)) {
 					Vec3 p = triangles.get(i);
-					//for (Vec3 p : triangles) {
 					if (Config.USE_AMBIENT_OCCLUSION) {
 						float visibility = 0;
 						for (Vec3 ray : rayDistribution) {
