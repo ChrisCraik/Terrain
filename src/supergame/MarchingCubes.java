@@ -294,9 +294,8 @@ public class MarchingCubes {
 	}
 
 	// ORDERING: 0 1 3 2, 4 5 7 6
-	static Vec3 points[] = { new Vec3(0.0f, 0.0f, 0.0f), new Vec3(0.0f, 0.0f, 1.0f), new Vec3(0.0f, 1.0f, 1.0f),
-			new Vec3(0.0f, 1.0f, 0.0f), new Vec3(1.0f, 0.0f, 0.0f), new Vec3(1.0f, 0.0f, 1.0f),
-			new Vec3(1.0f, 1.0f, 1.0f), new Vec3(1.0f, 1.0f, 0.0f) };
+	static Vec3 points[] = { new Vec3(0, 0, 0), new Vec3(0, 0, 1), new Vec3(0, 1, 1), new Vec3(0, 1, 0),
+			new Vec3(1, 0, 0), new Vec3(1, 0, 1), new Vec3(1, 1, 1), new Vec3(1, 1, 0) };
 	static int offsets[][] = { { 0, 0, 0 }, { 0, 0, 1 }, { 0, 1, 1 }, { 0, 1, 0 }, { 1, 0, 0 }, { 1, 0, 1 },
 			{ 1, 1, 1 }, { 1, 1, 0 } };
 
@@ -307,22 +306,107 @@ public class MarchingCubes {
 			points[i] = points[i].multiply(Config.METERS_PER_SUBCHUNK);
 	}
 
+	public static boolean cubeOccupied(int x, int y, int z, float[][][] weights) {
+		boolean firstIsPositive = (weights[x][y][z] > 0);
+		for (int i = 1; i < 8; i++) {
+			double val = weights[x + offsets[i][0]][y + offsets[i][1]][z + offsets[i][2]];
+			if ((val > 0) != firstIsPositive)
+				return true;
+		}
+		return false;
+	}
+
+	static Vec3 shortPoints[] = { new Vec3(1, 0, 0), new Vec3(0, 1, 0f), new Vec3(0, 0, 1) };
+	static int shortOffsets[][] = { { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 } };
+
+	public static int writeLocalVertices(Vec3 blockLoc, int x, int y, int z, float[][][] weights, float[] vertices,
+			int verticesOffset, int[][][][] vertIndexVolume) {
+
+		double blockLocVal = weights[x][y][z];
+		boolean blockLocIsPos = blockLocVal > 0;
+		for (int i = 0; i < 3; i++) {
+			double endpointLocVal = weights[x + offsets[i][0]][y + offsets[i][1]][z + offsets[i][2]];
+
+			if ((endpointLocVal > 0) != blockLocIsPos) {
+				Vec3 endpointLoc = blockLoc.add(points[i]);
+				Vec3 newVert = VertexInterp(0, blockLoc, endpointLoc, blockLocVal, endpointLocVal);
+				vertices[verticesOffset + 0] = newVert.getX();
+				vertices[verticesOffset + 1] = newVert.getY();
+				vertices[verticesOffset + 2] = newVert.getZ();
+
+				//populate 
+				vertIndexVolume[x + offsets[i][0]][y + offsets[i][1]][z + offsets[i][2]][i] = verticesOffset;
+
+				verticesOffset += 3;
+			}
+		}
+		return verticesOffset;
+	}
+
+	public static int writeLocalIndices(int x, int y, int z, float[][][] weights, int[] indices, int indicesOffset,
+			int[][][][] vertIndexVolume) {
+
+		int vertIndexList[] = new int[12];
+
+		int cubeindex = 0;
+		for (int i = 0; i < 8; i++) {
+			double val = weights[x + offsets[i][0]][y + offsets[i][1]][z + offsets[i][2]];
+			if (val > 0)
+				cubeindex |= 1 << i;
+		}
+
+		/*TODO:
+		 * instead of calculating vert position, calculate vert index, look up in vertIndexVolume
+		 * need a x,y,z coord plus a direction 0,1,2 (x,y,z)
+		 */
+
+		/*
+		0 { 0, 0, 0 }
+		1 { 0, 0, 1 }
+		2 { 0, 1, 1 }
+		3 { 0, 1, 0 }
+		4 { 1, 0, 0 }
+		5 { 1, 0, 1 }
+		6 { 1, 1, 1 }
+		7 { 1, 1, 0 }
+		 */
+		/*
+		*/
+
+		vertIndexList[0] = vertIndexVolume[x + 0][y + 0][z + 0][2]; // 0 1
+		vertIndexList[1] = vertIndexVolume[x + 0][y + 0][z + 1][1]; // 1 2
+		vertIndexList[2] = vertIndexVolume[x + 0][y + 1][z + 0][2]; // 2 3
+		vertIndexList[3] = vertIndexVolume[x + 0][y + 0][z + 0][1]; // 3 0
+
+		vertIndexList[4] = vertIndexVolume[x + 1][y + 0][z + 0][2]; // 4 5
+		vertIndexList[5] = vertIndexVolume[x + 1][y + 0][z + 1][1]; // 5 6
+		vertIndexList[6] = vertIndexVolume[x + 1][y + 1][z + 0][2]; // 7 6
+		vertIndexList[7] = vertIndexVolume[x + 1][y + 0][z + 0][1]; // 4 7
+
+		vertIndexList[8] = vertIndexVolume[x + 0][y + 0][z + 0][0]; // 0 4
+		vertIndexList[9] = vertIndexVolume[x + 0][y + 0][z + 1][0]; // 1 5
+		vertIndexList[10] = vertIndexVolume[x + 0][y + 1][z + 1][0]; // 2 6
+		vertIndexList[11] = vertIndexVolume[x + 0][y + 1][z + 0][0]; // 3 7
+
+		/* Create the triangle */
+		for (int i = 0; triTable[cubeindex][i] != -1; i += 3) {
+			indices[indicesOffset + 0] = vertIndexList[triTable[cubeindex][i + 0]];
+			indices[indicesOffset + 1] = vertIndexList[triTable[cubeindex][i + 1]];
+			indices[indicesOffset + 2] = vertIndexList[triTable[cubeindex][i + 2]];
+			indicesOffset += 3;
+		}
+		return indicesOffset;
+	}
+
 	public static int makeMesh(Vec3 blockPos, int x, int y, int z, float[][][] weights, double isolevel,
 			ArrayList<Vec3> triangleList) {
 		Vec3 grid[] = new Vec3[12];
 		double val[] = new double[12];
 		Vec3 vertlist[] = new Vec3[12];
 
-		int i = 1;
 		int cubeindex = 0;
 
-		for (i = 0; i < 8; i++) {
-			//grid[i] = Vec3(c.pos.getx() + x*Chunk.MPC
-			//grid[i] = start.add(points[i]);
-			//val[i] = Game.meshpoints[(int) grid[i].getX()][(int) grid[i].getY()][(int) grid[i].getZ()];
-			// val[i] = Perlin.noise(grid[i].getX() / 20.0, grid[i].getY() / 10.0, grid[i].getZ() / 20.0);
-			// System.out.println("vert " + i + " is " + val[i]);
-
+		for (int i = 0; i < 8; i++) {
 			grid[i] = blockPos.add(points[i]);
 			val[i] = weights[x + offsets[i][0]][y + offsets[i][1]][z + offsets[i][2]];
 			if (val[i] > isolevel)
@@ -357,7 +441,7 @@ public class MarchingCubes {
 
 		/* Create the triangle */
 		int ntriang = 0;
-		for (i = 0; triTable[cubeindex][i] != -1; i += 3) {
+		for (int i = 0; triTable[cubeindex][i] != -1; i += 3) {
 			triangleList.add(vertlist[triTable[cubeindex][i]]);
 			triangleList.add(vertlist[triTable[cubeindex][i + 1]]);
 			triangleList.add(vertlist[triTable[cubeindex][i + 2]]);

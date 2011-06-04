@@ -23,11 +23,12 @@ public class ChunkBakerThread extends Thread {
 	public void run() {
 		Chunk current;
 		Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
+		Object buffers = Chunk.parallel_workerBuffersInit();
 		while (Game.isRunning()) {
 			try {
 				current = chunkProvider.getChunkToProcess();
 				//System.out.println(id + " took chunk " + current);
-				current.parallel_process();
+				current.parallel_process(buffers);
 			} catch (InterruptedException e) {
 				System.out.println("interruptedexception ignored");
 			} catch (Exception e) {

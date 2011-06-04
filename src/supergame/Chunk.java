@@ -37,15 +37,15 @@ public class Chunk implements Frustrumable {
 	private static final int PARALLEL_COMPLETE = 2; // Processing complete, render-able
 	private static final int PARALLEL_GARBAGE = 3; // Processing interrupted by chunk garbage collection
 	private AtomicInteger state;
-	
+
 	private BvhTriangleMeshShape trimeshShape;
 	private RigidBody body;
 
 	public static final float colors[][][] = { { { 0, 1, 0, 1 }, { 1, 0, 0, 1 } },
 			{ { 1, 0.5f, 0, 1 }, { 0.5f, 0, 1, 1 } }, { { 0.9f, 0.9f, 0.9f, 1 }, { 0.4f, 0.4f, 0.4f, 1 } } };
-	
+
 	//Serial Methods - called by main loop
-	
+
 	Chunk(ChunkIndex index) {
 		this.index = index;
 		this.state = new AtomicInteger(SERIAL_INITIAL);
@@ -104,7 +104,7 @@ public class Chunk implements Frustrumable {
 		}
 		return false;
 	}
-	
+
 	public void serial_clean() {
 		if (displayList >= 0) {
 			GL11.glDeleteLists(displayList, 1);
@@ -125,12 +125,26 @@ public class Chunk implements Frustrumable {
 		weights = null;
 		pos = null;
 	}
-	
+
 	//Parallel Methods - called by worker threads
-	
-	public void parallel_process() {
+
+	//per worker temporary buffer data for chunk processing
+	private static class WorkerBuffers {
+		public int[] occupiedCells = new int[Config.CHUNK_DIVISION * Config.CHUNK_DIVISION * Config.CHUNK_DIVISION];
+		public float[] vertices = new float[9 * Config.CHUNK_DIVISION * Config.CHUNK_DIVISION * Config.CHUNK_DIVISION];
+		public int[] indices = new int[15 * Config.CHUNK_DIVISION * Config.CHUNK_DIVISION * Config.CHUNK_DIVISION];
+		public int[][][][] vertIndexVolume = new int[Config.CHUNK_DIVISION + 1][Config.CHUNK_DIVISION + 1][Config.CHUNK_DIVISION + 1][3];
+	}
+
+	public static Object parallel_workerBuffersInit() {
+		return new WorkerBuffers();
+	}
+
+	public void parallel_process(Object workerBuffers) {
 		if (!state.compareAndSet(SERIAL_INITIAL, PARALLEL_PROCESSING))
 			return;
+
+		WorkerBuffers buffers = (WorkerBuffers) workerBuffers;
 
 		pos = this.index.getVec3();
 		pos = pos.multiply(Config.CHUNK_DIVISION * Config.METERS_PER_SUBCHUNK);
@@ -143,8 +157,8 @@ public class Chunk implements Frustrumable {
 		for (x = 0; x < Config.CHUNK_DIVISION + 1; x++)
 			for (y = 0; y < Config.CHUNK_DIVISION + 1; y++)
 				for (z = 0; z < Config.CHUNK_DIVISION + 1; z++) {
-					weights[x][y][z] = TerrainGenerator.getDensity(pos.getX() + x * Config.METERS_PER_SUBCHUNK, pos.getY() + y
-							* Config.METERS_PER_SUBCHUNK, pos.getZ() + z * Config.METERS_PER_SUBCHUNK);
+					weights[x][y][z] = TerrainGenerator.getDensity(pos.getX() + x * Config.METERS_PER_SUBCHUNK,
+							pos.getY() + y * Config.METERS_PER_SUBCHUNK, pos.getZ() + z * Config.METERS_PER_SUBCHUNK);
 				}
 
 		// create polys
@@ -153,8 +167,53 @@ public class Chunk implements Frustrumable {
 				for (z = 0; z < Config.CHUNK_DIVISION; z++) {
 					Vec3 blockPos = new Vec3(pos.getX() + x * Config.METERS_PER_SUBCHUNK, pos.getY() + y
 							* Config.METERS_PER_SUBCHUNK, pos.getZ() + z * Config.METERS_PER_SUBCHUNK);
-					MarchingCubes.makeMesh(blockPos, x, y, z, weights, 0.0f, triangles);// (float) noise);
+					MarchingCubes.makeMesh(blockPos, x, y, z, weights, 0.0f, triangles);
 				}
+
+		////
+		int occupiedCubeCount = 0;
+		int vertices = 0;
+		for (x = 0; x < Config.CHUNK_DIVISION; x++)
+			for (y = 0; y < Config.CHUNK_DIVISION; y++)
+				for (z = 0; z < Config.CHUNK_DIVISION; z++)
+					if (MarchingCubes.cubeOccupied(x, y, z, weights)) {
+						//add cell to occupiedCells buffer
+						int cubeIndex = ((x * Config.CHUNK_DIVISION) + y) * Config.CHUNK_DIVISION + z;
+						buffers.occupiedCells[occupiedCubeCount++] = cubeIndex;
+
+						//calculate vertices, populate vert buffer, vertIndexVolume buffer
+						Vec3 blockPos = new Vec3(pos.getX() + x * Config.METERS_PER_SUBCHUNK, pos.getY() + y
+								* Config.METERS_PER_SUBCHUNK, pos.getZ() + z * Config.METERS_PER_SUBCHUNK);
+						vertices = MarchingCubes.writeLocalVertices(blockPos, x, y, z, weights, buffers.vertices,
+								vertices, buffers.vertIndexVolume);
+					}
+		int indices = 0;
+		for (x = 0; x < Config.CHUNK_DIVISION; x++)
+			for (y = 0; y < Config.CHUNK_DIVISION; y++)
+				for (z = 0; z < Config.CHUNK_DIVISION; z++)
+					if (MarchingCubes.cubeOccupied(x, y, z, weights)) {
+						//calculate indices
+						indices = MarchingCubes.writeLocalIndices(x, y, z, weights, buffers.indices, indices,
+								buffers.vertIndexVolume);
+					}
+		if (triangles.size() > 0 && triangles.size() < 4000)
+		{
+			System.out.println("-- START Small Chunk Splat---");
+			System.out.printf("Triangles size %d, indices %d, occ cells %d, uniqueVertCoords %d\n", triangles.size(),
+					indices, occupiedCubeCount, vertices);
+			for (int i=0; i<100; i++) {
+				System.out.printf("ORIG %f,%f,%f    NEW %f,%f,%f\n",
+						triangles.get(i).getX(),
+						triangles.get(i).getY(),
+						triangles.get(i).getZ(),
+						buffers.vertices[buffers.indices[i]+0],
+						buffers.vertices[buffers.indices[i]+1],
+						buffers.vertices[buffers.indices[i]+2]
+						);
+			}
+			System.out.println("-- END   Small Chunk Splat---");
+		}
+		////
 
 		if (triangles.size() == 0) {
 			triangles = null;
@@ -242,7 +301,7 @@ public class Chunk implements Frustrumable {
 
 		}
 	}
-	
+
 	// parallel OR serial
 	public Vec3 getVertexP(Vec3 n) {
 		Vec3 res = new Vec3(pos);

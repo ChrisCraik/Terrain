@@ -78,7 +78,7 @@ public class ChunkManager implements ChunkProvider {
 		//System.out.println("Prioritizing chunk " + key.getVec3());
 		if (chunks.containsKey(key)) {
 			//remove from LRU
-			//chunkCache.remove(key);
+			chunkCache.remove(key);
 		} else {
 			Chunk c = new Chunk(key);
 			dirtyChunks.add(c);
