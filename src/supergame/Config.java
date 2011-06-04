@@ -4,7 +4,7 @@ import java.lang.reflect.*;
 
 public class Config {
 	public static int MS_PER_HEARTBEAT = 1000;
-	public static int WORKER_THREADS = 3;
+	public static int WORKER_THREADS = 1;
 	public static int RESOLUTION_X = 1024;
 	public static int RESOLUTION_Y = 768;
 	

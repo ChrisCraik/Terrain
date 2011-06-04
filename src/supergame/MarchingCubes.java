@@ -322,21 +322,31 @@ public class MarchingCubes {
 	public static int writeLocalVertices(Vec3 blockLoc, int x, int y, int z, float[][][] weights, float[] vertices,
 			int verticesOffset, int[][][][] vertIndexVolume) {
 
+		//System.out.printf("Writing verts for cube %d,%d,%d\n",x,y,z);
 		double blockLocVal = weights[x][y][z];
 		boolean blockLocIsPos = blockLocVal > 0;
 		for (int i = 0; i < 3; i++) {
-			double endpointLocVal = weights[x + offsets[i][0]][y + offsets[i][1]][z + offsets[i][2]];
+			double endpointLocVal = weights[x + shortOffsets[i][0]][y + shortOffsets[i][1]][z + shortOffsets[i][2]];
 
 			if ((endpointLocVal > 0) != blockLocIsPos) {
-				Vec3 endpointLoc = blockLoc.add(points[i]);
+				Vec3 endpointLoc = blockLoc.add(shortPoints[i]);
 				Vec3 newVert = VertexInterp(0, blockLoc, endpointLoc, blockLocVal, endpointLocVal);
 				vertices[verticesOffset + 0] = newVert.getX();
 				vertices[verticesOffset + 1] = newVert.getY();
 				vertices[verticesOffset + 2] = newVert.getZ();
 
-				//populate 
-				vertIndexVolume[x + offsets[i][0]][y + offsets[i][1]][z + offsets[i][2]][i] = verticesOffset;
-
+				//populate
+				vertIndexVolume[x][y][z][i] = verticesOffset;
+				/*
+				System.out.printf("%d,%d,%d(%d) = vert %d (%s)\n",
+						x + offsets[i][0],
+						y + offsets[i][1],
+						z + offsets[i][2],
+						i,
+						verticesOffset,
+						newVert
+						);
+				*/
 				verticesOffset += 3;
 			}
 		}
@@ -390,9 +400,22 @@ public class MarchingCubes {
 
 		/* Create the triangle */
 		for (int i = 0; triTable[cubeindex][i] != -1; i += 3) {
+			/*
+			System.out.printf("\t\tNEW Triangle %d at block %d,%d,%d indices %d,%d,%d\n", i, x, y, z,
+					triTable[cubeindex][i + 0],
+					triTable[cubeindex][i + 1],
+					triTable[cubeindex][i + 2]);
+			*/
 			indices[indicesOffset + 0] = vertIndexList[triTable[cubeindex][i + 0]];
 			indices[indicesOffset + 1] = vertIndexList[triTable[cubeindex][i + 1]];
 			indices[indicesOffset + 2] = vertIndexList[triTable[cubeindex][i + 2]];
+
+			/*
+			System.out.printf("%d, %d, %d\n",
+					indices[indicesOffset + 0],
+					indices[indicesOffset + 1],
+					indices[indicesOffset + 2]);
+					*/
 			indicesOffset += 3;
 		}
 		return indicesOffset;
@@ -442,10 +465,21 @@ public class MarchingCubes {
 		/* Create the triangle */
 		int ntriang = 0;
 		for (int i = 0; triTable[cubeindex][i] != -1; i += 3) {
-			triangleList.add(vertlist[triTable[cubeindex][i]]);
+			/*System.out.printf("\t\tTriangle %d at block %d,%d,%d indices %d,%d,%d\n", i, x, y, z,
+					triTable[cubeindex][i + 0],
+					triTable[cubeindex][i + 1],
+					triTable[cubeindex][i + 2]);
+			*/
+			triangleList.add(vertlist[triTable[cubeindex][i + 0]]);
 			triangleList.add(vertlist[triTable[cubeindex][i + 1]]);
 			triangleList.add(vertlist[triTable[cubeindex][i + 2]]);
 			ntriang++;
+			/*
+			System.out.printf("%s, %s, %s\n",
+					triangleList.get(triangleList.size()-3),
+					triangleList.get(triangleList.size()-2),
+					triangleList.get(triangleList.size()-1));
+					*/
 		}
 		return ntriang;
 		// System.out.println("x" + start.getX() + ", y" + start.getY() + ",z" + start.getZ() + ", tris" + ntriang);
