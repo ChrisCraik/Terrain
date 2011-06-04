@@ -27,9 +27,13 @@ public class ChunkBakerThread extends Thread {
 			try {
 				current = chunkProvider.getChunkToProcess();
 				//System.out.println(id + " took chunk " + current);
-				current.initialize();
+				current.parallel_process();
 			} catch (InterruptedException e) {
 				System.out.println("interruptedexception ignored");
+			} catch (Exception e) {
+				System.out.println("ERROR: Worker thread experienced exception");
+				e.printStackTrace();
+				System.exit(1);
 			}
 		}
 	}

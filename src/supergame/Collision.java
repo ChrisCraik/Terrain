@@ -23,14 +23,14 @@ import org.lwjgl.opengl.GL11;
 public class Collision {
 
 	// create 125 (5x5x5) dynamic object
-	private static final int ARRAY_SIZE_X = 1;
-	private static final int ARRAY_SIZE_Y = 1;
-	private static final int ARRAY_SIZE_Z = 0;
+	private static final int ARRAY_SIZE_X = 3;
+	private static final int ARRAY_SIZE_Y = 3;
+	private static final int ARRAY_SIZE_Z = 3;
 
 	// maximum number of objects (and allow user to shoot additional boxes)
 	private static final int MAX_PROXIES = (ARRAY_SIZE_X * ARRAY_SIZE_Y * ARRAY_SIZE_Z + 1024 * 4);
 
-	public static final int START_POS_X = 30, START_POS_Y = 30, START_POS_Z = 30;
+	public static final int START_POS_X = 0, START_POS_Y = 50, START_POS_Z = 0;
 
 	// keep track of the shapes, we release memory at exit.
 	// make sure to re-use collision shapes among rigid bodies whenever

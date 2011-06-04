@@ -80,9 +80,9 @@ public class ChunkManager implements ChunkProvider {
 
 		Chunk c = chunks.get(key);
 		if (c != null) {
-			if (!c.initialized())
-				c.cancelProcessing();
-			c.clean();
+			if (!c.processingIsComplete())
+				c.cancelParallelProcessing();
+			c.serial_clean();
 			chunks.remove(key);
 		}
 		/*
@@ -137,16 +137,16 @@ public class ChunkManager implements ChunkProvider {
 		Game.PROFILE("pos update");
 		
 		//Stall until local chunk processed
-		while (!localChunk.initialized());
+		while (!localChunk.processingIsComplete());
 		Game.PROFILE("loc chunk stall");
 
 		System.out.println("NOW " + chunks.size() + " CHUNKS EXIST.");
 	}
 
 	public void renderChunks(Camera cam) {
-		int newRenders = 1; // only render this many NEW chunks
+		int newRenders = 10; // only render this many NEW chunks
 		for (Chunk c : chunks.values())
-			if (c.render(cam, newRenders > 0))
+			if (c.serial_render(cam, newRenders > 0))
 				newRenders++;
 	}
 }

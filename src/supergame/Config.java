@@ -10,8 +10,8 @@ public class Config {
 	
 	// CHUNKS
 	public static float METERS_PER_SUBCHUNK = 1;
-	public static int CHUNK_DIVISION = 16;
-	public static int CHUNK_LOAD_DISTANCE = 6;
+	public static int CHUNK_DIVISION = 32;
+	public static int CHUNK_LOAD_DISTANCE = 5;
 	public static int CHUNK_CACHE_SIZE = 4096;
 	
 	// GRAPHICS
