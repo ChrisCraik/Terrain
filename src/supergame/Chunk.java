@@ -2,6 +2,8 @@ package supergame;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
+import java.nio.ShortBuffer;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -59,10 +61,34 @@ public class Chunk implements Frustrumable {
 
 		if (display && cam.frustrumTest(this) == Inclusion.OUTSIDE)
 			return false;
+		/*
+		if (displayList < 0) {
+			displayList = 1;
+			
+			// register the terrain chunk with the physics engine
+			//Game.collision.collisionShapes.add(trimeshShape);
+			//Game.collision.dynamicsWorld.addRigidBody(body);
+		}
+		
+		System.out.printf("Number of VERTICES ChunkIndices.limit/2 %d, triangles.size() %d\n", chunkIndices.limit()/2, triangles.size());
+		if (chunkIndices.limit()/2 != triangles.size())
+			System.out.println("WARNING: incorrect nr of indices!");
+
+		GL11.glEnableClientState(GL11.GL_VERTEX_ARRAY);
+		GL11.glVertexPointer(3, 4, chunkVertices.asFloatBuffer());
+		GL11.glDrawElements(GL11.GL_TRIANGLES, chunkIndices.asShortBuffer());
+		GL11.glDisableClientState(GL11.GL_VERTEX_ARRAY);
+		*/
 
 		if (displayList >= 0) {
 			if (display)
-				GL11.glCallList(displayList);
+			{
+				//,,,,aGL11.glCallList(displayList);
+				GL11.glEnableClientState(GL11.GL_VERTEX_ARRAY);
+				GL11.glVertexPointer(3, 4*3, chunkVertices.asFloatBuffer());
+				GL11.glDrawElements(GL11.GL_TRIANGLES, chunkIndices.asShortBuffer());
+				GL11.glDisableClientState(GL11.GL_VERTEX_ARRAY);
+			}
 		} else if (allowBruteForceRender) {
 			// register the terrain chunk with the physics engine
 			Game.collision.collisionShapes.add(trimeshShape);
@@ -73,6 +99,7 @@ public class Chunk implements Frustrumable {
 			displayList = GL11.glGenLists(1);
 			GL11.glNewList(displayList, display ? GL11.GL_COMPILE_AND_EXECUTE : GL11.GL_COMPILE);
 			GL11.glBegin(GL11.GL_TRIANGLES); // Draw some triangles
+			
 			if (!Config.USE_DEBUG_COLORS)
 				GL11.glColor3f(0.2f, 0.5f, 0.1f);
 
@@ -94,15 +121,16 @@ public class Chunk implements Frustrumable {
 			}
 			GL11.glEnd();
 			GL11.glEndList();
+			
 			triangles = null;
 			normals = null;
 			occlusion = null;
 			return true;
-			/*
-			if (!state.compareAndSet(PARALLEL_COMPLETE, SERIAL_COMPLETE)) {
-				System.err.println("Error: in");
-				System.exit(1);
-			}*/
+			
+			//if (!state.compareAndSet(PARALLEL_COMPLETE, SERIAL_COMPLETE)) {
+			//	System.err.println("Error: in");
+			//	System.exit(1);
+			//}
 		}
 		return false;
 	}
@@ -199,9 +227,29 @@ public class Chunk implements Frustrumable {
 							indicesCount = MarchingCubes.writeLocalIndices(x, y, z, weights, buffers.indices,
 									indicesCount, buffers.vertIndexVolume);
 						}
+			
+			chunkIndices= ByteBuffer.allocateDirect(triangles.size() * 2).order(ByteOrder.nativeOrder());
+			for (int index=0; index<triangles.size(); index++) {
+				chunkIndices.putShort((short)index);
+			}
+			/*
+			chunkVertices = ByteBuffer.allocateDirect(verticesCount * 4).order(ByteOrder.nativeOrder());
+			for (int i = 0; i < verticesCount; i++) {
+				//System.out.println(i + " vertFloat is " + buffers.vertices[i]);
+				chunkVertices.putFloat(buffers.vertices[i]);
+			}
 
-			System.out.printf("Triangles size %d, indices %d, occ cells %d, uniqueVertCoords %d\n", triangles.size(),
-					indicesCount, occupiedCubeCount, verticesCount);
+			chunkIndices = ByteBuffer.allocateDirect(indicesCount * 2).order(ByteOrder.nativeOrder());
+			for (int i = 0; i < indicesCount; i++) {
+				//System.out.println("vertID originally "+indices[i]/3);
+				//chunkIndices.putInt(4 * i, (buffers.indices[i] / 3)); //(i+2);
+				chunkIndices.putShort(2 * i, (short) (buffers.indices[i] / 3)); //(i+2);
+				//System.out.println(i+" triangle vert ID is "+chunkIndices.getShort(2*i));
+			}*/
+			/*
+			System.out.printf("Triangles size %d, indices %d, occ cells %d, uniqueVertCoords %d ... vert.limit %d ind.limit %d\n", triangles.size(),
+					indicesCount, occupiedCubeCount, verticesCount, chunkVertices.limit(), chunkIndices.limit());
+					*/
 		}
 
 		/*if (triangles.size() > 0 && triangles.size() < 4000) {
@@ -248,8 +296,12 @@ public class Chunk implements Frustrumable {
 					normals.add(null);
 				}
 			}
-			parallel_processPhysics(buffers.vertices, verticesCount, buffers.indices, indicesCount);
-			//parallel_processPhysicsOld();
+			//parallel_processPhysics(buffers.vertices, verticesCount, buffers.indices, indicesCount);
+			parallel_processPhysicsOld();
+
+			chunkVertices.flip();
+			chunkIndices.flip();
+			
 			empty = false;
 		}
 
@@ -262,18 +314,6 @@ public class Chunk implements Frustrumable {
 	private ByteBuffer chunkIndices, chunkVertices;
 
 	private void parallel_processPhysics(float[] vertices, int verticesCount, int[] indices, int indicesCount) {
-		chunkVertices = ByteBuffer.allocateDirect(verticesCount * 4).order(ByteOrder.nativeOrder());
-		for (int i = 0; i < verticesCount; i++) {
-			//System.out.println(i + " vertFloat is " + vertices[i]);
-			chunkVertices.putFloat(vertices[i]);
-		}
-
-		chunkIndices = ByteBuffer.allocateDirect(indicesCount * 4).order(ByteOrder.nativeOrder());
-		for (int i = 0; i < indicesCount; i++) {
-			//System.out.println("vertID originally "+indices[i]/3);
-			chunkIndices.putInt(4 * i, (indices[i] / 3)); //(i+2);
-			//System.out.println(i+" triangle vert ID is "+chunkIndices.getInt(4*i));
-		}
 		/*
 		chunkIndices.flip();
 		for (int i=0; i<indicesCount; i++) {
@@ -285,7 +325,7 @@ public class Chunk implements Frustrumable {
 		TriangleIndexVertexArray indexVertexArrays = new TriangleIndexVertexArray();//indicesCount/3, chunkIndices, 4, verticesCount, chunkVertices, 4*3);
 
 		IndexedMesh mesh = new IndexedMesh();
-		mesh.indexType = ScalarType.INTEGER;
+		mesh.indexType = ScalarType.SHORT;
 		mesh.numTriangles = indicesCount / 3;
 		mesh.numVertices = verticesCount;
 		mesh.triangleIndexBase = chunkIndices;
@@ -319,7 +359,8 @@ public class Chunk implements Frustrumable {
 		int totalTriangles = triangles.size() / 3;
 
 		ByteBuffer gVertices = ByteBuffer.allocateDirect(triangles.size() * 3 * 4).order(ByteOrder.nativeOrder());
-		ByteBuffer gIndices = ByteBuffer.allocateDirect(triangles.size() * 3 * 4).order(ByteOrder.nativeOrder());
+		ByteBuffer gIndices = ByteBuffer.allocateDirect(triangles.size() * 4).order(ByteOrder.nativeOrder());
+		chunkVertices = gVertices;
 
 		gIndices.clear();
 		int index = 0;
@@ -327,8 +368,6 @@ public class Chunk implements Frustrumable {
 			gVertices.putFloat(p.getX());
 			gVertices.putFloat(p.getY());
 			gVertices.putFloat(p.getZ());
-			gIndices.putInt(index++);
-			gIndices.putInt(index++);
 			gIndices.putInt(index++);
 		}
 
