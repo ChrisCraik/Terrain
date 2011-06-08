@@ -2,8 +2,6 @@ package supergame;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.FloatBuffer;
-import java.nio.ShortBuffer;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -81,12 +79,11 @@ public class Chunk implements Frustrumable {
 		*/
 
 		if (displayList >= 0) {
-			if (display)
-			{
+			if (display) {
 				//,,,,aGL11.glCallList(displayList);
 				GL11.glEnableClientState(GL11.GL_VERTEX_ARRAY);
-				GL11.glVertexPointer(3, 4*3, chunkVertices.asFloatBuffer());
-				GL11.glDrawElements(GL11.GL_TRIANGLES, chunkIndices.asShortBuffer());
+				GL11.glVertexPointer(3, 4 * 3, chunkVertices.asFloatBuffer());
+				GL11.glDrawElements(GL11.GL_TRIANGLES, chunkShortIndices.asShortBuffer());
 				GL11.glDisableClientState(GL11.GL_VERTEX_ARRAY);
 			}
 		} else if (allowBruteForceRender) {
@@ -99,7 +96,7 @@ public class Chunk implements Frustrumable {
 			displayList = GL11.glGenLists(1);
 			GL11.glNewList(displayList, display ? GL11.GL_COMPILE_AND_EXECUTE : GL11.GL_COMPILE);
 			GL11.glBegin(GL11.GL_TRIANGLES); // Draw some triangles
-			
+
 			if (!Config.USE_DEBUG_COLORS)
 				GL11.glColor3f(0.2f, 0.5f, 0.1f);
 
@@ -121,12 +118,12 @@ public class Chunk implements Frustrumable {
 			}
 			GL11.glEnd();
 			GL11.glEndList();
-			
+
 			triangles = null;
 			normals = null;
 			occlusion = null;
 			return true;
-			
+
 			//if (!state.compareAndSet(PARALLEL_COMPLETE, SERIAL_COMPLETE)) {
 			//	System.err.println("Error: in");
 			//	System.exit(1);
@@ -193,6 +190,7 @@ public class Chunk implements Frustrumable {
 				}
 
 		// create polys
+		/*
 		for (x = 0; x < Config.CHUNK_DIVISION; x++)
 			for (y = 0; y < Config.CHUNK_DIVISION; y++)
 				for (z = 0; z < Config.CHUNK_DIVISION; z++) {
@@ -200,7 +198,7 @@ public class Chunk implements Frustrumable {
 							* Config.METERS_PER_SUBCHUNK, pos.getZ() + z * Config.METERS_PER_SUBCHUNK);
 					MarchingCubes.makeMesh(blockPos, x, y, z, weights, 0.0f, triangles);
 				}
-
+		*/
 		////
 		int occupiedCubeCount = 0;
 		int verticesCount = 0, indicesCount = 0;
@@ -212,58 +210,69 @@ public class Chunk implements Frustrumable {
 						int cubeIndex = ((x * Config.CHUNK_DIVISION) + y) * Config.CHUNK_DIVISION + z;
 						buffers.occupiedCells[occupiedCubeCount++] = cubeIndex;
 
-						//calculate vertices, populate vert buffer, vertIndexVolume buffer
+						//calculate vertices, populate vert buffer, vertIndexVolume buffer (NOTE some of these vertices wasted: reside in neighbor chunks)
 						Vec3 blockPos = new Vec3(pos.getX() + x * Config.METERS_PER_SUBCHUNK, pos.getY() + y
 								* Config.METERS_PER_SUBCHUNK, pos.getZ() + z * Config.METERS_PER_SUBCHUNK);
 						verticesCount = MarchingCubes.writeLocalVertices(blockPos, x, y, z, weights, buffers.vertices,
 								verticesCount, buffers.vertIndexVolume);
 					}
-		if (verticesCount > 0) {
-			for (x = 0; x < Config.CHUNK_DIVISION; x++)
-				for (y = 0; y < Config.CHUNK_DIVISION; y++)
-					for (z = 0; z < Config.CHUNK_DIVISION; z++)
-						if (MarchingCubes.cubeOccupied(x, y, z, weights)) {
-							//calculate indices
-							indicesCount = MarchingCubes.writeLocalIndices(x, y, z, weights, buffers.indices,
-									indicesCount, buffers.vertIndexVolume);
-						}
-			
-			chunkIndices= ByteBuffer.allocateDirect(triangles.size() * 2).order(ByteOrder.nativeOrder());
-			for (int index=0; index<triangles.size(); index++) {
-				chunkIndices.putShort((short)index);
-			}
-			/*
-			chunkVertices = ByteBuffer.allocateDirect(verticesCount * 4).order(ByteOrder.nativeOrder());
-			for (int i = 0; i < verticesCount; i++) {
-				//System.out.println(i + " vertFloat is " + buffers.vertices[i]);
-				chunkVertices.putFloat(buffers.vertices[i]);
-			}
+		for (x = 0; x < Config.CHUNK_DIVISION; x++)
+			for (y = 0; y < Config.CHUNK_DIVISION; y++)
+				for (z = 0; z < Config.CHUNK_DIVISION; z++)
+					if (MarchingCubes.cubeOccupied(x, y, z, weights)) {
+						//calculate indices
+						indicesCount = MarchingCubes.writeLocalIndices(x, y, z, weights, buffers.indices, indicesCount,
+								buffers.vertIndexVolume);
+					}
 
-			chunkIndices = ByteBuffer.allocateDirect(indicesCount * 2).order(ByteOrder.nativeOrder());
-			for (int i = 0; i < indicesCount; i++) {
-				//System.out.println("vertID originally "+indices[i]/3);
-				//chunkIndices.putInt(4 * i, (buffers.indices[i] / 3)); //(i+2);
-				chunkIndices.putShort(2 * i, (short) (buffers.indices[i] / 3)); //(i+2);
-				//System.out.println(i+" triangle vert ID is "+chunkIndices.getShort(2*i));
-			}*/
+		if (indicesCount > 0) {
+			boolean USE_FAST = true;
+
+			if (USE_FAST) {
+				chunkVertices = ByteBuffer.allocateDirect(verticesCount * 4).order(ByteOrder.nativeOrder());
+				chunkShortIndices = ByteBuffer.allocateDirect(indicesCount * 2).order(ByteOrder.nativeOrder());
+				chunkIntIndices = ByteBuffer.allocateDirect(indicesCount * 4).order(ByteOrder.nativeOrder());
+
+				for (int i = 0; i < verticesCount; i++)
+					chunkVertices.putFloat(buffers.vertices[i]);
+				for (int i = 0; i < indicesCount; i++) {
+					chunkShortIndices.putShort((short) (buffers.indices[i] / 3));
+					chunkIntIndices.putInt(buffers.indices[i] / 3);
+				}
+			} else {
+				chunkVertices = ByteBuffer.allocateDirect(triangles.size() * 3 * 4).order(ByteOrder.nativeOrder());
+				chunkShortIndices = ByteBuffer.allocateDirect(triangles.size() * 2).order(ByteOrder.nativeOrder());
+				chunkIntIndices = ByteBuffer.allocateDirect(triangles.size() * 4).order(ByteOrder.nativeOrder());
+				int index = 0;
+				for (Vec3 p : triangles) {
+					chunkVertices.putFloat(p.getX());
+					chunkVertices.putFloat(p.getY());
+					chunkVertices.putFloat(p.getZ());
+					chunkShortIndices.putShort((short) index);
+					chunkIntIndices.putInt(index);
+					index++;
+				}
+			}
 			/*
-			System.out.printf("Triangles size %d, indices %d, occ cells %d, uniqueVertCoords %d ... vert.limit %d ind.limit %d\n", triangles.size(),
-					indicesCount, occupiedCubeCount, verticesCount, chunkVertices.limit(), chunkIndices.limit());
-					*/
+			System.out.printf("Triangles size %d, indices %d, occ cells %d, uniqueVertFloats %d ... vertices count %d indices count %d\n",
+							triangles.size(), indicesCount, occupiedCubeCount, verticesCount, chunkVertices.limit()/(3*4),
+							chunkShortIndices.limit()/2);
+							*/
 		}
-
-		/*if (triangles.size() > 0 && triangles.size() < 4000) {
+		/*
+		if (triangles.size() > 0) {
 			System.out.println("-- START Small Chunk Splat---");
-			for (int i = 0; i < 100; i++) {
+			for (int i = 0; i < triangles.size(); i++) {
 				System.out.printf("ORIG %f,%f,%f    NEW %f,%f,%f\n", triangles.get(i).getX(), triangles.get(i).getY(),
 						triangles.get(i).getZ(), buffers.vertices[buffers.indices[i] + 0],
 						buffers.vertices[buffers.indices[i] + 1], buffers.vertices[buffers.indices[i] + 2]);
 			}
 			System.out.println("-- END   Small Chunk Splat---");
-		}*/
+		}
+		*/
 		////
 
-		if (triangles.size() == 0) {
+		if (indicesCount == 0) {
 			triangles = null;
 			weights = null; //save memory on 'empty' chunks
 			empty = true;
@@ -280,6 +289,7 @@ public class Chunk implements Frustrumable {
 						for (Vec3 ray : rayDistribution) {
 							boolean isOccluded = false;
 							for (int step = 1; step < Config.AMB_OCC_BIGRAY_STEPS && !isOccluded; step++) {
+
 								Vec3 rp = p.add(ray.multiply(Config.AMB_OCC_BIGRAY_STEP_SIZE * step));
 								if (TerrainGenerator.getDensity(rp.getX(), rp.getY(), rp.getZ()) > 0)
 									isOccluded = true;
@@ -296,12 +306,12 @@ public class Chunk implements Frustrumable {
 					normals.add(null);
 				}
 			}
-			//parallel_processPhysics(buffers.vertices, verticesCount, buffers.indices, indicesCount);
-			parallel_processPhysicsOld();
+			parallel_processPhysics();
 
 			chunkVertices.flip();
-			chunkIndices.flip();
-			
+			chunkShortIndices.flip();
+			chunkIntIndices.flip();
+
 			empty = false;
 		}
 
@@ -311,31 +321,37 @@ public class Chunk implements Frustrumable {
 		}
 	}
 
-	private ByteBuffer chunkIndices, chunkVertices;
+	private ByteBuffer chunkShortIndices, chunkIntIndices, chunkVertices;
+	private static boolean USE_OLD = false;
+	private static int SIZE = 4;
 
-	private void parallel_processPhysics(float[] vertices, int verticesCount, int[] indices, int indicesCount) {
-		/*
-		chunkIndices.flip();
-		for (int i=0; i<indicesCount; i++) {
-			System.out.println(i+" triangle vert ID is AGAIN "+chunkIndices.getInt());
-		}*/
+	private void parallel_processPhysics() {
+		TriangleIndexVertexArray indexVertexArrays;
+		if (USE_OLD) {
+			int vertStride = 3 * 4;
+			int indexStride = 3 * 4;
 
-		System.out.printf("%d numTriangles, %d triangleIndexStride, %d numVertices, %d vertexStride\n",
-				indicesCount / 3, 4, verticesCount, 4 * 3);
-		TriangleIndexVertexArray indexVertexArrays = new TriangleIndexVertexArray();//indicesCount/3, chunkIndices, 4, verticesCount, chunkVertices, 4*3);
+			int totalTriangles = triangles.size() / 3;
 
-		IndexedMesh mesh = new IndexedMesh();
-		mesh.indexType = ScalarType.SHORT;
-		mesh.numTriangles = indicesCount / 3;
-		mesh.numVertices = verticesCount;
-		mesh.triangleIndexBase = chunkIndices;
-		mesh.triangleIndexStride = 2;
-		mesh.vertexBase = chunkVertices;
-		mesh.vertexStride = 4 * 3;
+			indexVertexArrays = new TriangleIndexVertexArray(totalTriangles, chunkIntIndices, indexStride,
+					totalTriangles * 3, chunkVertices, vertStride);
+		} else {
+			indexVertexArrays = new TriangleIndexVertexArray();
 
-		indexVertexArrays.addIndexedMesh(mesh);
+			IndexedMesh mesh = new IndexedMesh();
+			mesh.indexType = (SIZE == 2) ? ScalarType.SHORT : ScalarType.INTEGER;
+			mesh.numTriangles = chunkIntIndices.capacity() / (SIZE * 3);
+			mesh.numVertices = chunkVertices.capacity() / (4 * 3);
+			mesh.triangleIndexBase = chunkIntIndices;
+			mesh.triangleIndexStride = SIZE * 3;
+			mesh.vertexBase = chunkVertices;
+			mesh.vertexStride = 4 * 3;
 
-		trimeshShape = new BvhTriangleMeshShape(indexVertexArrays, true);
+			indexVertexArrays.addIndexedMesh(mesh, (SIZE == 2) ? ScalarType.SHORT : ScalarType.INTEGER);
+		}
+
+		boolean useQuantizedAabbCompression = true;
+		trimeshShape = new BvhTriangleMeshShape(indexVertexArrays, useQuantizedAabbCompression);
 
 		Transform groundTransform = new Transform();
 		groundTransform.setIdentity();
@@ -350,49 +366,6 @@ public class Chunk implements Frustrumable {
 		RigidBodyConstructionInfo rbInfo = new RigidBodyConstructionInfo(mass, myMotionState, trimeshShape,
 				localInertia);
 		body = new RigidBody(rbInfo);
-	}
-
-	private void parallel_processPhysicsOld() {
-		int vertStride = 3 * 4;
-		int indexStride = 3 * 4;
-
-		int totalTriangles = triangles.size() / 3;
-
-		ByteBuffer gVertices = ByteBuffer.allocateDirect(triangles.size() * 3 * 4).order(ByteOrder.nativeOrder());
-		ByteBuffer gIndices = ByteBuffer.allocateDirect(triangles.size() * 4).order(ByteOrder.nativeOrder());
-		chunkVertices = gVertices;
-
-		gIndices.clear();
-		int index = 0;
-		for (Vec3 p : triangles) {
-			gVertices.putFloat(p.getX());
-			gVertices.putFloat(p.getY());
-			gVertices.putFloat(p.getZ());
-			gIndices.putInt(index++);
-		}
-
-		TriangleIndexVertexArray indexVertexArrays = new TriangleIndexVertexArray(totalTriangles, gIndices,
-				indexStride, totalTriangles * 3, gVertices, vertStride);
-
-		boolean useQuantizedAabbCompression = true;
-		trimeshShape = new BvhTriangleMeshShape(indexVertexArrays, useQuantizedAabbCompression);
-
-		{
-			Transform groundTransform = new Transform();
-			groundTransform.setIdentity();
-			groundTransform.origin.set(new Vector3f(0, 0, 0));
-
-			float mass = 0f;
-			Vector3f localInertia = new Vector3f(0, 0, 0);
-
-			// using motionstate is recommended, it provides interpolation
-			// capabilities, and only synchronizes 'active' objects
-			DefaultMotionState myMotionState = new DefaultMotionState(groundTransform);
-			RigidBodyConstructionInfo rbInfo = new RigidBodyConstructionInfo(mass, myMotionState, trimeshShape,
-					localInertia);
-			body = new RigidBody(rbInfo);
-
-		}
 	}
 
 	// parallel OR serial
