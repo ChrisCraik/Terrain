@@ -2,7 +2,6 @@ package supergame;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.vecmath.Vector3f;
@@ -25,9 +24,6 @@ public class Chunk implements Frustrumable {
 	public static Vec3[] rayDistribution;
 
 	private boolean empty = true;
-	private ArrayList<Vec3> triangles;
-	private ArrayList<Vec3> normals;
-	private ArrayList<Float> occlusion;
 	private float[][][] weights;
 	private int displayList = -1;
 
@@ -59,42 +55,28 @@ public class Chunk implements Frustrumable {
 
 		if (display && cam.frustrumTest(this) == Inclusion.OUTSIDE)
 			return false;
-		/*
-		if (displayList < 0) {
-			displayList = 1;
-			
-			// register the terrain chunk with the physics engine
-			//Game.collision.collisionShapes.add(trimeshShape);
-			//Game.collision.dynamicsWorld.addRigidBody(body);
-		}
-		
-		System.out.printf("Number of VERTICES ChunkIndices.limit/2 %d, triangles.size() %d\n", chunkIndices.limit()/2, triangles.size());
-		if (chunkIndices.limit()/2 != triangles.size())
-			System.out.println("WARNING: incorrect nr of indices!");
-
-		GL11.glEnableClientState(GL11.GL_VERTEX_ARRAY);
-		GL11.glVertexPointer(3, 4, chunkVertices.asFloatBuffer());
-		GL11.glDrawElements(GL11.GL_TRIANGLES, chunkIndices.asShortBuffer());
-		GL11.glDisableClientState(GL11.GL_VERTEX_ARRAY);
-		*/
 
 		if (displayList >= 0) {
 			if (display) {
-				//,,,,aGL11.glCallList(displayList);
-				GL11.glEnableClientState(GL11.GL_VERTEX_ARRAY);
-				GL11.glVertexPointer(3, 4 * 3, chunkVertices.asFloatBuffer());
-				GL11.glDrawElements(GL11.GL_TRIANGLES, chunkShortIndices.asShortBuffer());
-				GL11.glDisableClientState(GL11.GL_VERTEX_ARRAY);
+				GL11.glCallList(displayList);
 			}
 		} else if (allowBruteForceRender) {
 			// register the terrain chunk with the physics engine
 			Game.collision.collisionShapes.add(trimeshShape);
 			Game.collision.dynamicsWorld.addRigidBody(body);
 
-			int chunkColorIndex = 0;//(int) ((xid + yid + zid) % 2);
-
 			displayList = GL11.glGenLists(1);
 			GL11.glNewList(displayList, display ? GL11.GL_COMPILE_AND_EXECUTE : GL11.GL_COMPILE);
+
+			GL11.glEnableClientState(GL11.GL_NORMAL_ARRAY);
+			GL11.glEnableClientState(GL11.GL_VERTEX_ARRAY);
+			GL11.glNormalPointer(0, chunkNormals.asFloatBuffer());
+			GL11.glVertexPointer(3, 0, chunkVertices.asFloatBuffer());
+			GL11.glDrawElements(GL11.GL_TRIANGLES, chunkShortIndices.asShortBuffer());
+			GL11.glDisableClientState(GL11.GL_VERTEX_ARRAY);
+			GL11.glDisableClientState(GL11.GL_NORMAL_ARRAY);
+
+			/*			
 			GL11.glBegin(GL11.GL_TRIANGLES); // Draw some triangles
 
 			if (!Config.USE_DEBUG_COLORS)
@@ -116,12 +98,9 @@ public class Chunk implements Frustrumable {
 				}
 				triangles.get(i).GLdraw();
 			}
-			GL11.glEnd();
+			GL11.glEnd();*/
 			GL11.glEndList();
 
-			triangles = null;
-			normals = null;
-			occlusion = null;
 			return true;
 
 			//if (!state.compareAndSet(PARALLEL_COMPLETE, SERIAL_COMPLETE)) {
@@ -146,9 +125,6 @@ public class Chunk implements Frustrumable {
 			body = null;
 		}
 
-		triangles = null;
-		normals = null;
-		occlusion = null;
 		weights = null;
 		pos = null;
 	}
@@ -178,7 +154,6 @@ public class Chunk implements Frustrumable {
 		pos = pos.multiply(Config.CHUNK_DIVISION * Config.METERS_PER_SUBCHUNK);
 
 		weights = new float[Config.CHUNK_DIVISION + 2][Config.CHUNK_DIVISION + 2][Config.CHUNK_DIVISION + 2];
-		triangles = new ArrayList<Vec3>();
 
 		// cache weights 
 		int x, y, z;
@@ -190,16 +165,6 @@ public class Chunk implements Frustrumable {
 				}
 
 		// create polys
-		/*
-		for (x = 0; x < Config.CHUNK_DIVISION; x++)
-			for (y = 0; y < Config.CHUNK_DIVISION; y++)
-				for (z = 0; z < Config.CHUNK_DIVISION; z++) {
-					Vec3 blockPos = new Vec3(pos.getX() + x * Config.METERS_PER_SUBCHUNK, pos.getY() + y
-							* Config.METERS_PER_SUBCHUNK, pos.getZ() + z * Config.METERS_PER_SUBCHUNK);
-					MarchingCubes.makeMesh(blockPos, x, y, z, weights, 0.0f, triangles);
-				}
-		*/
-		////
 		int occupiedCubeCount = 0;
 		int verticesCount = 0, indicesCount = 0;
 		for (x = 0; x < Config.CHUNK_DIVISION + 1; x++)
@@ -225,90 +190,46 @@ public class Chunk implements Frustrumable {
 								buffers.vertIndexVolume);
 					}
 
-		if (indicesCount > 0) {
-			boolean USE_FAST = true;
-
-			if (USE_FAST) {
-				chunkVertices = ByteBuffer.allocateDirect(verticesCount * 4).order(ByteOrder.nativeOrder());
-				chunkShortIndices = ByteBuffer.allocateDirect(indicesCount * 2).order(ByteOrder.nativeOrder());
-				chunkIntIndices = ByteBuffer.allocateDirect(indicesCount * 4).order(ByteOrder.nativeOrder());
-
-				for (int i = 0; i < verticesCount; i++)
-					chunkVertices.putFloat(buffers.vertices[i]);
-				for (int i = 0; i < indicesCount; i++) {
-					chunkShortIndices.putShort((short) (buffers.indices[i] / 3));
-					chunkIntIndices.putInt(buffers.indices[i] / 3);
-				}
-			} else {
-				chunkVertices = ByteBuffer.allocateDirect(triangles.size() * 3 * 4).order(ByteOrder.nativeOrder());
-				chunkShortIndices = ByteBuffer.allocateDirect(triangles.size() * 2).order(ByteOrder.nativeOrder());
-				chunkIntIndices = ByteBuffer.allocateDirect(triangles.size() * 4).order(ByteOrder.nativeOrder());
-				int index = 0;
-				for (Vec3 p : triangles) {
-					chunkVertices.putFloat(p.getX());
-					chunkVertices.putFloat(p.getY());
-					chunkVertices.putFloat(p.getZ());
-					chunkShortIndices.putShort((short) index);
-					chunkIntIndices.putInt(index);
-					index++;
-				}
-			}
-			/*
-			System.out.printf("Triangles size %d, indices %d, occ cells %d, uniqueVertFloats %d ... vertices count %d indices count %d\n",
-							triangles.size(), indicesCount, occupiedCubeCount, verticesCount, chunkVertices.limit()/(3*4),
-							chunkShortIndices.limit()/2);
-							*/
-		}
-		/*
-		if (triangles.size() > 0) {
-			System.out.println("-- START Small Chunk Splat---");
-			for (int i = 0; i < triangles.size(); i++) {
-				System.out.printf("ORIG %f,%f,%f    NEW %f,%f,%f\n", triangles.get(i).getX(), triangles.get(i).getY(),
-						triangles.get(i).getZ(), buffers.vertices[buffers.indices[i] + 0],
-						buffers.vertices[buffers.indices[i] + 1], buffers.vertices[buffers.indices[i] + 2]);
-			}
-			System.out.println("-- END   Small Chunk Splat---");
-		}
-		*/
-		////
-
 		if (indicesCount == 0) {
-			triangles = null;
 			weights = null; //save memory on 'empty' chunks
 			empty = true;
 		} else {
-			normals = new ArrayList<Vec3>(triangles.size());
-			if (Config.USE_AMBIENT_OCCLUSION)
-				occlusion = new ArrayList<Float>(triangles.size());
+			chunkVertices = ByteBuffer.allocateDirect(verticesCount * 4).order(ByteOrder.nativeOrder());
+			chunkNormals = ByteBuffer.allocateDirect(verticesCount * 4).order(ByteOrder.nativeOrder());
+			chunkShortIndices = ByteBuffer.allocateDirect(indicesCount * 2).order(ByteOrder.nativeOrder());
+			chunkIntIndices = ByteBuffer.allocateDirect(indicesCount * 4).order(ByteOrder.nativeOrder());
 
-			for (int i = 0; i < triangles.size(); i++) {
-				if (Config.USE_SMOOTH_SHADE || (i % 3 == 0)) {
-					Vec3 p = triangles.get(i);
-					if (Config.USE_AMBIENT_OCCLUSION) {
-						float visibility = 0;
-						for (Vec3 ray : rayDistribution) {
-							boolean isOccluded = false;
-							for (int step = 1; step < Config.AMB_OCC_BIGRAY_STEPS && !isOccluded; step++) {
+			for (int i = 0; i < verticesCount; i += 3) {
+				float vx = buffers.vertices[i + 0];
+				float vy = buffers.vertices[i + 1];
+				float vz = buffers.vertices[i + 2];
 
-								Vec3 rp = p.add(ray.multiply(Config.AMB_OCC_BIGRAY_STEP_SIZE * step));
-								if (TerrainGenerator.getDensity(rp.getX(), rp.getY(), rp.getZ()) > 0)
-									isOccluded = true;
-							}
-							if (!isOccluded)
-								visibility += 1.0f / Config.AMB_OCC_RAY_COUNT;
-						}
-						occlusion.add(Math.min(0.1f, 0.4f * visibility - 0.1f));
-					}
-					normals.add(TerrainGenerator.getNormal(p.getX(), p.getY(), p.getZ()));
-				} else {
-					if (Config.USE_AMBIENT_OCCLUSION)
-						occlusion.add(null);
-					normals.add(null);
-				}
+				chunkVertices.putFloat(vx);
+				chunkVertices.putFloat(vy);
+				chunkVertices.putFloat(vz);
+
+				Vec3 normal = TerrainGenerator.getNormal(vx, vy, vz);
+
+				chunkNormals.putFloat(normal.getX());
+				chunkNormals.putFloat(normal.getY());
+				chunkNormals.putFloat(normal.getZ());
+
+				//System.out.printf("pos %f %f %f has normal %s\n", vx, vy, vz, normal);
 			}
+			for (int i = 0; i < indicesCount; i++) {
+				chunkShortIndices.putShort((short) (buffers.indices[i] / 3));
+				chunkIntIndices.putInt(buffers.indices[i] / 3);
+			}
+			/*
+				System.out.printf("Triangles size %d, indices %d, occ cells %d, uniqueVertFloats %d ... vertices count %d indices count %d\n",
+								triangles.size(), indicesCount, occupiedCubeCount, verticesCount, chunkVertices.limit()/(3*4),
+								chunkShortIndices.limit()/2);
+								*/
+
 			parallel_processPhysics();
 
 			chunkVertices.flip();
+			chunkNormals.flip();
 			chunkShortIndices.flip();
 			chunkIntIndices.flip();
 
@@ -321,34 +242,66 @@ public class Chunk implements Frustrumable {
 		}
 	}
 
-	private ByteBuffer chunkShortIndices, chunkIntIndices, chunkVertices;
-	private static boolean USE_OLD = false;
+	/*
+	if (triangles.size() > 0) {
+		System.out.println("-- START Small Chunk Splat---");
+		for (int i = 0; i < triangles.size(); i++) {
+			System.out.printf("ORIG %f,%f,%f    NEW %f,%f,%f\n", triangles.get(i).getX(), triangles.get(i).getY(),
+					triangles.get(i).getZ(), buffers.vertices[buffers.indices[i] + 0],
+					buffers.vertices[buffers.indices[i] + 1], buffers.vertices[buffers.indices[i] + 2]);
+		}
+		System.out.println("-- END   Small Chunk Splat---");
+	}
+	*/
+	////
+
+	/*
+	normals = new ArrayList<Vec3>(triangles.size());
+	if (Config.USE_AMBIENT_OCCLUSION)
+		occlusion = new ArrayList<Float>(triangles.size());
+
+	for (int i = 0; i < triangles.size(); i++) {
+		if (Config.USE_SMOOTH_SHADE || (i % 3 == 0)) {
+			Vec3 p = triangles.get(i);
+			if (Config.USE_AMBIENT_OCCLUSION) {
+				float visibility = 0;
+				for (Vec3 ray : rayDistribution) {
+					boolean isOccluded = false;
+					for (int step = 1; step < Config.AMB_OCC_BIGRAY_STEPS && !isOccluded; step++) {
+
+						Vec3 rp = p.add(ray.multiply(Config.AMB_OCC_BIGRAY_STEP_SIZE * step));
+						if (TerrainGenerator.getDensity(rp.getX(), rp.getY(), rp.getZ()) > 0)
+							isOccluded = true;
+					}
+					if (!isOccluded)
+						visibility += 1.0f / Config.AMB_OCC_RAY_COUNT;
+				}
+				occlusion.add(Math.min(0.1f, 0.4f * visibility - 0.1f));
+			}
+		} else {
+			if (Config.USE_AMBIENT_OCCLUSION)
+				occlusion.add(null);
+		}
+	}
+	*/
+
+	private ByteBuffer chunkShortIndices, chunkIntIndices, chunkVertices, chunkNormals;
 	private static int SIZE = 4;
 
 	private void parallel_processPhysics() {
 		TriangleIndexVertexArray indexVertexArrays;
-		if (USE_OLD) {
-			int vertStride = 3 * 4;
-			int indexStride = 3 * 4;
+		indexVertexArrays = new TriangleIndexVertexArray();
 
-			int totalTriangles = triangles.size() / 3;
+		IndexedMesh mesh = new IndexedMesh();
+		mesh.indexType = (SIZE == 2) ? ScalarType.SHORT : ScalarType.INTEGER;
+		mesh.numTriangles = chunkIntIndices.capacity() / (SIZE * 3);
+		mesh.numVertices = chunkVertices.capacity() / (4 * 3);
+		mesh.triangleIndexBase = chunkIntIndices;
+		mesh.triangleIndexStride = SIZE * 3;
+		mesh.vertexBase = chunkVertices;
+		mesh.vertexStride = 4 * 3;
 
-			indexVertexArrays = new TriangleIndexVertexArray(totalTriangles, chunkIntIndices, indexStride,
-					totalTriangles * 3, chunkVertices, vertStride);
-		} else {
-			indexVertexArrays = new TriangleIndexVertexArray();
-
-			IndexedMesh mesh = new IndexedMesh();
-			mesh.indexType = (SIZE == 2) ? ScalarType.SHORT : ScalarType.INTEGER;
-			mesh.numTriangles = chunkIntIndices.capacity() / (SIZE * 3);
-			mesh.numVertices = chunkVertices.capacity() / (4 * 3);
-			mesh.triangleIndexBase = chunkIntIndices;
-			mesh.triangleIndexStride = SIZE * 3;
-			mesh.vertexBase = chunkVertices;
-			mesh.vertexStride = 4 * 3;
-
-			indexVertexArrays.addIndexedMesh(mesh, (SIZE == 2) ? ScalarType.SHORT : ScalarType.INTEGER);
-		}
+		indexVertexArrays.addIndexedMesh(mesh, (SIZE == 2) ? ScalarType.SHORT : ScalarType.INTEGER);
 
 		boolean useQuantizedAabbCompression = true;
 		trimeshShape = new BvhTriangleMeshShape(indexVertexArrays, useQuantizedAabbCompression);
