@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.lwjgl.Sys;
+
 /*
 Serial dict contains all cubes.
 Serial LRU containing 
@@ -35,6 +37,8 @@ public class ChunkManager implements ChunkProvider {
 	private HashMap<ChunkIndex, Chunk> chunks;
 	private LinkedBlockingQueue<Chunk> dirtyChunks;
 	private LinkedHashSet<ChunkIndex> chunkCache;
+	
+	public static long startTime;
 
 	ChunkManager(long x, long y, long z) {
 		chunks = new HashMap<ChunkIndex, Chunk>();
@@ -50,6 +54,8 @@ public class ChunkManager implements ChunkProvider {
 		for (int i = 0; i < Config.WORKER_THREADS; i++)
 			new ChunkBakerThread(i, this).start();
 
+		startTime = Sys.getTime();
+		
 		sweepNearby(x, y, z, 2, false);
 		sweepNearby(x, y, z, Config.CHUNK_LOAD_DISTANCE, false);
 	}
@@ -70,6 +76,8 @@ public class ChunkManager implements ChunkProvider {
 	}
 
 	public Chunk getChunkToProcess() throws InterruptedException {
+		if (dirtyChunks.size() == 1)
+			System.out.println("\t\t\tCompleted in " + ((Sys.getTime()-startTime)*1.0)/Sys.getTimerResolution());
 		return dirtyChunks.take();
 	}
 
@@ -101,7 +109,7 @@ public class ChunkManager implements ChunkProvider {
 		/*
 		if (chunkCache.contains(key))
 			System.err.println("WARNING: non-local chunk removed from local pool");
-		chunkCache.add(key); //TODO chunkCache needs only tags: use non-map
+		chunkCache.add(key);
 		*/
 	}
 
@@ -146,13 +154,7 @@ public class ChunkManager implements ChunkProvider {
 		lastz = z;
 
 		Game.PROFILE("pos update");
-		/*
-		Chunk localChunk = chunks.get(new ChunkIndex(x, y, z));
-
-		//Stall until local chunk processed
-		while (!localChunk.processingIsComplete());
-		localChunk.serial_render(null, true, false);
-		*/
+		
 		sweepNearby(x, y, z, 1, true);
 		Game.PROFILE("loc chunk stall");
 

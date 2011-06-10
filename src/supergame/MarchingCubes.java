@@ -294,15 +294,12 @@ public class MarchingCubes {
 	}
 
 	// ORDERING: 0 1 3 2, 4 5 7 6
-	static Vec3 points[] = { new Vec3(0, 0, 0), new Vec3(0, 0, 1), new Vec3(0, 1, 1), new Vec3(0, 1, 0),
+	private static Vec3 points[] = { new Vec3(0, 0, 0), new Vec3(0, 0, 1), new Vec3(0, 1, 1), new Vec3(0, 1, 0),
 			new Vec3(1, 0, 0), new Vec3(1, 0, 1), new Vec3(1, 1, 1), new Vec3(1, 1, 0) };
-	static int offsets[][] = { { 0, 0, 0 }, { 0, 0, 1 }, { 0, 1, 1 }, { 0, 1, 0 }, { 1, 0, 0 }, { 1, 0, 1 },
+	private static int offsets[][] = { { 0, 0, 0 }, { 0, 0, 1 }, { 0, 1, 1 }, { 0, 1, 0 }, { 1, 0, 0 }, { 1, 0, 1 },
 			{ 1, 1, 1 }, { 1, 1, 0 } };
-
-	static float colors[][] = { { 0, 1, 0 }, { 1, 0.5f, 0 }, { 1, 0, 0 }, { 1, 1, 0 }, { 0, 1, 1 } };
 	static {
-		int i;
-		for (i = 0; i < 8; i++)
+		for (int i = 0; i < 8; i++)
 			points[i] = points[i].multiply(Config.METERS_PER_SUBCHUNK);
 	}
 
@@ -316,8 +313,8 @@ public class MarchingCubes {
 		return false;
 	}
 
-	static Vec3 shortPoints[] = { new Vec3(1, 0, 0), new Vec3(0, 1, 0f), new Vec3(0, 0, 1) };
-	static int shortOffsets[][] = { { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 } };
+	private static Vec3 shortPoints[] = { new Vec3(1, 0, 0), new Vec3(0, 1, 0f), new Vec3(0, 0, 1) };
+	private static int shortOffsets[][] = { { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 } };
 
 	public static int writeLocalVertices(Vec3 blockLoc, int x, int y, int z, float[][][] weights, float[] vertices,
 			int verticesOffset, int[][][][] vertIndexVolume) {
@@ -364,24 +361,6 @@ public class MarchingCubes {
 			if (val > 0)
 				cubeindex |= 1 << i;
 		}
-
-		/*TODO:
-		 * instead of calculating vert position, calculate vert index, look up in vertIndexVolume
-		 * need a x,y,z coord plus a direction 0,1,2 (x,y,z)
-		 */
-
-		/*
-		0 { 0, 0, 0 }
-		1 { 0, 0, 1 }
-		2 { 0, 1, 1 }
-		3 { 0, 1, 0 }
-		4 { 1, 0, 0 }
-		5 { 1, 0, 1 }
-		6 { 1, 1, 1 }
-		7 { 1, 1, 0 }
-		 */
-		/*
-		*/
 
 		vertIndexList[0] = vertIndexVolume[x + 0][y + 0][z + 0][2]; // 0 1
 		vertIndexList[1] = vertIndexVolume[x + 0][y + 0][z + 1][1]; // 1 2

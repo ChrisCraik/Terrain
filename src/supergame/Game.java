@@ -94,7 +94,7 @@ public class Game {
 				render();
 				Display.update();
 				PROFILE("Display update");
-				Display.sync(120);
+				Display.sync(Config.FRAME_CAP);
 				PROFILE("Display sync");
 			}
 			cleanup();
@@ -137,9 +137,6 @@ public class Game {
 		endTime = tempTime;
 	}
 	private boolean render() {
-		if (Game.heartbeatFrame)
-			System.out.println("Clearing buffer, rendering chunks");
-		
 		collision.stepSimulation(delta / 1000f);
 		PROFILE("Collision");
 		

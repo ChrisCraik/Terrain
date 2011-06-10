@@ -2,6 +2,7 @@ package supergame;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.vecmath.Vector3f;
@@ -24,8 +25,10 @@ public class Chunk implements Frustrumable {
 	public static Vec3[] rayDistribution;
 
 	private boolean empty = true;
-	private float[][][] weights;
+	//private float[][][] dirtyWeights;
 	private int displayList = -1;
+
+	private ArrayList<Vec3> triangles;
 
 	private ChunkIndex index;
 	private Vec3 pos; //cube's origin (not center)
@@ -41,6 +44,9 @@ public class Chunk implements Frustrumable {
 
 	public static final float colors[][][] = { { { 0, 1, 0, 1 }, { 1, 0, 0, 1 } },
 			{ { 1, 0.5f, 0, 1 }, { 0.5f, 0, 1, 1 } }, { { 0.9f, 0.9f, 0.9f, 1 }, { 0.4f, 0.4f, 0.4f, 1 } } };
+
+	private ByteBuffer chunkShortIndices, chunkIntIndices, chunkVertices, chunkNormals;
+	private static int SIZE = 4;
 
 	//Serial Methods - called by main loop
 
@@ -61,13 +67,14 @@ public class Chunk implements Frustrumable {
 				GL11.glCallList(displayList);
 			}
 		} else if (allowBruteForceRender) {
-			// register the terrain chunk with the physics engine
-			Game.collision.collisionShapes.add(trimeshShape);
-			Game.collision.dynamicsWorld.addRigidBody(body);
+			if (Config.CHUNK_PHYSICS) {
+				// register the terrain chunk with the physics engine
+				Game.collision.collisionShapes.add(trimeshShape);
+				Game.collision.dynamicsWorld.addRigidBody(body);
+			}
 
 			displayList = GL11.glGenLists(1);
 			GL11.glNewList(displayList, display ? GL11.GL_COMPILE_AND_EXECUTE : GL11.GL_COMPILE);
-
 			GL11.glEnableClientState(GL11.GL_NORMAL_ARRAY);
 			GL11.glEnableClientState(GL11.GL_VERTEX_ARRAY);
 			GL11.glNormalPointer(0, chunkNormals.asFloatBuffer());
@@ -75,7 +82,6 @@ public class Chunk implements Frustrumable {
 			GL11.glDrawElements(GL11.GL_TRIANGLES, chunkShortIndices.asShortBuffer());
 			GL11.glDisableClientState(GL11.GL_VERTEX_ARRAY);
 			GL11.glDisableClientState(GL11.GL_NORMAL_ARRAY);
-
 			/*			
 			GL11.glBegin(GL11.GL_TRIANGLES); // Draw some triangles
 
@@ -115,17 +121,18 @@ public class Chunk implements Frustrumable {
 		if (displayList >= 0) {
 			GL11.glDeleteLists(displayList, 1);
 			displayList = -1;
-			if (body == null || trimeshShape == null) {
-				System.err.println("improperly initialized body/collision shape");
-				System.exit(1);
+			if (Config.CHUNK_PHYSICS) {
+				if (body == null || trimeshShape == null) {
+					System.err.println("improperly initialized body/collision shape");
+					System.exit(1);
+				}
+				Game.collision.dynamicsWorld.removeRigidBody(body);
+				Game.collision.collisionShapes.remove(trimeshShape);
 			}
-			Game.collision.dynamicsWorld.removeRigidBody(body);
-			Game.collision.collisionShapes.remove(trimeshShape);
 			trimeshShape = null;
 			body = null;
 		}
 
-		weights = null;
 		pos = null;
 	}
 
@@ -133,10 +140,11 @@ public class Chunk implements Frustrumable {
 
 	//per worker temporary buffer data for chunk processing
 	private static class WorkerBuffers {
-		public int[] occupiedCells = new int[(Config.CHUNK_DIVISION + 1) * (Config.CHUNK_DIVISION + 1)
-				* (Config.CHUNK_DIVISION + 1)];
+		public float[][][] weights = new float[Config.CHUNK_DIVISION + 2][Config.CHUNK_DIVISION + 2][Config.CHUNK_DIVISION + 2];
 		public float[] vertices = new float[9 * Config.CHUNK_DIVISION * Config.CHUNK_DIVISION * Config.CHUNK_DIVISION];
+		public int verticesFloatCount;
 		public int[] indices = new int[15 * Config.CHUNK_DIVISION * Config.CHUNK_DIVISION * Config.CHUNK_DIVISION];
+		public int indicesIntCount;
 		public int[][][][] vertIndexVolume = new int[Config.CHUNK_DIVISION + 2][Config.CHUNK_DIVISION + 2][Config.CHUNK_DIVISION + 2][3];
 	}
 
@@ -144,81 +152,109 @@ public class Chunk implements Frustrumable {
 		return new WorkerBuffers();
 	}
 
-	public void parallel_process(Object workerBuffers) {
-		if (!state.compareAndSet(SERIAL_INITIAL, PARALLEL_PROCESSING))
-			return;
-
-		WorkerBuffers buffers = (WorkerBuffers) workerBuffers;
-
-		pos = this.index.getVec3();
-		pos = pos.multiply(Config.CHUNK_DIVISION * Config.METERS_PER_SUBCHUNK);
-
-		weights = new float[Config.CHUNK_DIVISION + 2][Config.CHUNK_DIVISION + 2][Config.CHUNK_DIVISION + 2];
-
-		// cache weights 
-		int x, y, z;
-		for (x = 0; x < Config.CHUNK_DIVISION + 1; x++)
-			for (y = 0; y < Config.CHUNK_DIVISION + 1; y++)
-				for (z = 0; z < Config.CHUNK_DIVISION + 1; z++) {
-					weights[x][y][z] = TerrainGenerator.getDensity(pos.getX() + x * Config.METERS_PER_SUBCHUNK,
+	public boolean parallel_processCalcWeights(WorkerBuffers buffers) {
+		//boolean isNeg = TerrainGenerator.getDensity(pos.getX(), pos.getY(), pos.getZ()) < 0;
+		int posCount = 0, negCount = 0;
+		for (int x = 0; x < Config.CHUNK_DIVISION + 1; x++)
+			for (int y = 0; y < Config.CHUNK_DIVISION + 1; y++)
+				for (int z = 0; z < Config.CHUNK_DIVISION + 1; z++) {
+					float val = TerrainGenerator.getDensity(pos.getX() + x * Config.METERS_PER_SUBCHUNK,
 							pos.getY() + y * Config.METERS_PER_SUBCHUNK, pos.getZ() + z * Config.METERS_PER_SUBCHUNK);
+					if (val < 0)
+						negCount++;
+					else
+						posCount++;
+					buffers.weights[x][y][z] = val;
+				}
+		return (negCount != 0) && (posCount != 0); //returns true if terrain is worth rendering 
+	}
+	public void parallel_processCalcGeometry(WorkerBuffers buffers) {
+		int x, y, z;
+
+		if (Config.CHUNK_REUSE_VERTS) {
+			for (x = 0; x < Config.CHUNK_DIVISION + 1; x++)
+				for (y = 0; y < Config.CHUNK_DIVISION + 1; y++)
+					for (z = 0; z < Config.CHUNK_DIVISION + 1; z++)
+						if (MarchingCubes.cubeOccupied(x, y, z, buffers.weights)) {
+							//calculate vertices, populate vert buffer, vertIndexVolume buffer (NOTE some of these vertices wasted: reside in neighbor chunks)
+							Vec3 blockPos = new Vec3(pos.getX() + x * Config.METERS_PER_SUBCHUNK, pos.getY() + y
+									* Config.METERS_PER_SUBCHUNK, pos.getZ() + z * Config.METERS_PER_SUBCHUNK);
+							buffers.verticesFloatCount = MarchingCubes.writeLocalVertices(blockPos, x, y, z, buffers.weights,
+									buffers.vertices, buffers.verticesFloatCount, buffers.vertIndexVolume);
+						}
+			for (x = 0; x < Config.CHUNK_DIVISION; x++)
+				for (y = 0; y < Config.CHUNK_DIVISION; y++)
+					for (z = 0; z < Config.CHUNK_DIVISION; z++)
+						if (MarchingCubes.cubeOccupied(x, y, z, buffers.weights)) {
+							//calculate indices
+							buffers.indicesIntCount = MarchingCubes.writeLocalIndices(x, y, z, buffers.weights, buffers.indices,
+									buffers.indicesIntCount, buffers.vertIndexVolume);
+						}
+		} else {
+			triangles = new ArrayList<Vec3>();
+			for (x = 0; x < Config.CHUNK_DIVISION; x++)
+				for (y = 0; y < Config.CHUNK_DIVISION; y++)
+					for (z = 0; z < Config.CHUNK_DIVISION; z++) {
+						if (MarchingCubes.cubeOccupied(x, y, z, buffers.weights)) {
+							Vec3 blockPos = new Vec3(pos.getX() + x * Config.METERS_PER_SUBCHUNK, pos.getY() + y
+									* Config.METERS_PER_SUBCHUNK, pos.getZ() + z * Config.METERS_PER_SUBCHUNK);
+							MarchingCubes.makeMesh(blockPos, x, y, z, buffers.weights, 0.0, triangles);
+						}
+					}
+			buffers.verticesFloatCount = triangles.size() * 3;
+			buffers.indicesIntCount = triangles.size();
+		}	
+	}
+	public boolean parallel_processSaveGeometry(WorkerBuffers buffers) {
+		if (buffers.indicesIntCount == 0) {
+			return true;
+		} else {
+			chunkVertices = ByteBuffer.allocateDirect(buffers.verticesFloatCount * 4).order(ByteOrder.nativeOrder());
+			chunkNormals = ByteBuffer.allocateDirect(buffers.verticesFloatCount * 4).order(ByteOrder.nativeOrder());
+			chunkShortIndices = ByteBuffer.allocateDirect(buffers.indicesIntCount * 2).order(ByteOrder.nativeOrder());
+			chunkIntIndices = ByteBuffer.allocateDirect(buffers.indicesIntCount * 4).order(ByteOrder.nativeOrder());
+
+			if (Config.CHUNK_REUSE_VERTS) {
+				for (int i = 0; i < buffers.verticesFloatCount; i += 3) {
+					float vx = buffers.vertices[i + 0];
+					float vy = buffers.vertices[i + 1];
+					float vz = buffers.vertices[i + 2];
+
+					chunkVertices.putFloat(vx);
+					chunkVertices.putFloat(vy);
+					chunkVertices.putFloat(vz);
+
+					Vec3 normal = TerrainGenerator.getNormal(vx, vy, vz);
+
+					chunkNormals.putFloat(normal.getX());
+					chunkNormals.putFloat(normal.getY());
+					chunkNormals.putFloat(normal.getZ());
+				}
+				for (int i = 0; i < buffers.indicesIntCount; i++) {
+					chunkShortIndices.putShort((short) (buffers.indices[i] / 3));
+					chunkIntIndices.putInt(buffers.indices[i] / 3);
+				}
+			} else {
+				for (int i = 0; i < buffers.indicesIntCount; i++) {
+					Vec3 vert = triangles.get(i);
+					float vx = vert.getX();
+					float vy = vert.getY();
+					float vz = vert.getZ();
+
+					chunkVertices.putFloat(vx);
+					chunkVertices.putFloat(vy);
+					chunkVertices.putFloat(vz);
+
+					Vec3 normal = TerrainGenerator.getNormal(vx, vy, vz);
+
+					chunkNormals.putFloat(normal.getX());
+					chunkNormals.putFloat(normal.getY());
+					chunkNormals.putFloat(normal.getZ());
+
+					chunkShortIndices.putShort((short) i);
+					chunkIntIndices.putInt(i);
 				}
 
-		// create polys
-		int occupiedCubeCount = 0;
-		int verticesCount = 0, indicesCount = 0;
-		for (x = 0; x < Config.CHUNK_DIVISION + 1; x++)
-			for (y = 0; y < Config.CHUNK_DIVISION + 1; y++)
-				for (z = 0; z < Config.CHUNK_DIVISION + 1; z++)
-					if (MarchingCubes.cubeOccupied(x, y, z, weights)) {
-						//add cell to occupiedCells buffer
-						int cubeIndex = ((x * Config.CHUNK_DIVISION) + y) * Config.CHUNK_DIVISION + z;
-						buffers.occupiedCells[occupiedCubeCount++] = cubeIndex;
-
-						//calculate vertices, populate vert buffer, vertIndexVolume buffer (NOTE some of these vertices wasted: reside in neighbor chunks)
-						Vec3 blockPos = new Vec3(pos.getX() + x * Config.METERS_PER_SUBCHUNK, pos.getY() + y
-								* Config.METERS_PER_SUBCHUNK, pos.getZ() + z * Config.METERS_PER_SUBCHUNK);
-						verticesCount = MarchingCubes.writeLocalVertices(blockPos, x, y, z, weights, buffers.vertices,
-								verticesCount, buffers.vertIndexVolume);
-					}
-		for (x = 0; x < Config.CHUNK_DIVISION; x++)
-			for (y = 0; y < Config.CHUNK_DIVISION; y++)
-				for (z = 0; z < Config.CHUNK_DIVISION; z++)
-					if (MarchingCubes.cubeOccupied(x, y, z, weights)) {
-						//calculate indices
-						indicesCount = MarchingCubes.writeLocalIndices(x, y, z, weights, buffers.indices, indicesCount,
-								buffers.vertIndexVolume);
-					}
-
-		if (indicesCount == 0) {
-			weights = null; //save memory on 'empty' chunks
-			empty = true;
-		} else {
-			chunkVertices = ByteBuffer.allocateDirect(verticesCount * 4).order(ByteOrder.nativeOrder());
-			chunkNormals = ByteBuffer.allocateDirect(verticesCount * 4).order(ByteOrder.nativeOrder());
-			chunkShortIndices = ByteBuffer.allocateDirect(indicesCount * 2).order(ByteOrder.nativeOrder());
-			chunkIntIndices = ByteBuffer.allocateDirect(indicesCount * 4).order(ByteOrder.nativeOrder());
-
-			for (int i = 0; i < verticesCount; i += 3) {
-				float vx = buffers.vertices[i + 0];
-				float vy = buffers.vertices[i + 1];
-				float vz = buffers.vertices[i + 2];
-
-				chunkVertices.putFloat(vx);
-				chunkVertices.putFloat(vy);
-				chunkVertices.putFloat(vz);
-
-				Vec3 normal = TerrainGenerator.getNormal(vx, vy, vz);
-
-				chunkNormals.putFloat(normal.getX());
-				chunkNormals.putFloat(normal.getY());
-				chunkNormals.putFloat(normal.getZ());
-
-				//System.out.printf("pos %f %f %f has normal %s\n", vx, vy, vz, normal);
-			}
-			for (int i = 0; i < indicesCount; i++) {
-				chunkShortIndices.putShort((short) (buffers.indices[i] / 3));
-				chunkIntIndices.putInt(buffers.indices[i] / 3);
 			}
 			/*
 				System.out.printf("Triangles size %d, indices %d, occ cells %d, uniqueVertFloats %d ... vertices count %d indices count %d\n",
@@ -233,9 +269,32 @@ public class Chunk implements Frustrumable {
 			chunkShortIndices.flip();
 			chunkIntIndices.flip();
 
-			empty = false;
+			return false;
 		}
 
+	}
+
+	public void parallel_process(Object workerBuffers) {
+		if (!state.compareAndSet(SERIAL_INITIAL, PARALLEL_PROCESSING))
+			return;
+
+		WorkerBuffers buffers = (WorkerBuffers) workerBuffers;
+
+		pos = this.index.getVec3();
+		pos = pos.multiply(Config.CHUNK_DIVISION * Config.METERS_PER_SUBCHUNK);
+
+		buffers.verticesFloatCount = 0;
+		buffers.indicesIntCount = 0;
+
+		// cache weights
+		if (parallel_processCalcWeights(buffers)) {
+			// create polys
+			parallel_processCalcGeometry(buffers);
+			
+			// save polys in bytebuffers for rendering/physics
+			empty = parallel_processSaveGeometry(buffers);	
+		}
+		
 		if (!state.compareAndSet(PARALLEL_PROCESSING, PARALLEL_COMPLETE)) {
 			System.err.println("Error: Chunk parallel processing interrupted");
 			System.exit(1);
@@ -285,10 +344,10 @@ public class Chunk implements Frustrumable {
 	}
 	*/
 
-	private ByteBuffer chunkShortIndices, chunkIntIndices, chunkVertices, chunkNormals;
-	private static int SIZE = 4;
-
 	private void parallel_processPhysics() {
+		if (!Config.CHUNK_PHYSICS)
+			return;
+
 		TriangleIndexVertexArray indexVertexArrays;
 		indexVertexArrays = new TriangleIndexVertexArray();
 

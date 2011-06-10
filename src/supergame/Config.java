@@ -3,7 +3,7 @@ package supergame;
 import java.lang.reflect.*;
 
 public class Config {
-	public static int MS_PER_HEARTBEAT = 1000;
+	public static int MS_PER_HEARTBEAT = 2000;
 	public static int WORKER_THREADS = 1;
 	public static int RESOLUTION_X = 1024;
 	public static int RESOLUTION_Y = 768;
@@ -11,12 +11,15 @@ public class Config {
 	// CHUNKS
 	public static float METERS_PER_SUBCHUNK = 1;
 	public static int CHUNK_DIVISION = 32;
-	public static int CHUNK_LOAD_DISTANCE = 3;
+	public static int CHUNK_LOAD_DISTANCE = 4;
 	public static int CHUNK_CACHE_SIZE = 4096;
+	public static boolean CHUNK_REUSE_VERTS = true;
+	public static boolean CHUNK_PHYSICS = true;
 	
 	// GRAPHICS
 	public static boolean USE_DEBUG_COLORS = false;
 	public static boolean USE_SMOOTH_SHADE = true;
+	public static int FRAME_CAP = 60;
 	
 	// AMBIENT OCCLUSION
 	public static boolean USE_AMBIENT_OCCLUSION = false;
