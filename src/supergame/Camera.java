@@ -16,10 +16,12 @@ public class Camera {
 
 	public interface CameraControllable {
 		void setHeadingPitch(float heading, float pitch);
+
 		Vector3f getPos();
 	}
-	
+
 	private CameraControllable controllable;
+
 	Camera(CameraControllable controllable) {
 		pos = new Vector3f(15, 40, 8);
 		cameraSetup();
@@ -27,7 +29,7 @@ public class Camera {
 		pl = new Plane[6];
 		for (int i = 0; i < 6; i++)
 			pl[i] = new Plane();
-		
+
 		this.controllable = controllable;
 
 		//initialize mouse position
@@ -75,13 +77,14 @@ public class Camera {
 			return this.offset + this.normal.innerProduct(p);
 		}
 
+		@SuppressWarnings("unused")
 		public void draw(float[] color) {
 			GL11.glBegin(GL11.GL_TRIANGLES); // Draw some triangles
 
 			Vec3 a, b, c, d;
 
 			a = new Vec3(0, 0, 0);
-			b = new Vec3(0,1,0).cross(this.normal); // relative horizontal vector
+			b = new Vec3(0, 1, 0).cross(this.normal); // relative horizontal vector
 			c = b.cross(this.normal);
 			d = b.add(c);
 
@@ -122,7 +125,7 @@ public class Camera {
 		if (!Config.FROZEN_FRUSTUM_PITCH)
 			pitch = this.pitch;
 		if (!Config.FROZEN_FRUSTUM_POS)
-			offset = new Vec3(this.pos.x,this.pos.y,this.pos.z);
+			offset = new Vec3(this.pos.x, this.pos.y, this.pos.z);
 
 		Vec3 Z = forward = new Vec3(-heading, -pitch);
 		Vec3 negZ = forward.multiply(-1);
@@ -157,28 +160,26 @@ public class Camera {
 			pos.sub(d);
 		if (Mouse.isButtonDown(1))
 			pos.add(d);
-		
+
 		DisplayMode dm = Display.getDisplayMode();
 		int height = dm.getHeight();
 		int width = dm.getWidth();
 
 		// System.out.println("x move:"+(Mouse.getX()-width/2)+",y move:"+(Mouse.getY()-height/2));
 
-		if (msSinceHeartbeat != 0) {
-			heading -= (Mouse.getX() - width / 2) / 10.0;
-			pitch += (Mouse.getY() - height / 2) / 10.0;
-		}
+		heading -= (Mouse.getX() - width / 2) / 10.0;
+		pitch += (Mouse.getY() - height / 2) / 10.0;
 
 		pitch = Math.min(pitch, 90);
 		pitch = Math.max(pitch, -90);
 
 		controllable.setHeadingPitch(heading, pitch);
-		
+
 		// System.out.println("pitch:"+Math.sin(pitch*Math.PI/180.0)+", heading:"+Math.sin(heading*Math.PI/180.0));
 		Mouse.setCursorPosition(width / 2, height / 2);
 
 		msSinceHeartbeat += Game.delta;
-		if (msSinceHeartbeat > 1000) {
+		if (Game.heartbeatFrame) {
 			System.out.println("pos:" + pos + ", pitch:" + pitch + ", heading:" + heading);
 			msSinceHeartbeat = 0;
 		}
@@ -190,6 +191,7 @@ public class Camera {
 
 	interface Frustrumable {
 		Vec3 getVertexP(Vec3 n);
+
 		Vec3 getVertexN(Vec3 n);
 	}
 
@@ -218,7 +220,7 @@ public class Camera {
 	public void apply() {
 		pos = controllable.getPos();
 		updateFrustum();
-		
+
 		GL11.glRotatef(pitch, -1, 0, 0);
 		GL11.glRotatef(heading, 0, -1, 0);
 		GL11.glTranslatef(-pos.x, -pos.y, -pos.z);

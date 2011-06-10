@@ -4,7 +4,7 @@ import java.lang.reflect.*;
 
 public class Config {
 	public static int MS_PER_HEARTBEAT = 2000;
-	public static int WORKER_THREADS = 1;
+	public static int WORKER_THREADS = 3;
 	public static int RESOLUTION_X = 1024;
 	public static int RESOLUTION_Y = 768;
 	
@@ -17,8 +17,6 @@ public class Config {
 	public static boolean CHUNK_PHYSICS = true;
 	
 	// GRAPHICS
-	public static boolean USE_DEBUG_COLORS = false;
-	public static boolean USE_SMOOTH_SHADE = true;
 	public static int FRAME_CAP = 60;
 	
 	// AMBIENT OCCLUSION

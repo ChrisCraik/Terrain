@@ -128,9 +128,17 @@ public class Chunk implements Frustrumable {
 				}
 				Game.collision.dynamicsWorld.removeRigidBody(body);
 				Game.collision.collisionShapes.remove(trimeshShape);
+
+				trimeshShape = null;
+				body = null;
 			}
-			trimeshShape = null;
-			body = null;
+		}
+
+		if (!empty) {
+			chunkVertices = null;
+			chunkNormals = null;
+			chunkIntIndices = null;
+			chunkShortIndices = null;
 		}
 
 		pos = null;
@@ -158,8 +166,8 @@ public class Chunk implements Frustrumable {
 		for (int x = 0; x < Config.CHUNK_DIVISION + 1; x++)
 			for (int y = 0; y < Config.CHUNK_DIVISION + 1; y++)
 				for (int z = 0; z < Config.CHUNK_DIVISION + 1; z++) {
-					float val = TerrainGenerator.getDensity(pos.getX() + x * Config.METERS_PER_SUBCHUNK,
-							pos.getY() + y * Config.METERS_PER_SUBCHUNK, pos.getZ() + z * Config.METERS_PER_SUBCHUNK);
+					float val = TerrainGenerator.getDensity(pos.getX() + x * Config.METERS_PER_SUBCHUNK, pos.getY() + y
+							* Config.METERS_PER_SUBCHUNK, pos.getZ() + z * Config.METERS_PER_SUBCHUNK);
 					if (val < 0)
 						negCount++;
 					else
@@ -168,6 +176,7 @@ public class Chunk implements Frustrumable {
 				}
 		return (negCount != 0) && (posCount != 0); //returns true if terrain is worth rendering 
 	}
+
 	public void parallel_processCalcGeometry(WorkerBuffers buffers) {
 		int x, y, z;
 
@@ -179,16 +188,17 @@ public class Chunk implements Frustrumable {
 							//calculate vertices, populate vert buffer, vertIndexVolume buffer (NOTE some of these vertices wasted: reside in neighbor chunks)
 							Vec3 blockPos = new Vec3(pos.getX() + x * Config.METERS_PER_SUBCHUNK, pos.getY() + y
 									* Config.METERS_PER_SUBCHUNK, pos.getZ() + z * Config.METERS_PER_SUBCHUNK);
-							buffers.verticesFloatCount = MarchingCubes.writeLocalVertices(blockPos, x, y, z, buffers.weights,
-									buffers.vertices, buffers.verticesFloatCount, buffers.vertIndexVolume);
+							buffers.verticesFloatCount = MarchingCubes.writeLocalVertices(blockPos, x, y, z,
+									buffers.weights, buffers.vertices, buffers.verticesFloatCount,
+									buffers.vertIndexVolume);
 						}
 			for (x = 0; x < Config.CHUNK_DIVISION; x++)
 				for (y = 0; y < Config.CHUNK_DIVISION; y++)
 					for (z = 0; z < Config.CHUNK_DIVISION; z++)
 						if (MarchingCubes.cubeOccupied(x, y, z, buffers.weights)) {
 							//calculate indices
-							buffers.indicesIntCount = MarchingCubes.writeLocalIndices(x, y, z, buffers.weights, buffers.indices,
-									buffers.indicesIntCount, buffers.vertIndexVolume);
+							buffers.indicesIntCount = MarchingCubes.writeLocalIndices(x, y, z, buffers.weights,
+									buffers.indices, buffers.indicesIntCount, buffers.vertIndexVolume);
 						}
 		} else {
 			triangles = new ArrayList<Vec3>();
@@ -203,8 +213,9 @@ public class Chunk implements Frustrumable {
 					}
 			buffers.verticesFloatCount = triangles.size() * 3;
 			buffers.indicesIntCount = triangles.size();
-		}	
+		}
 	}
+
 	public boolean parallel_processSaveGeometry(WorkerBuffers buffers) {
 		if (buffers.indicesIntCount == 0) {
 			return true;
@@ -290,11 +301,11 @@ public class Chunk implements Frustrumable {
 		if (parallel_processCalcWeights(buffers)) {
 			// create polys
 			parallel_processCalcGeometry(buffers);
-			
+
 			// save polys in bytebuffers for rendering/physics
-			empty = parallel_processSaveGeometry(buffers);	
+			empty = parallel_processSaveGeometry(buffers);
 		}
-		
+
 		if (!state.compareAndSet(PARALLEL_PROCESSING, PARALLEL_COMPLETE)) {
 			System.err.println("Error: Chunk parallel processing interrupted");
 			System.exit(1);

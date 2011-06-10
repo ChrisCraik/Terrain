@@ -9,6 +9,7 @@ interface ChunkProvider {
 }
 
 public class ChunkBakerThread extends Thread {
+	@SuppressWarnings("unused")
 	private int id;
 	private ChunkProvider chunkProvider;
 
@@ -18,7 +19,7 @@ public class ChunkBakerThread extends Thread {
 	}
 
 	/*
-	 * Take one dirty chunk(for now) and clean it by re-initializing it 
+	 * Take one dirty chunk and (re-)initialize it so that it can be rendered, and collided 
 	 */
 	public void run() {
 		Chunk current;
@@ -31,11 +32,11 @@ public class ChunkBakerThread extends Thread {
 				current.parallel_process(buffers);
 			} catch (InterruptedException e) {
 				System.out.println("interruptedexception ignored");
-			} /*catch (Exception e) {
+			} catch (Exception e) {
 				System.out.println("ERROR: Worker thread experienced exception");
 				e.printStackTrace();
 				System.exit(1);
-			}*/
+			}
 		}
 	}
 }

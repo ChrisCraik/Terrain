@@ -13,7 +13,7 @@ public class TerrainGenerator {
 	}
 
 	public static float getDensity(float x, float y, float z) {
-		//return (float) Perlin.noise(x / 10, y / 10, z / 10);
+		//return (float) Perlin.noise(x / 20, y / 20, z / 20);
 		//return (float) Perlin.noise(x / 10, y / 10, z / 10) + 0.0f - y * 0.05f;
 		return (float) Perlin.noise(x / 20, 0, z / 20) + 0.0f - y * 0.05f;
 		/*
