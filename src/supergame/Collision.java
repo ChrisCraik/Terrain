@@ -34,32 +34,6 @@ public class Collision {
 		physics = Config.PHYSICS_USE_NATIVE ? new NativePhysics() : new JavaPhysics();
 		physics.initialize(Config.PHYSICS_GRAVITY, Config.CHUNK_DIVISION);
 		/*
-		// collision configuration contains default setup for memory, collision
-		// setup. Advanced users can create their own configuration.
-		CollisionConfiguration collisionConfiguration = new DefaultCollisionConfiguration();
-
-		// use the default collision dispatcher. For parallel processing you
-		// can use a different dispatcher (see Extras/BulletMultiThreaded)
-		CollisionDispatcher dispatcher = new CollisionDispatcher(collisionConfiguration);
-
-		// the maximum size of the collision world. Make sure objects stay
-		// within these boundaries
-		// Don't make the world AABB size too large, it will harm simulation
-		// quality and performance
-		Vector3f worldAabbMin = new Vector3f(-10000, -10000, -10000);
-		Vector3f worldAabbMax = new Vector3f(10000, 10000, 10000);
-		AxisSweep3 overlappingPairCache = new AxisSweep3(worldAabbMin, worldAabbMax, MAX_PROXIES);
-		overlappingPairCache.getOverlappingPairCache().setInternalGhostPairCallback(new GhostPairCallback());
-		//BroadphaseInterface overlappingPairCache = new SimpleBroadphase(
-		//		maxProxies);
-
-		// the default constraint solver. For parallel processing you can use a
-		// different solver (see Extras/BulletMultiThreaded)
-		SequentialImpulseConstraintSolver solver = new SequentialImpulseConstraintSolver();
-
-		dynamicsWorld = new DiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
-
-		dynamicsWorld.setGravity(new Vector3f(0, -Config.PHYSICS_GRAVITY, 0));
 
 		// create a few basic rigid bodies
 		CollisionShape groundShape = new BoxShape(new Vector3f(15.f, 15.f, 15.f));

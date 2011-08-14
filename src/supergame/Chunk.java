@@ -5,18 +5,7 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.vecmath.Vector3f;
-
 import org.lwjgl.opengl.GL11;
-
-import com.bulletphysics.collision.shapes.BvhTriangleMeshShape;
-import com.bulletphysics.collision.shapes.IndexedMesh;
-import com.bulletphysics.collision.shapes.ScalarType;
-import com.bulletphysics.collision.shapes.TriangleIndexVertexArray;
-import com.bulletphysics.dynamics.RigidBody;
-import com.bulletphysics.dynamics.RigidBodyConstructionInfo;
-import com.bulletphysics.linearmath.DefaultMotionState;
-import com.bulletphysics.linearmath.Transform;
 
 import supergame.Camera.Frustrumable;
 import supergame.Camera.Inclusion;
@@ -355,38 +344,6 @@ public class Chunk implements Frustrumable {
 			return;
 		
 		meshId = Game.collision.physics.createMesh(chunkVertices, SIZE, chunkIntIndices);
-		/*
-		TriangleIndexVertexArray indexVertexArrays;
-		indexVertexArrays = new TriangleIndexVertexArray();
-
-		IndexedMesh mesh = new IndexedMesh();
-		mesh.indexType = (SIZE == 2) ? ScalarType.SHORT : ScalarType.INTEGER;
-		mesh.numTriangles = chunkIntIndices.capacity() / (SIZE * 3);
-		mesh.numVertices = chunkVertices.capacity() / (4 * 3);
-		mesh.triangleIndexBase = chunkIntIndices;
-		mesh.triangleIndexStride = SIZE * 3;
-		mesh.vertexBase = chunkVertices;
-		mesh.vertexStride = 4 * 3;
-
-		indexVertexArrays.addIndexedMesh(mesh, (SIZE == 2) ? ScalarType.SHORT : ScalarType.INTEGER);
-
-		boolean useQuantizedAabbCompression = true;
-		trimeshShape = new BvhTriangleMeshShape(indexVertexArrays, useQuantizedAabbCompression);
-
-		Transform groundTransform = new Transform();
-		groundTransform.setIdentity();
-		groundTransform.origin.set(new Vector3f(0, 0, 0));
-
-		float mass = 0f;
-		Vector3f localInertia = new Vector3f(0, 0, 0);
-
-		// using motionstate is recommended, it provides interpolation
-		// capabilities, and only synchronizes 'active' objects
-		DefaultMotionState myMotionState = new DefaultMotionState(groundTransform);
-		RigidBodyConstructionInfo rbInfo = new RigidBodyConstructionInfo(mass, myMotionState, trimeshShape,
-				localInertia);
-		body = new RigidBody(rbInfo);
-		*/
 	}
 
 	// parallel OR serial

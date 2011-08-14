@@ -8,6 +8,10 @@
 #include <unistd.h>
 
 #include "btBulletDynamicsCommon.h"
+#include "BulletDynamics/Character/btKinematicCharacterController.h"
+#include "BulletCollision/CollisionDispatch/btGhostObject.h"
+
+
 #include <stdio.h>
 #include "supergame_physics_NativePhysics.h"
 
@@ -20,9 +24,18 @@ public:
 	btCollisionDispatcher m_dispatcher;
 	btDbvtBroadphase m_broadphase;
 	btSequentialImpulseConstraintSolver m_solver;
+	btGhostPairCallback m_ghostPairCallback;
 	btDiscreteDynamicsWorld m_dynamicsWorld;
 	float m_chunkSize;
 };
+
+NativePhysics::NativePhysics() :
+		m_collisionConfiguration(), m_dispatcher(&m_collisionConfiguration), m_broadphase(), m_solver(), m_dynamicsWorld(
+				&m_dispatcher, &m_broadphase, &m_solver,
+				&m_collisionConfiguration)
+{
+	m_broadphase.getOverlappingPairCache()->setInternalGhostPairCallback(&m_ghostPairCallback);
+}
 
 class NativeChunk
 {
@@ -49,12 +62,21 @@ NativeChunk::NativeChunk(int totalTriangles, void* indices, int indexStride,
 {
 }
 
-NativePhysics::NativePhysics() :
-		m_collisionConfiguration(), m_dispatcher(&m_collisionConfiguration), m_broadphase(), m_solver(), m_dynamicsWorld(
-				&m_dispatcher, &m_broadphase, &m_solver,
-				&m_collisionConfiguration)
+class NativeCharacter
 {
-	m_dynamicsWorld.setGravity(btVector3(0, -10, 0));
+public:
+	NativeCharacter(btTransform &transform);
+	btPairCachingGhostObject m_ghostObject;
+	btCapsuleShape m_shape;
+	btKinematicCharacterController m_character;
+};
+
+NativeCharacter::NativeCharacter(btTransform &transform) :
+		m_shape(1.0, 1.5),
+		m_character(&m_ghostObject, &m_shape, btScalar(0.35))
+{
+	m_ghostObject.setWorldTransform(transform);
+	m_ghostObject.setCollisionShape(&m_shape);
 }
 
 static NativePhysics physics;
@@ -133,6 +155,10 @@ JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeUnregisterMesh
 JNIEXPORT jlong JNICALL Java_supergame_physics_NativePhysics_nativeCreateCharacter(
 		JNIEnv* env, jobject obj, jfloat x, jfloat y, jfloat z)
 {
+	btTransform startTransform;
+	startTransform.setIdentity();
+	startTransform.setOrigin(btVector3(x,y,z));
+	return (jlong) new NativeCharacter(startTransform);
 }
 
 JNIEXPORT jlong JNICALL Java_supergame_physics_NativePhysics_nativeCreateCube(
