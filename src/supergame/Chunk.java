@@ -39,8 +39,7 @@ public class Chunk implements Frustrumable {
 	private static final int PARALLEL_GARBAGE = 3; // Processing interrupted by chunk garbage collection
 	private AtomicInteger state;
 
-	private BvhTriangleMeshShape trimeshShape;
-	private RigidBody body;
+	private long meshId = 0;
 
 	public static final float colors[][][] = { { { 0, 1, 0, 1 }, { 1, 0, 0, 1 } },
 			{ { 1, 0.5f, 0, 1 }, { 0.5f, 0, 1, 1 } }, { { 0.9f, 0.9f, 0.9f, 1 }, { 0.4f, 0.4f, 0.4f, 1 } } };
@@ -69,8 +68,7 @@ public class Chunk implements Frustrumable {
 		} else if (allowBruteForceRender) {
 			if (Config.CHUNK_PHYSICS) {
 				// register the terrain chunk with the physics engine
-				Game.collision.collisionShapes.add(trimeshShape);
-				Game.collision.dynamicsWorld.addRigidBody(body);
+				Game.collision.physics.registerMesh(meshId);
 			}
 
 			displayList = GL11.glGenLists(1);
@@ -122,15 +120,12 @@ public class Chunk implements Frustrumable {
 			GL11.glDeleteLists(displayList, 1);
 			displayList = -1;
 			if (Config.CHUNK_PHYSICS) {
-				if (body == null || trimeshShape == null) {
+				if (0 == meshId) {
 					System.err.println("improperly initialized body/collision shape");
 					System.exit(1);
 				}
-				Game.collision.dynamicsWorld.removeRigidBody(body);
-				Game.collision.collisionShapes.remove(trimeshShape);
-
-				trimeshShape = null;
-				body = null;
+				Game.collision.physics.unregisterMesh(meshId);
+				meshId = 0;
 			}
 		}
 
@@ -358,7 +353,9 @@ public class Chunk implements Frustrumable {
 	private void parallel_processPhysics() {
 		if (!Config.CHUNK_PHYSICS)
 			return;
-
+		
+		meshId = Game.collision.physics.createMesh(chunkVertices, SIZE, chunkIntIndices);
+		/*
 		TriangleIndexVertexArray indexVertexArrays;
 		indexVertexArrays = new TriangleIndexVertexArray();
 
@@ -389,6 +386,7 @@ public class Chunk implements Frustrumable {
 		RigidBodyConstructionInfo rbInfo = new RigidBodyConstructionInfo(mass, myMotionState, trimeshShape,
 				localInertia);
 		body = new RigidBody(rbInfo);
+		*/
 	}
 
 	// parallel OR serial

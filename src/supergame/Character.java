@@ -72,6 +72,7 @@ public class Character implements CameraControllable {
 	private static int msSinceShoot = 0;
 	
 	void move() {
+/*
 		if (Game.collision.dynamicsWorld == null)
 			return;
 
@@ -93,7 +94,7 @@ public class Character implements CameraControllable {
 			lookDir.scale(20);
 			cube.applyCentralImpulse(lookDir);
 		}
-			
+*/
 
 		if (character.onGround() || Config.PLAYER_MIDAIR_CONTROL) {
 			Vector3f forwardDir = Vec3.HPVector(180-heading, 0);

@@ -64,7 +64,7 @@ static btDefaultMotionState motion(startTransform);
 static btVector3 inertia(0, 0, 0), aabbMin(-1000, -1000, -1000), aabbMax(1000,
 		1000, 1000);
 
-JNIEXPORT void JNICALL Java_supergame_NativePhysics_nativeInitialize(
+JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeInitialize(
 		JNIEnv* env, jobject obj, jfloat gravity, jfloat chunkSize)
 {
 	printf("Hooray, physics! Woo!\n");
@@ -74,13 +74,13 @@ JNIEXPORT void JNICALL Java_supergame_NativePhysics_nativeInitialize(
 	physics.m_chunkSize = chunkSize;
 }
 
-JNIEXPORT void JNICALL Java_supergame_NativePhysics_nativeStepSimulation(
+JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeStepSimulation(
 		JNIEnv* env, jobject obj, jfloat timeStep, jint maxSubSteps)
 {
 	physics.m_dynamicsWorld.stepSimulation(timeStep, maxSubSteps);
 }
 
-JNIEXPORT jlong JNICALL Java_supergame_NativePhysics_nativeCreateMesh(
+JNIEXPORT jlong JNICALL Java_supergame_physics_NativePhysics_nativeCreateMesh(
 		JNIEnv* env, jobject obj, jobject verticesBuffer, jint indexScalarSize,
 		jobject indicesBuffer)
 {
@@ -102,7 +102,7 @@ JNIEXPORT jlong JNICALL Java_supergame_NativePhysics_nativeCreateMesh(
 			vertices, 3 * 4, motion, inertia, aabbMin, aabbMax);
 }
 
-JNIEXPORT void JNICALL Java_supergame_NativePhysics_nativeRegisterMesh(
+JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeRegisterMesh(
 		JNIEnv* env, jobject obj, jlong meshPtr)
 {
 	NativeChunk* chunk = (NativeChunk*) meshPtr;
@@ -116,7 +116,7 @@ JNIEXPORT void JNICALL Java_supergame_NativePhysics_nativeRegisterMesh(
 	physics.m_dynamicsWorld.addRigidBody(&(chunk->m_body));
 }
 
-JNIEXPORT void JNICALL Java_supergame_NativePhysics_nativeUnregisterMesh(
+JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeUnregisterMesh(
 		JNIEnv* env, jobject obj, jlong meshPtr)
 {
 	NativeChunk* chunk = (NativeChunk*) meshPtr;
@@ -130,12 +130,12 @@ JNIEXPORT void JNICALL Java_supergame_NativePhysics_nativeUnregisterMesh(
 	delete (chunk);
 }
 
-JNIEXPORT jlong JNICALL Java_supergame_NativePhysics_nativeCreateCharacter(
+JNIEXPORT jlong JNICALL Java_supergame_physics_NativePhysics_nativeCreateCharacter(
 		JNIEnv* env, jobject obj, jfloat x, jfloat y, jfloat z)
 {
 }
 
-JNIEXPORT jlong JNICALL Java_supergame_NativePhysics_nativeCreateCube(
+JNIEXPORT jlong JNICALL Java_supergame_physics_NativePhysics_nativeCreateCube(
 		JNIEnv* env, jobject obj, jfloat, jfloat, jfloat, jfloat, jfloat)
 {
 }

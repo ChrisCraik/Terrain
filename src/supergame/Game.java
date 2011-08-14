@@ -139,21 +139,22 @@ public class Game {
 	private boolean render() {
 		collision.stepSimulation(delta / 1000f);
 		PROFILE("Collision");
-		
+		/*
 		Vector3f center = collision.character.getPos();
 		
 		chunkManager.updatePosition((long)Math.floor(center.x/Config.CHUNK_DIVISION), 
 				(long)Math.floor(center.y/Config.CHUNK_DIVISION), 
 				(long)Math.floor(center.z/Config.CHUNK_DIVISION));
 		PROFILE("Update pos");
+		*/
 		
 		GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT); // Clear the screen and the depth buffer
 		GL11.glLoadIdentity(); // Reset The Current Modelview Matrix
 		camera.apply();
 		PROFILE("Cam stuff");
 		
-		collision.render();
-		PROFILE("Col rendr");
+		//collision.render();
+		//PROFILE("Col rendr");
 		
 		chunkManager.renderChunks(camera);
 		PROFILE("chunk rdr");

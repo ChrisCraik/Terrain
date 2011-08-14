@@ -1,27 +1,17 @@
 package supergame;
 
-import com.bulletphysics.collision.broadphase.AxisSweep3;
-import com.bulletphysics.collision.dispatch.CollisionConfiguration;
-import com.bulletphysics.collision.dispatch.CollisionDispatcher;
-import com.bulletphysics.collision.dispatch.CollisionObject;
-import com.bulletphysics.collision.dispatch.DefaultCollisionConfiguration;
-import com.bulletphysics.collision.dispatch.GhostPairCallback;
-import com.bulletphysics.collision.shapes.BoxShape;
-import com.bulletphysics.collision.shapes.CollisionShape;
-import com.bulletphysics.collision.shapes.SphereShape;
-import com.bulletphysics.dynamics.DiscreteDynamicsWorld;
-import com.bulletphysics.dynamics.RigidBody;
-import com.bulletphysics.dynamics.RigidBodyConstructionInfo;
-import com.bulletphysics.dynamics.constraintsolver.SequentialImpulseConstraintSolver;
-import com.bulletphysics.linearmath.DefaultMotionState;
-import com.bulletphysics.linearmath.Transform;
-import com.bulletphysics.util.ObjectArrayList;
 import javax.vecmath.Vector3f;
 
 import org.lwjgl.opengl.GL11;
 
+import supergame.physics.JavaPhysics;
+import supergame.physics.NativePhysics;
+import supergame.physics.Physics;
+
 public class Collision {
 
+	public static final int START_POS_X = 0, START_POS_Y = 20, START_POS_Z = 0;
+/*
 	// create 125 (5x5x5) dynamic object
 	private static final int ARRAY_SIZE_X = 3;
 	private static final int ARRAY_SIZE_Y = 3;
@@ -30,17 +20,20 @@ public class Collision {
 	// maximum number of objects (and allow user to shoot additional boxes)
 	private static final int MAX_PROXIES = (ARRAY_SIZE_X * ARRAY_SIZE_Y * ARRAY_SIZE_Z + 1024 * 4);
 
-	public static final int START_POS_X = 0, START_POS_Y = 20, START_POS_Z = 0;
-
 	// keep track of the shapes, we release memory at exit.
 	// make sure to re-use collision shapes among rigid bodies whenever
 	// possible!
 	public ObjectArrayList<CollisionShape> collisionShapes = new ObjectArrayList<CollisionShape>();
 	public DiscreteDynamicsWorld dynamicsWorld;
 
+*/
 	public Character character;
 
+	public Physics physics;
 	Collision() {
+		physics = Config.PHYSICS_USE_NATIVE ? new NativePhysics() : new JavaPhysics();
+		physics.initialize(Config.PHYSICS_GRAVITY, Config.CHUNK_DIVISION);
+		/*
 		// collision configuration contains default setup for memory, collision
 		// setup. Advanced users can create their own configuration.
 		CollisionConfiguration collisionConfiguration = new DefaultCollisionConfiguration();
@@ -119,9 +112,10 @@ public class Collision {
 				}
 			}
 			character = new Character(dynamicsWorld, new Vector3f(start_x, start_y, start_z));
-		}
+		}*/
 	}
 
+	/*
 	public RigidBody spawnCube(float mass, CollisionShape colShape, Transform startTransform, Vector3f localInertia) {
 		// using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
 		DefaultMotionState myMotionState = new DefaultMotionState(startTransform);
@@ -132,6 +126,7 @@ public class Collision {
 		dynamicsWorld.addRigidBody(body);
 		return body;
 	}
+	*/
 
 	private static int displayList = -1;
 	public void drawCube(Vector3f size) {
@@ -184,10 +179,10 @@ public class Collision {
 	}
 
 	public void stepSimulation(float duration) {
-		character.move();
-		dynamicsWorld.stepSimulation(duration, 10);
+		//character.move();
+		physics.stepSimulation(duration, 10);
 	}
-
+/*
 	private static float[] glMat = new float[16];
 
 	public void render() {
@@ -218,13 +213,14 @@ public class Collision {
 							sphereShape.getMargin());
 					drawCube(sphereSize);
 				}
-				/*
+				/ *
 				if (Game.heartbeatFrame)
 					System.out.printf("%s: world pos = %f,%f,%f\n", body.getCollisionShape().getShapeType(),
 							trans.origin.x, trans.origin.y, trans.origin.z);
-				*/
+				* /
 				GL11.glPopMatrix();
 			}
 		}
 	}
+	*/
 }

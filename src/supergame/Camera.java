@@ -173,7 +173,8 @@ public class Camera {
 		pitch = Math.min(pitch, 90);
 		pitch = Math.max(pitch, -90);
 
-		controllable.setHeadingPitch(heading, pitch);
+		if (null != controllable)
+			controllable.setHeadingPitch(heading, pitch);
 
 		// System.out.println("pitch:"+Math.sin(pitch*Math.PI/180.0)+", heading:"+Math.sin(heading*Math.PI/180.0));
 		Mouse.setCursorPosition(width / 2, height / 2);
@@ -218,7 +219,8 @@ public class Camera {
 	}
 
 	public void apply() {
-		pos = controllable.getPos();
+		if (null != controllable)
+			pos = controllable.getPos();
 		updateFrustum();
 
 		GL11.glRotatef(pitch, -1, 0, 0);
