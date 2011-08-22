@@ -2,6 +2,8 @@ package supergame.physics;
 
 import java.nio.ByteBuffer;
 
+import javax.vecmath.Vector3f;
+
 public interface Physics {
 	/**
 	 * Create an empty physics environment
@@ -26,8 +28,14 @@ public interface Physics {
 	void registerMesh(long meshId);
 
 	void unregisterMesh(long meshId);
-	
+
 	long createCharacter(float x, float y, float z);
-	
+
+	void controlCharacter(long character, boolean applyIfJumping, boolean jump, float x, float y, float z);
+
+	public void queryCharacterPosition(long characterId, Vector3f position);
+
 	long createCube(float size, float mass, float x, float y, float z);
+
+	void queryObject(long object, ByteBuffer matrix);
 }

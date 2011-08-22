@@ -2,6 +2,8 @@ package supergame.physics;
 
 import java.nio.ByteBuffer;
 
+import javax.vecmath.Vector3f;
+
 public class NativePhysics implements Physics {
 	public native void nativeInitialize(float gravity, float chunkSize);
 
@@ -16,9 +18,16 @@ public class NativePhysics implements Physics {
 
 	public native long nativeCreateCharacter(float x, float y, float z);
 
+	public native void nativeQueryCharacterPosition(long character, Vector3f position);
+
+	public native void nativeControlCharacter(long character,
+			boolean applyIfJumping, boolean jump, float x, float y, float z);
+
 	public native long nativeCreateCube(float size, float mass, float x,
 			float y, float z);
 
+	public native void nativeQueryObject(long object, ByteBuffer matrix);
+	
 	static {
 		System.err.println(System.getProperty("java.library.path"));
 		try {
@@ -28,7 +37,7 @@ public class NativePhysics implements Physics {
 			e.printStackTrace();
 		}
 	}
-	
+
 	@Override
 	public void initialize(float gravity, float chunkSize) {
 		nativeInitialize(gravity, chunkSize);
@@ -61,8 +70,23 @@ public class NativePhysics implements Physics {
 	}
 
 	@Override
+	public void controlCharacter(long character, boolean applyIfJumping, boolean jump,
+			float x, float y, float z) {
+		nativeControlCharacter(character, applyIfJumping, jump, x, y, z);
+	}
+
+	@Override
+	public void queryCharacterPosition(long character, Vector3f position) {
+		nativeQueryCharacterPosition(character, position);
+	}
+
+	@Override
 	public long createCube(float size, float mass, float x, float y, float z) {
 		return nativeCreateCube(size, mass, x, y, z);
 	}
 
+	@Override
+	public void queryObject(long object, ByteBuffer matrix) {
+		nativeQueryObject(object, matrix);
+	}
 }

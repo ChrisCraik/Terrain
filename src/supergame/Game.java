@@ -38,7 +38,7 @@ public class Game {
 	public static boolean heartbeatFrame = false;
 	private static int msSinceLastHeartbeat = 0;
 
-	private long lastFrame = 0;
+	private long lastFrame = getTime();
 	private int fps = 0;
 	private long lastFPS = 0;
 
@@ -46,7 +46,7 @@ public class Game {
 		long time = getTime();
 		delta = (int) (time - lastFrame);
 		lastFrame = time;
-
+		
 		// compute heartbeat
 		msSinceLastHeartbeat += delta;
 		if (msSinceLastHeartbeat > Config.MS_PER_HEARTBEAT) {
@@ -139,6 +139,7 @@ public class Game {
 	private boolean render() {
 		collision.stepSimulation(delta / 1000f);
 		PROFILE("Collision");
+		
 		/*
 		Vector3f center = collision.character.getPos();
 		
@@ -153,8 +154,8 @@ public class Game {
 		camera.apply();
 		PROFILE("Cam stuff");
 		
-		//collision.render();
-		//PROFILE("Col rendr");
+		collision.render();
+		PROFILE("Col rendr");
 		
 		chunkManager.renderChunks(camera);
 		PROFILE("chunk rdr");

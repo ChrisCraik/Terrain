@@ -1,5 +1,10 @@
 package supergame;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
+import java.util.ArrayList;
+
 import javax.vecmath.Vector3f;
 
 import org.lwjgl.opengl.GL11;
@@ -11,11 +16,12 @@ import supergame.physics.Physics;
 public class Collision {
 
 	public static final int START_POS_X = 0, START_POS_Y = 20, START_POS_Z = 0;
-/*
-	// create 125 (5x5x5) dynamic object
+
+	// create 27 (3x3x3) dynamic objects
 	private static final int ARRAY_SIZE_X = 3;
 	private static final int ARRAY_SIZE_Y = 3;
 	private static final int ARRAY_SIZE_Z = 3;
+/*
 
 	// maximum number of objects (and allow user to shoot additional boxes)
 	private static final int MAX_PROXIES = (ARRAY_SIZE_X * ARRAY_SIZE_Y * ARRAY_SIZE_Z + 1024 * 4);
@@ -28,11 +34,32 @@ public class Collision {
 
 */
 	public Character character;
-
 	public Physics physics;
+	
+	ArrayList<Long> bodyList = new ArrayList<Long>();
+	
 	Collision() {
 		physics = Config.PHYSICS_USE_NATIVE ? new NativePhysics() : new JavaPhysics();
 		physics.initialize(Config.PHYSICS_GRAVITY, Config.CHUNK_DIVISION);
+		character = new Character(physics.createCharacter(START_POS_X, START_POS_Y + 40, START_POS_Z));
+
+		float start_x = START_POS_X - ARRAY_SIZE_X / 2;
+		float start_y = START_POS_Y;
+		float start_z = START_POS_Z - ARRAY_SIZE_Z / 2;
+		
+		bodyList.add(physics.createCube(15, 0, 0, 0, 0));
+		
+		float mass = 1;
+		for (int k = 0; k < ARRAY_SIZE_Y; k++) {
+			for (int i = 0; i < ARRAY_SIZE_X; i++) {
+				for (int j = 0; j < ARRAY_SIZE_Z; j++) {
+					float x = 2f * i + start_x;
+					float y = 10f + 2f * k + start_y;
+					float z = 2f * j + start_z;
+					bodyList.add(physics.createCube(1, mass, x, y, z));
+				}
+			}
+		}
 		/*
 
 		// create a few basic rigid bodies
@@ -153,13 +180,55 @@ public class Collision {
 	}
 
 	public void stepSimulation(float duration) {
-		//character.move();
+		character.move();
 		physics.stepSimulation(duration, 10);
 	}
-/*
-	private static float[] glMat = new float[16];
 
+	private static ByteBuffer matrix = ByteBuffer.allocateDirect(16 * 4).order(ByteOrder.nativeOrder());
+	
 	public void render() {
+		character.render();
+		
+		for (int i=0; i<bodyList.size(); i++) {
+		//for (int i=1; i>=0; i--) {
+			int size = 0==i ? 15 : 1;
+			physics.queryObject(bodyList.get(i), matrix);
+			
+			GL11.glPushMatrix();
+			GL11.glMultMatrix(matrix.asFloatBuffer());
+			drawCube(new Vector3f(size, size, size));
+			GL11.glPopMatrix();
+		}
+		
+		/*
+		int size;
+		
+		physics.queryObject(bodyList.get(0), matrix);
+		size = 10;
+		GL11.glPushMatrix();
+		FloatBuffer f = matrix.asFloatBuffer();
+		GL11.glMultMatrix(f);
+		//matrix.flip();
+
+		for (int i=0; i<4; i++) {
+			for (int k=0; k<4; k++) {
+				System.err.print("  " + f.get());
+			}
+			System.err.println();
+		}
+		System.err.println();
+		//GL11.glRotatef(45, 0, 1, 1);
+		drawCube(new Vector3f(size, size, size));
+		GL11.glPopMatrix();
+		
+		physics.queryObject(bodyList.get(1), matrix);
+		size = 3;
+		GL11.glPushMatrix();
+		GL11.glLoadMatrix(matrix.asFloatBuffer());
+		//GL11.glRotatef(45, 0, 1, 0);
+		drawCube(new Vector3f(size, size, size));
+		GL11.glPopMatrix();
+		/ *
 		// render all collision objects
 		character.render();
 		Game.PROFILE("char render");
@@ -195,6 +264,6 @@ public class Collision {
 				GL11.glPopMatrix();
 			}
 		}
+		*/
 	}
-	*/
 }

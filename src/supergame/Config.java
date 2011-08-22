@@ -36,8 +36,8 @@ public class Config {
 	public static float PLAYER_JUMP_SPEED = 25;
 	
 	//PHYSICS
-	public static float PHYSICS_GRAVITY = 50;
-	public static final boolean PHYSICS_USE_NATIVE = true;
+	public static float PHYSICS_GRAVITY = -10;
+	public static final boolean PHYSICS_USE_NATIVE = false;
 	
 	public static void setOption(String fieldname, String value) {
 		try {

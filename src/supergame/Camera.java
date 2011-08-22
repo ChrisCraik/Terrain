@@ -9,15 +9,14 @@ import org.lwjgl.opengl.GL11;
 
 public class Camera {
 	private Vector3f pos;
-	private float pitch = 0, heading = 0;
+	private float pitch = -64, heading = 56;
 	public Vec3 forward, right, up;
 
 	long msSinceHeartbeat = 0;
 
 	public interface CameraControllable {
 		void setHeadingPitch(float heading, float pitch);
-
-		Vector3f getPos();
+		void getPos(Vector3f pos);
 	}
 
 	private CameraControllable controllable;
@@ -160,6 +159,9 @@ public class Camera {
 			pos.sub(d);
 		if (Mouse.isButtonDown(1))
 			pos.add(d);
+		
+		if(Game.heartbeatFrame)
+			System.out.println("Pos = " + pos);
 
 		DisplayMode dm = Display.getDisplayMode();
 		int height = dm.getHeight();
@@ -179,10 +181,8 @@ public class Camera {
 		// System.out.println("pitch:"+Math.sin(pitch*Math.PI/180.0)+", heading:"+Math.sin(heading*Math.PI/180.0));
 		Mouse.setCursorPosition(width / 2, height / 2);
 
-		msSinceHeartbeat += Game.delta;
 		if (Game.heartbeatFrame) {
 			System.out.println("pos:" + pos + ", pitch:" + pitch + ", heading:" + heading);
-			msSinceHeartbeat = 0;
 		}
 	}
 
@@ -219,13 +219,16 @@ public class Camera {
 	}
 
 	public void apply() {
+		/*
 		if (null != controllable)
 			pos = controllable.getPos();
+		*/
 		updateFrustum();
 
 		GL11.glRotatef(pitch, -1, 0, 0);
 		GL11.glRotatef(heading, 0, -1, 0);
 		GL11.glTranslatef(-pos.x, -pos.y, -pos.z);
-		GL11.glLight(GL11.GL_LIGHT0, GL11.GL_POSITION, Game.makeFB(new float[] { 0, 1, 0, 0 })); // from above!
+		//GL11.glMultMatrix(controllable.getMatrix());
+		GL11.glLight(GL11.GL_LIGHT0, GL11.GL_POSITION, Game.makeFB(new float[] { 0, 1, 0.5f, 0 })); // from above!
 	}
 }

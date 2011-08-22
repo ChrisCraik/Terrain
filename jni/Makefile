@@ -6,8 +6,11 @@ $(LIB) : $(HEADER) nativePhysics.cpp
 		-o $(LIB) nativePhysics.cpp -framework JavaVM \
 		-L../lib/native/macosx -lBulletDynamics -lBulletCollision -lLinearMath
 
-$(HEADER) :
+$(HEADER) : ../src/supergame/physics/Physics.java
 	javah -jni -classpath ../bin supergame.physics.NativePhysics
+
+
+.PHONY: all clean
 
 all : $(LIB)
 

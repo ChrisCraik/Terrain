@@ -11,19 +11,24 @@ import com.bulletphysics.collision.dispatch.CollisionConfiguration;
 import com.bulletphysics.collision.dispatch.CollisionDispatcher;
 import com.bulletphysics.collision.dispatch.DefaultCollisionConfiguration;
 import com.bulletphysics.collision.dispatch.GhostPairCallback;
+import com.bulletphysics.collision.dispatch.PairCachingGhostObject;
 import com.bulletphysics.collision.shapes.BoxShape;
 import com.bulletphysics.collision.shapes.BvhTriangleMeshShape;
+import com.bulletphysics.collision.shapes.CapsuleShape;
 import com.bulletphysics.collision.shapes.CollisionShape;
+import com.bulletphysics.collision.shapes.ConvexShape;
 import com.bulletphysics.collision.shapes.IndexedMesh;
 import com.bulletphysics.collision.shapes.ScalarType;
 import com.bulletphysics.collision.shapes.TriangleIndexVertexArray;
 import com.bulletphysics.dynamics.DiscreteDynamicsWorld;
 import com.bulletphysics.dynamics.RigidBody;
 import com.bulletphysics.dynamics.RigidBodyConstructionInfo;
+import com.bulletphysics.dynamics.character.KinematicCharacterController;
 import com.bulletphysics.dynamics.constraintsolver.SequentialImpulseConstraintSolver;
 import com.bulletphysics.linearmath.DefaultMotionState;
 import com.bulletphysics.linearmath.Transform;
 import com.bulletphysics.util.ObjectArrayList;
+import com.sun.tools.javac.util.Pair;
 
 public class JavaPhysics implements Physics {
 
@@ -31,6 +36,9 @@ public class JavaPhysics implements Physics {
 	private static final int ARRAY_SIZE_X = 3;
 	private static final int ARRAY_SIZE_Y = 3;
 	private static final int ARRAY_SIZE_Z = 3;
+	
+	private static final int PLAYER_GRAVITY = 10;
+	private static final int PLAYER_JUMP_SPEED = 10;
 
 	// maximum number of objects (and allow user to shoot additional boxes)
 	private static final int MAX_PROXIES = (ARRAY_SIZE_X * ARRAY_SIZE_Y * ARRAY_SIZE_Z + 1024 * 4);
@@ -40,9 +48,14 @@ public class JavaPhysics implements Physics {
 	// possible!
 	private ObjectArrayList<CollisionShape> collisionShapes = new ObjectArrayList<CollisionShape>();
 	private DiscreteDynamicsWorld dynamicsWorld;
-	
+
 	private Map<Long, RigidBody> rigidBodyMap = new HashMap<Long, RigidBody>();
 	private long nextRigidBodyId = 1;
+	private Map<Long, Pair<KinematicCharacterController, PairCachingGhostObject>> characterMap = new HashMap<Long, Pair<KinematicCharacterController, PairCachingGhostObject>>();
+	private long nextCharacterId = 1;
+
+	private float matrixArray[] = new float[16];
+	
 	
 	@Override
 	public void initialize(float gravity, float chunkSize) {
@@ -100,6 +113,10 @@ public class JavaPhysics implements Physics {
 		System.out.printf("coordBytes %d, numTriangles %d, numVert %d, triangleIndexStride %d, vertexStride %d\n",
 				indexBytes, mesh.numTriangles, mesh.numVertices,
 				mesh.triangleIndexStride, mesh.vertexStride);
+
+		System.out.printf("indices cap %d, indices lim %d,    vert cap %d, vert lim %d\n",
+				indices.capacity(), indices.limit(),
+				vertices.capacity(), vertices.limit());
 		
 		indexVertexArrays.addIndexedMesh(mesh, (indexBytes == 2) ? ScalarType.SHORT : ScalarType.INTEGER);
 
@@ -141,13 +158,61 @@ public class JavaPhysics implements Physics {
 		RigidBody body = rigidBodyMap.remove(meshId);
 		collisionShapes.remove(body.getCollisionShape());
 		dynamicsWorld.removeRigidBody(body);
-		
 	}
 
 	@Override
 	public long createCharacter(float x, float y, float z) {
-		// TODO Auto-generated method stub
-		return 0;
+		
+		Transform startTransform = new Transform();
+		startTransform.setIdentity();
+		startTransform.origin.set(x,y,z);
+
+		PairCachingGhostObject ghostObject = new PairCachingGhostObject();
+		ghostObject.setWorldTransform(startTransform);
+		ConvexShape ghostShape = new CapsuleShape(1f, 1.5f);
+		ghostObject.setCollisionShape(ghostShape);
+		//ghostObject.setCollisionFlags(CollisionFlags.CHARACTER_OBJECT);
+
+		float stepHeight = 0.5f;
+		KinematicCharacterController character = new KinematicCharacterController(ghostObject, ghostShape,
+				stepHeight);
+		character.setGravity(PLAYER_GRAVITY);
+		character.setJumpSpeed(PLAYER_JUMP_SPEED);
+
+		dynamicsWorld.addCollisionObject(ghostObject);
+		// CollisionFilterGroups.CHARACTER_FILTER,
+		// (short) (CollisionFilterGroups.STATIC_FILTER |
+		// CollisionFilterGroups.DEFAULT_FILTER));
+		dynamicsWorld.addAction(character);
+		
+		long newCharacterId = nextCharacterId++;
+		characterMap.put(newCharacterId, new Pair<KinematicCharacterController,PairCachingGhostObject>(character, ghostObject));
+		return newCharacterId;
+	}
+
+	@Override
+	public void controlCharacter(long characterId, boolean applyIfJumping, boolean jump,
+			float x, float y, float z) {
+		KinematicCharacterController character = characterMap.get(characterId).fst;
+		if (character.onGround() || applyIfJumping)
+			character.setWalkDirection(new Vector3f(x,y,z));
+		if (character.onGround() && jump)
+			character.jump();
+	}
+
+	@Override
+	public void queryCharacterPosition(long characterId, Vector3f position) {
+		PairCachingGhostObject ghostObject = characterMap.get(characterId).snd;
+		Transform world = new Transform();
+		ghostObject.getWorldTransform(world);
+
+		//System.out.println("Querying character" + characterId + world.origin);
+
+		position.x = world.origin.x;
+		position.y = world.origin.y;
+		position.z = world.origin.z;
+		//world.getOpenGLMatrix(matrixArray);
+		//matrix.asFloatBuffer().put(matrixArray).flip();
 	}
 	
 	private static final Vector3f inertia = new Vector3f(0,0,0);
@@ -155,6 +220,7 @@ public class JavaPhysics implements Physics {
 	
 	@Override
 	public long createCube(float size, float mass, float x, float y, float z) {
+		System.out.println("Creating cube:" + x + " " + y  + " " + z);
 		Transform startTransform = new Transform();
 		startTransform.setIdentity();
 		startTransform.origin.set(x,y,z);
@@ -170,7 +236,25 @@ public class JavaPhysics implements Physics {
 		//body.setActivationState(RigidBody.ISLAND_SLEEPING);
 
 		dynamicsWorld.addRigidBody(body);
-		return 0;
+		long newObjectId = nextRigidBodyId++;
+		rigidBodyMap.put(newObjectId, body);
+		return newObjectId;
 	}
 
+	@Override
+	public void queryObject(long objectId, ByteBuffer matrix) {
+		RigidBody body = rigidBodyMap.get(objectId);
+
+		if (body != null && body.getMotionState() != null) {
+			Transform world = new Transform();
+			body.getWorldTransform(world);
+
+			//System.out.println("Querying object" + objectId + world.origin);
+
+			world.getOpenGLMatrix(matrixArray);
+			matrix.asFloatBuffer().put(matrixArray).flip();
+		} else {
+			System.err.println("Warning: failed to get matrix for obj " + objectId);
+		}
+	}
 }

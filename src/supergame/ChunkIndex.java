@@ -33,4 +33,9 @@ public class ChunkIndex {
 	public Vec3 getVec3() {
 		return new Vec3(x, y, z);
 	}
+	
+	@Override
+	public String toString() {
+		return String.format("ID:%d %d %d", x, y, z);
+	}
 }

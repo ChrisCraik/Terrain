@@ -15,6 +15,9 @@
 #include <stdio.h>
 #include "supergame_physics_NativePhysics.h"
 
+#define CHAR_GRAVITY 10.0f
+#define JUMP_SPEED 50
+
 class NativePhysics
 {
 public:
@@ -36,6 +39,8 @@ NativePhysics::NativePhysics() :
 {
 	m_broadphase.getOverlappingPairCache()->setInternalGhostPairCallback(&m_ghostPairCallback);
 }
+
+static NativePhysics physics;
 
 class NativeChunk
 {
@@ -77,9 +82,11 @@ NativeCharacter::NativeCharacter(btTransform &transform) :
 {
 	m_ghostObject.setWorldTransform(transform);
 	m_ghostObject.setCollisionShape(&m_shape);
+	m_character.setGravity(CHAR_GRAVITY);
+	m_character.setJumpSpeed(JUMP_SPEED);
+	physics.m_dynamicsWorld.addCollisionObject(&m_ghostObject);
+	physics.m_dynamicsWorld.addAction(&m_character);
 }
-
-static NativePhysics physics;
 
 static btTransform startTransform;
 static btDefaultMotionState motion(startTransform);
@@ -89,7 +96,7 @@ static btVector3 inertia(0, 0, 0), aabbMin(-1000, -1000, -1000), aabbMax(1000,
 JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeInitialize(
 		JNIEnv* env, jobject obj, jfloat gravity, jfloat chunkSize)
 {
-	printf("Hooray, physics! Woo!\n");
+	printf("Hooray, physics! Woo! Gravity = %f\n", gravity);
 	printf("Vector size is %d", (int) sizeof(btVector3));
 	printf("Scalar size is %d", (int) sizeof(btScalar));
 	physics.m_dynamicsWorld.setGravity(btVector3(0, gravity, 0));
@@ -99,6 +106,7 @@ JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeInitialize(
 JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeStepSimulation(
 		JNIEnv* env, jobject obj, jfloat timeStep, jint maxSubSteps)
 {
+	fprintf(stderr,"Stepping for %f\n", timeStep);
 	physics.m_dynamicsWorld.stepSimulation(timeStep, maxSubSteps);
 }
 
@@ -118,7 +126,9 @@ JNIEXPORT jlong JNICALL Java_supergame_physics_NativePhysics_nativeCreateMesh(
 	int verts = verticesCap / (3 * 4);
 
 	fprintf(stderr, "Creating native mesh! %d tris, %d verts\n", tris, verts);
-	//NativeChunk* chunk = new NativeChunk();
+	fprintf(stderr, "coordBytes %d, numTriangles %d, numVert %d, triangleIndexStride %d, vertexStride %d\n",
+			indexScalarSize, tris, verts,
+			3*indexScalarSize, 3*4);
 
 	return (jlong) new NativeChunk(tris, indices, 3 * indexScalarSize, verts,
 			vertices, 3 * 4, motion, inertia, aabbMin, aabbMax);
@@ -127,6 +137,7 @@ JNIEXPORT jlong JNICALL Java_supergame_physics_NativePhysics_nativeCreateMesh(
 JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeRegisterMesh(
 		JNIEnv* env, jobject obj, jlong meshPtr)
 {
+	fprintf(stderr, "Registering chunk...\n");
 	NativeChunk* chunk = (NativeChunk*) meshPtr;
 	if (NULL == chunk)
 	{
@@ -155,10 +166,67 @@ JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeUnregisterMesh
 JNIEXPORT jlong JNICALL Java_supergame_physics_NativePhysics_nativeCreateCharacter(
 		JNIEnv* env, jobject obj, jfloat x, jfloat y, jfloat z)
 {
+	fprintf(stderr,"creating character\n");
+	/*
+		Transform startTransform = new Transform();
+		startTransform.setIdentity();
+		startTransform.origin.set(startPos);
+
+		ghostObject = new PairCachingGhostObject();
+		ghostObject.setWorldTransform(startTransform);
+		ConvexShape ghostShape = new CapsuleShape(1f, 1.5f);
+		ghostObject.setCollisionShape(ghostShape);
+		ghostObject.setCollisionFlags(CollisionFlags.CHARACTER_OBJECT);
+
+		float stepHeight = 0.5f;
+		character = new KinematicCharacterController(ghostObject, ghostShape,
+				stepHeight);
+		character.setGravity(Config.PHYSICS_GRAVITY);
+		character.setJumpSpeed(Config.PLAYER_JUMP_SPEED);
+
+		dynamicsWorld.addCollisionObject(ghostObject);
+		// CollisionFilterGroups.CHARACTER_FILTER,
+		// (short) (CollisionFilterGroups.STATIC_FILTER |
+		// CollisionFilterGroups.DEFAULT_FILTER));
+		dynamicsWorld.addAction(character);
+	 */
 	btTransform startTransform;
 	startTransform.setIdentity();
 	startTransform.setOrigin(btVector3(x,y,z));
 	return (jlong) new NativeCharacter(startTransform);
+}
+
+JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeControlCharacter
+  (JNIEnv *env, jobject obj, jlong charPtr, jboolean applyIfJumping, jboolean jump,
+		jfloat x, jfloat y, jfloat z)
+{
+	fprintf(stderr,"controlling character, heading %f %f %f\n", x, y, z);
+	NativeCharacter* character = (NativeCharacter*) charPtr;
+
+	if (character->m_character.onGround() || applyIfJumping)
+		character->m_character.setWalkDirection(btVector3(x,y,z));
+	if (character->m_character.onGround() && jump)
+		character->m_character.jump();
+}
+
+JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeQueryCharacterPosition
+  (JNIEnv *env, jobject obj, jlong charPtr, jobject position)
+{
+	NativeCharacter* character = (NativeCharacter*) charPtr;
+	btTransform world = character->m_ghostObject.getWorldTransform();
+
+	btVector3 origin(world.getOrigin());
+
+	fprintf(stderr,"querying character at %f %f %f\n", world.getOrigin().getX(), world.getOrigin().getY(), world.getOrigin().getZ());
+	//float* matrix = (float*) env->GetDirectBufferAddress(matrixBuffer);
+
+	static jclass bbclass = env->FindClass("javax/vecmath/Vector3f");
+
+	static jfieldID xfid = env->GetFieldID(env, "x", "Ljavax/vecmath/Vector3f;");
+
+	(*env)->GetObjectField(env, obj, xfid, world.getOrigin());
+
+	//world.getOpenGLMatrix(matrix);
 }
 
 JNIEXPORT jlong JNICALL Java_supergame_physics_NativePhysics_nativeCreateCube(

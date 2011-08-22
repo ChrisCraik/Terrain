@@ -34,8 +34,7 @@ public class Chunk implements Frustrumable {
 			{ { 1, 0.5f, 0, 1 }, { 0.5f, 0, 1, 1 } }, { { 0.9f, 0.9f, 0.9f, 1 }, { 0.4f, 0.4f, 0.4f, 1 } } };
 
 	private ByteBuffer chunkShortIndices, chunkIntIndices, chunkVertices, chunkNormals;
-	private static int SIZE = 4;
-
+	
 	//Serial Methods - called by main loop
 
 	Chunk(ChunkIndex index) {
@@ -60,6 +59,8 @@ public class Chunk implements Frustrumable {
 				Game.collision.physics.registerMesh(meshId);
 			}
 
+			System.err.println("chunkNormals "+chunkNormals + ", id = "+index.toString() + ", empty "+empty);
+			
 			displayList = GL11.glGenLists(1);
 			GL11.glNewList(displayList, display ? GL11.GL_COMPILE_AND_EXECUTE : GL11.GL_COMPILE);
 			GL11.glEnableClientState(GL11.GL_NORMAL_ARRAY);
@@ -158,12 +159,14 @@ public class Chunk implements Frustrumable {
 						posCount++;
 					buffers.weights[x][y][z] = val;
 				}
-		return (negCount != 0) && (posCount != 0); //returns true if terrain is worth rendering 
+		return (negCount == 0) || (posCount == 0); // return true if empty
 	}
 
 	public void parallel_processCalcGeometry(WorkerBuffers buffers) {
 		int x, y, z;
 
+		buffers.indicesIntCount = 0;
+		buffers.verticesFloatCount = 0;
 		if (Config.CHUNK_REUSE_VERTS) {
 			for (x = 0; x < Config.CHUNK_DIVISION + 1; x++)
 				for (y = 0; y < Config.CHUNK_DIVISION + 1; y++)
@@ -201,72 +204,61 @@ public class Chunk implements Frustrumable {
 	}
 
 	public boolean parallel_processSaveGeometry(WorkerBuffers buffers) {
-		if (buffers.indicesIntCount == 0) {
-			return true;
-		} else {
-			chunkVertices = ByteBuffer.allocateDirect(buffers.verticesFloatCount * 4).order(ByteOrder.nativeOrder());
-			chunkNormals = ByteBuffer.allocateDirect(buffers.verticesFloatCount * 4).order(ByteOrder.nativeOrder());
-			chunkShortIndices = ByteBuffer.allocateDirect(buffers.indicesIntCount * 2).order(ByteOrder.nativeOrder());
-			chunkIntIndices = ByteBuffer.allocateDirect(buffers.indicesIntCount * 4).order(ByteOrder.nativeOrder());
+		chunkVertices = ByteBuffer.allocateDirect(buffers.verticesFloatCount * 4).order(ByteOrder.nativeOrder());
+		chunkNormals = ByteBuffer.allocateDirect(buffers.verticesFloatCount * 4).order(ByteOrder.nativeOrder());
+		chunkShortIndices = ByteBuffer.allocateDirect(buffers.indicesIntCount * 2).order(ByteOrder.nativeOrder());
+		chunkIntIndices = ByteBuffer.allocateDirect(buffers.indicesIntCount * 4).order(ByteOrder.nativeOrder());
 
-			if (Config.CHUNK_REUSE_VERTS) {
-				for (int i = 0; i < buffers.verticesFloatCount; i += 3) {
-					float vx = buffers.vertices[i + 0];
-					float vy = buffers.vertices[i + 1];
-					float vz = buffers.vertices[i + 2];
+		System.err.println("CREATING chunkNormals " + chunkNormals + ", id = "
+				+ index.toString() + ", empty " + empty);
 
-					chunkVertices.putFloat(vx);
-					chunkVertices.putFloat(vy);
-					chunkVertices.putFloat(vz);
+		if (Config.CHUNK_REUSE_VERTS) {
+			for (int i = 0; i < buffers.verticesFloatCount; i += 3) {
+				float vx = buffers.vertices[i + 0];
+				float vy = buffers.vertices[i + 1];
+				float vz = buffers.vertices[i + 2];
 
-					Vec3 normal = TerrainGenerator.getNormal(vx, vy, vz);
+				chunkVertices.putFloat(vx);
+				chunkVertices.putFloat(vy);
+				chunkVertices.putFloat(vz);
 
-					chunkNormals.putFloat(normal.getX());
-					chunkNormals.putFloat(normal.getY());
-					chunkNormals.putFloat(normal.getZ());
-				}
-				for (int i = 0; i < buffers.indicesIntCount; i++) {
-					chunkShortIndices.putShort((short) (buffers.indices[i] / 3));
-					chunkIntIndices.putInt(buffers.indices[i] / 3);
-				}
-			} else {
-				for (int i = 0; i < buffers.indicesIntCount; i++) {
-					Vec3 vert = triangles.get(i);
-					float vx = vert.getX();
-					float vy = vert.getY();
-					float vz = vert.getZ();
+				Vec3 normal = TerrainGenerator.getNormal(vx, vy, vz);
 
-					chunkVertices.putFloat(vx);
-					chunkVertices.putFloat(vy);
-					chunkVertices.putFloat(vz);
-
-					Vec3 normal = TerrainGenerator.getNormal(vx, vy, vz);
-
-					chunkNormals.putFloat(normal.getX());
-					chunkNormals.putFloat(normal.getY());
-					chunkNormals.putFloat(normal.getZ());
-
-					chunkShortIndices.putShort((short) i);
-					chunkIntIndices.putInt(i);
-				}
-
+				chunkNormals.putFloat(normal.getX());
+				chunkNormals.putFloat(normal.getY());
+				chunkNormals.putFloat(normal.getZ());
 			}
-			/*
-				System.out.printf("Triangles size %d, indices %d, occ cells %d, uniqueVertFloats %d ... vertices count %d indices count %d\n",
-								triangles.size(), indicesCount, occupiedCubeCount, verticesCount, chunkVertices.limit()/(3*4),
-								chunkShortIndices.limit()/2);
-								*/
+			for (int i = 0; i < buffers.indicesIntCount; i++) {
+				chunkShortIndices.putShort((short) (buffers.indices[i] / 3));
+				chunkIntIndices.putInt(buffers.indices[i] / 3);
+			}
+		} else {
+			for (int i = 0; i < buffers.indicesIntCount; i++) {
+				Vec3 vert = triangles.get(i);
+				float vx = vert.getX();
+				float vy = vert.getY();
+				float vz = vert.getZ();
 
-			parallel_processPhysics();
+				chunkVertices.putFloat(vx);
+				chunkVertices.putFloat(vy);
+				chunkVertices.putFloat(vz);
 
-			chunkVertices.flip();
-			chunkNormals.flip();
-			chunkShortIndices.flip();
-			chunkIntIndices.flip();
+				Vec3 normal = TerrainGenerator.getNormal(vx, vy, vz);
 
-			return false;
+				chunkNormals.putFloat(normal.getX());
+				chunkNormals.putFloat(normal.getY());
+				chunkNormals.putFloat(normal.getZ());
+
+				chunkShortIndices.putShort((short) i);
+				chunkIntIndices.putInt(i);
+			}
 		}
 
+		chunkVertices.flip();
+		chunkNormals.flip();
+		chunkShortIndices.flip();
+		chunkIntIndices.flip();
+		return false;
 	}
 
 	public void parallel_process(Object workerBuffers) {
@@ -282,12 +274,17 @@ public class Chunk implements Frustrumable {
 		buffers.indicesIntCount = 0;
 
 		// cache weights
-		if (parallel_processCalcWeights(buffers)) {
+		boolean isEmpty = parallel_processCalcWeights(buffers);
+		
+		if (!isEmpty) {
 			// create polys
 			parallel_processCalcGeometry(buffers);
-
+			
 			// save polys in bytebuffers for rendering/physics
-			empty = parallel_processSaveGeometry(buffers);
+			parallel_processSaveGeometry(buffers);
+			
+			parallel_processPhysics();
+			empty = false; // flag tells main loop that chunk can be used
 		}
 
 		if (!state.compareAndSet(PARALLEL_PROCESSING, PARALLEL_COMPLETE)) {
@@ -343,7 +340,11 @@ public class Chunk implements Frustrumable {
 		if (!Config.CHUNK_PHYSICS)
 			return;
 		
-		meshId = Game.collision.physics.createMesh(chunkVertices, SIZE, chunkIntIndices);
+		if (empty)
+			System.err.println("PHYSICS ON EMPTY");
+		
+		meshId = Game.collision.physics.createMesh(chunkVertices, 4, chunkIntIndices);
+		//meshId = Game.collision.physics.createMesh(chunkVertices, 2, chunkShortIndices);
 	}
 
 	// parallel OR serial
