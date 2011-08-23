@@ -59,8 +59,6 @@ public class Chunk implements Frustrumable {
 				Game.collision.physics.registerMesh(meshId);
 			}
 
-			System.err.println("chunkNormals "+chunkNormals + ", id = "+index.toString() + ", empty "+empty);
-			
 			displayList = GL11.glGenLists(1);
 			GL11.glNewList(displayList, display ? GL11.GL_COMPILE_AND_EXECUTE : GL11.GL_COMPILE);
 			GL11.glEnableClientState(GL11.GL_NORMAL_ARRAY);
@@ -209,9 +207,6 @@ public class Chunk implements Frustrumable {
 		chunkShortIndices = ByteBuffer.allocateDirect(buffers.indicesIntCount * 2).order(ByteOrder.nativeOrder());
 		chunkIntIndices = ByteBuffer.allocateDirect(buffers.indicesIntCount * 4).order(ByteOrder.nativeOrder());
 
-		System.err.println("CREATING chunkNormals " + chunkNormals + ", id = "
-				+ index.toString() + ", empty " + empty);
-
 		if (Config.CHUNK_REUSE_VERTS) {
 			for (int i = 0; i < buffers.verticesFloatCount; i += 3) {
 				float vx = buffers.vertices[i + 0];
@@ -339,10 +334,7 @@ public class Chunk implements Frustrumable {
 	private void parallel_processPhysics() {
 		if (!Config.CHUNK_PHYSICS)
 			return;
-		
-		if (empty)
-			System.err.println("PHYSICS ON EMPTY");
-		
+
 		meshId = Game.collision.physics.createMesh(chunkVertices, 4, chunkIntIndices);
 		//meshId = Game.collision.physics.createMesh(chunkVertices, 2, chunkShortIndices);
 	}

@@ -1,9 +1,5 @@
 package supergame;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.FloatBuffer;
-
 import javax.vecmath.Vector3f;
 
 import org.lwjgl.input.Keyboard;
@@ -23,19 +19,14 @@ public class Character implements CameraControllable {
 		pitch = 0;
 	}
 
-	//private static float[] glMat = new float[16];
-	//private static ByteBuffer glMat = ByteBuffer.allocateDirect(16*4).order(ByteOrder.nativeOrder());
 	private static Vector3f position = new Vector3f();
 	
 	void render() {
 		Game.collision.physics.queryCharacterPosition(characterId, position);
 		GL11.glPushMatrix();
-		//GL11.glMultMatrix(matrix.asFloatBuffer());
 		GL11.glTranslatef(position.x, position.y, position.z);
-
 		GL11.glRotatef(heading, 0, 1, 0);
 		//GL11.glRotatef(pitch, 1, 0, 0);
-		
 		Game.collision.drawCube(new Vector3f(2, 2, 2));
 		GL11.glPopMatrix();
 	}
@@ -44,27 +35,31 @@ public class Character implements CameraControllable {
 			0.5f));
 	private static Transform startTransform = new Transform();
 	private static Vector3f localInertia = new Vector3f(0, 0, 0);
+	*/
 	private static int msSinceShoot = 0;
-*/
+
 	void move() {
-		/*
-		 * if (Game.collision.dynamicsWorld == null) return;
-		 * 
-		 * msSinceShoot += Game.delta; if (msSinceShoot > 500 &&
-		 * Mouse.isButtonDown(0)) { msSinceShoot = 0; float mass = 0.5f;
-		 * Vector3f lookDir = Vec3.HPVector(180-heading, pitch);
-		 * 
-		 * Transform xform = ghostObject.getWorldTransform(new Transform());
-		 * 
-		 * startTransform.setIdentity(); startTransform.origin.set(lookDir);
-		 * startTransform.origin.scale(2);
-		 * startTransform.origin.add(xform.origin);
-		 * 
-		 * boxShape.calculateLocalInertia(mass, localInertia); RigidBody cube =
-		 * Game.collision.spawnCube(mass, boxShape, startTransform,
-		 * localInertia); lookDir.scale(20); cube.applyCentralImpulse(lookDir);
-		 * }
-		 */
+
+		msSinceShoot += Game.delta;
+		if (msSinceShoot > 500 && Mouse.isButtonDown(0)) {
+			msSinceShoot = 0;
+			float mass = 0.5f;
+			Vector3f lookDir = Vec3.HPVector(180 - heading, pitch);
+			/*
+			Transform xform = ghostObject.getWorldTransform(new Transform());
+
+			startTransform.setIdentity();
+			startTransform.origin.set(lookDir);
+			startTransform.origin.scale(2);
+			startTransform.origin.add(xform.origin);
+
+			boxShape.calculateLocalInertia(mass, localInertia);
+			RigidBody cube = Game.collision.spawnCube(mass, boxShape,
+					startTransform, localInertia);
+			lookDir.scale(20);
+			cube.applyCentralImpulse(lookDir);
+			*/
+		}
 
 		Vector3f forwardDir = Vec3.HPVector(180 - heading, 0);
 		Vector3f strafeDir = Vec3.HPVector(-heading + 90, 0);
@@ -99,11 +94,5 @@ public class Character implements CameraControllable {
 	@Override
 	public void getPos(Vector3f pos) {
 		Game.collision.physics.queryCharacterPosition(characterId, pos);
-		//return glMat.asFloatBuffer();
-		/*
-		Transform xform = ghostObject.getWorldTransform(new Transform());
-		return xform.origin;
-		return new Vector3f(0,0,0);
-		*/
 	}
 }
