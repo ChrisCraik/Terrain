@@ -212,7 +212,7 @@ public class Game {
 		org.lwjgl.util.glu.GLU.gluPerspective(Camera.angle,
 				(float) displayMode.getWidth() / (float) displayMode.getHeight(), 0.1f, Camera.farD);
 		GL11.glMatrixMode(GL11.GL_MODELVIEW); // Select The Modelview Matrix
-
+		
 		// Really Nice Perspective Calculations
 		GL11.glHint(GL11.GL_PERSPECTIVE_CORRECTION_HINT, GL11.GL_NICEST);
 

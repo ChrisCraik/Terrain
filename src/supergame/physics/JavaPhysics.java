@@ -75,8 +75,6 @@ public class JavaPhysics implements Physics {
 		Vector3f worldAabbMax = new Vector3f(10000, 10000, 10000);
 		AxisSweep3 overlappingPairCache = new AxisSweep3(worldAabbMin, worldAabbMax, MAX_PROXIES);
 		overlappingPairCache.getOverlappingPairCache().setInternalGhostPairCallback(new GhostPairCallback());
-		//BroadphaseInterface overlappingPairCache = new SimpleBroadphase(
-		//		maxProxies);
 
 		// the default constraint solver. For parallel processing you can use a
 		// different solver (see Extras/BulletMultiThreaded)

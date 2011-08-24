@@ -25,7 +25,7 @@ public:
 	//btRigidBody* addRigidBody(btScalar mass, const btTransform& startTransform, btCollisionShape* shape);
 	btDefaultCollisionConfiguration m_collisionConfiguration;
 	btCollisionDispatcher m_dispatcher;
-	btDbvtBroadphase m_broadphase;
+	btAxisSweep3 m_broadphase;
 	btSequentialImpulseConstraintSolver m_solver;
 	btGhostPairCallback m_ghostPairCallback;
 	btDiscreteDynamicsWorld m_dynamicsWorld;
@@ -33,7 +33,12 @@ public:
 };
 
 NativePhysics::NativePhysics() :
-		m_collisionConfiguration(), m_dispatcher(&m_collisionConfiguration), m_broadphase(), m_solver(), m_dynamicsWorld(
+		m_collisionConfiguration(),
+		m_dispatcher(&m_collisionConfiguration),
+		m_broadphase(btVector3(-1000,-1000,-1000), btVector3(1000,1000,1000), 4096),
+		m_solver(),
+		m_ghostPairCallback(),
+		m_dynamicsWorld(
 				&m_dispatcher, &m_broadphase, &m_solver,
 				&m_collisionConfiguration)
 {
@@ -72,7 +77,7 @@ class NativeCharacter
 public:
 	NativeCharacter(btTransform &transform) :
 			m_shape(1.0, 1.5),
-			m_character(&m_ghostObject, &m_shape, btScalar(0.35))
+			m_character(&m_ghostObject, &m_shape, btScalar(0.5))
 	{
 		m_ghostObject.setWorldTransform(transform);
 		m_ghostObject.setCollisionShape(&m_shape);
@@ -95,7 +100,10 @@ public:
 				m_state(transform),
 				m_info(mass, &m_state, &m_shape, inertia),
 				m_body(m_info)
-	{}
+	{
+		fprintf(stderr, "mass is %f\n", mass);
+		physics.m_dynamicsWorld.addRigidBody(&m_body);
+	}
 	btBoxShape m_shape;
 	btDefaultMotionState m_state;
 	btRigidBody::btRigidBodyConstructionInfo m_info;
@@ -109,9 +117,7 @@ static btVector3 inertia(0, 0, 0), aabbMin(-1000, -1000, -1000), aabbMax(1000, 1
 JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeInitialize(
 		JNIEnv* env, jobject obj, jfloat gravity, jfloat chunkSize)
 {
-	printf("Hooray, physics! Woo! Gravity = %f\n", gravity);
-	printf("Vector size is %d", (int) sizeof(btVector3));
-	printf("Scalar size is %d", (int) sizeof(btScalar));
+	fprintf(stderr, "Hooray, physics! Woo! Gravity = %f\n", gravity);
 	physics.m_dynamicsWorld.setGravity(btVector3(0, gravity, 0));
 	physics.m_chunkSize = chunkSize;
 }
@@ -225,7 +231,7 @@ JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeQueryCharacter
 JNIEXPORT jlong JNICALL Java_supergame_physics_NativePhysics_nativeCreateCube(
 		JNIEnv* env, jobject obj, jfloat size, jfloat mass, jfloat x, jfloat y, jfloat z)
 {
-	fprintf(stderr,"creating cube at %f %f %f!\n", x, y, z);
+	fprintf(stderr,"creating cube of size %f, mass %f, at %f %f %f!\n", size, mass, x, y, z);
 	btTransform transform;
 	transform.setIdentity();
 	transform.setOrigin(btVector3(x,y,z));
