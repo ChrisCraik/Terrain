@@ -36,7 +36,7 @@ public class JavaPhysics implements Physics {
 	private static final int ARRAY_SIZE_X = 3;
 	private static final int ARRAY_SIZE_Y = 3;
 	private static final int ARRAY_SIZE_Z = 3;
-	
+
 	private static final int PLAYER_GRAVITY = 10;
 	private static final int PLAYER_JUMP_SPEED = 10;
 
@@ -55,8 +55,8 @@ public class JavaPhysics implements Physics {
 	private long nextCharacterId = 1;
 
 	private float matrixArray[] = new float[16];
-	
-	
+
+
 	@Override
 	public void initialize(float gravity, float chunkSize) {
 		// collision configuration contains default setup for memory, collision
@@ -90,12 +90,12 @@ public class JavaPhysics implements Physics {
 	public void stepSimulation(float timeStep, int maxSubSteps) {
 		dynamicsWorld.stepSimulation(timeStep, maxSubSteps);
 	}
-	
+
 	@Override
 	public long createMesh(ByteBuffer vertices, int indexBytes, ByteBuffer indices) {
 		vertices.rewind();
 		indices.rewind();
-		
+
 		TriangleIndexVertexArray indexVertexArrays;
 		indexVertexArrays = new TriangleIndexVertexArray();
 
@@ -107,7 +107,7 @@ public class JavaPhysics implements Physics {
 		mesh.triangleIndexStride = indexBytes * 3;
 		mesh.vertexBase = vertices;
 		mesh.vertexStride = 4 * 3;
-
+/*
 		System.out.printf("coordBytes %d, numTriangles %d, numVert %d, triangleIndexStride %d, vertexStride %d\n",
 				indexBytes, mesh.numTriangles, mesh.numVertices,
 				mesh.triangleIndexStride, mesh.vertexStride);
@@ -115,7 +115,7 @@ public class JavaPhysics implements Physics {
 		System.out.printf("indices cap %d, indices lim %d,    vert cap %d, vert lim %d\n",
 				indices.capacity(), indices.limit(),
 				vertices.capacity(), vertices.limit());
-		
+*/
 		indexVertexArrays.addIndexedMesh(mesh, (indexBytes == 2) ? ScalarType.SHORT : ScalarType.INTEGER);
 
 		boolean useQuantizedAabbCompression = true;
@@ -133,7 +133,7 @@ public class JavaPhysics implements Physics {
 		DefaultMotionState myMotionState = new DefaultMotionState(groundTransform);
 		RigidBodyConstructionInfo rbInfo = new RigidBodyConstructionInfo(mass, myMotionState, trimeshShape,
 				localInertia);
-		
+
 		// store the new rigid body in a map so that it can be accessed with a unique long id
 		long newRigidBodyId = nextRigidBodyId++;
 		rigidBodyMap.put(newRigidBodyId, new RigidBody(rbInfo));
@@ -160,7 +160,7 @@ public class JavaPhysics implements Physics {
 
 	@Override
 	public long createCharacter(float x, float y, float z) {
-		
+
 		Transform startTransform = new Transform();
 		startTransform.setIdentity();
 		startTransform.origin.set(x,y,z);
@@ -182,7 +182,7 @@ public class JavaPhysics implements Physics {
 		// (short) (CollisionFilterGroups.STATIC_FILTER |
 		// CollisionFilterGroups.DEFAULT_FILTER));
 		dynamicsWorld.addAction(character);
-		
+
 		long newCharacterId = nextCharacterId++;
 		characterMap.put(newCharacterId, new Pair<KinematicCharacterController,PairCachingGhostObject>(character, ghostObject));
 		return newCharacterId;
@@ -212,21 +212,21 @@ public class JavaPhysics implements Physics {
 		//world.getOpenGLMatrix(matrixArray);
 		//matrix.asFloatBuffer().put(matrixArray).flip();
 	}
-	
+
 	private static final Vector3f inertia = new Vector3f(0,0,0);
 	private Map<Float, CollisionShape> boxShapes = new HashMap<Float, CollisionShape>();
-	
+
 	@Override
 	public long createCube(float size, float mass, float x, float y, float z) {
 		System.out.println("Creating cube:" + x + " " + y  + " " + z);
 		Transform startTransform = new Transform();
 		startTransform.setIdentity();
 		startTransform.origin.set(x,y,z);
-		
+
 		//re-use the same collision shape when possible for performance
 		if (!boxShapes.containsKey(size))
 			boxShapes.put(size, new BoxShape(new Vector3f(size, size, size)));
-		
+
 		// using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
 		DefaultMotionState myMotionState = new DefaultMotionState(startTransform);
 		RigidBodyConstructionInfo rbInfo = new RigidBodyConstructionInfo(mass, myMotionState, boxShapes.get(size), inertia);

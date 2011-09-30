@@ -5,22 +5,28 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.vecmath.Vector3f;
+
 import org.lwjgl.opengl.GL11;
 
 import supergame.Camera.Frustrumable;
 import supergame.Camera.Inclusion;
+import supergame.modify.ChunkModifierInterface;
 
 public class Chunk implements Frustrumable {
 	public static Vec3[] rayDistribution;
 
 	private boolean empty = true;
-	//private float[][][] dirtyWeights;
 	private int displayList = -1;
 
 	private ArrayList<Vec3> triangles;
 
 	private ChunkIndex index;
 	private Vec3 pos; //cube's origin (not center)
+
+	private float modifiedWeights[][][];
+	private Chunk modifiedParent;
+	private final ChunkModifierInterface modifyComplete;
 
 	private static final int SERIAL_INITIAL = 0; // Chunk allocated, not yet processed
 	private static final int PARALLEL_PROCESSING = 1; // being processed by worker thread
@@ -34,12 +40,25 @@ public class Chunk implements Frustrumable {
 			{ { 1, 0.5f, 0, 1 }, { 0.5f, 0, 1, 1 } }, { { 0.9f, 0.9f, 0.9f, 1 }, { 0.4f, 0.4f, 0.4f, 1 } } };
 
 	private ByteBuffer chunkShortIndices, chunkIntIndices, chunkVertices, chunkNormals;
-	
+
+
 	//Serial Methods - called by main loop
 
-	Chunk(ChunkIndex index) {
+	public Chunk(ChunkIndex index) {
 		this.index = index;
 		this.state = new AtomicInteger(SERIAL_INITIAL);
+		this.modifyComplete = null;
+	}
+
+	public Chunk(ChunkIndex index, Chunk other, ChunkModifierInterface cm) {
+		// TODO: copy weights from other to here, so that modifications can be
+		// further modified. Two ways of doing this - always save weights so
+		// that modification is faster, or only save weights when a chunk is
+		// first modified.
+		this.index = index;
+		this.state = new AtomicInteger(SERIAL_INITIAL);
+		this.modifyComplete  = cm;
+		this.modifiedParent = other;
 	}
 
 	public boolean serial_render(Camera cam, boolean allowBruteForceRender, boolean display) {
@@ -68,7 +87,7 @@ public class Chunk implements Frustrumable {
 			GL11.glDrawElements(GL11.GL_TRIANGLES, chunkShortIndices.asShortBuffer());
 			GL11.glDisableClientState(GL11.GL_VERTEX_ARRAY);
 			GL11.glDisableClientState(GL11.GL_NORMAL_ARRAY);
-			/*			
+			/*
 			GL11.glBegin(GL11.GL_TRIANGLES); // Draw some triangles
 
 			if (!Config.USE_DEBUG_COLORS)
@@ -143,26 +162,43 @@ public class Chunk implements Frustrumable {
 		return new WorkerBuffers();
 	}
 
-	public boolean parallel_processCalcWeights(WorkerBuffers buffers) {
-		//boolean isNeg = TerrainGenerator.getDensity(pos.getX(), pos.getY(), pos.getZ()) < 0;
+	private boolean parallel_processCalcWeights(WorkerBuffers buffers) {
+		// initialize weights from modifiedParent, if parent was modified
+		boolean skipGeneration = false;
+		if (modifiedParent != null) {
+			float oldWeights[][][] = modifiedParent.getModifiedWeights();
+			if (oldWeights != null) {
+				buffers.weights = oldWeights;
+				skipGeneration = true;
+			}
+		}
+
 		int posCount = 0, negCount = 0;
 		for (int x = 0; x < Config.CHUNK_DIVISION + 1; x++)
 			for (int y = 0; y < Config.CHUNK_DIVISION + 1; y++)
 				for (int z = 0; z < Config.CHUNK_DIVISION + 1; z++) {
-					float val = TerrainGenerator.getDensity(pos.getX() + x * Config.METERS_PER_SUBCHUNK, pos.getY() + y
+					Vector3f localPos = new Vector3f(pos.getX() + x * Config.METERS_PER_SUBCHUNK, pos.getY() + y
 							* Config.METERS_PER_SUBCHUNK, pos.getZ() + z * Config.METERS_PER_SUBCHUNK);
-					if (val < 0)
+
+					if (!skipGeneration) {
+						// haven't already initialized the weights from parent,
+						// so need to call TerrainGenerator
+						buffers.weights[x][y][z] = TerrainGenerator.getDensity(localPos);
+					}
+
+					if (modifyComplete != null)
+						buffers.weights[x][y][z] += modifyComplete.getModification(localPos);
+
+					if (buffers.weights[x][y][z] < 0)
 						negCount++;
 					else
 						posCount++;
-					buffers.weights[x][y][z] = val;
 				}
 		return (negCount == 0) || (posCount == 0); // return true if empty
 	}
 
-	public void parallel_processCalcGeometry(WorkerBuffers buffers) {
+	private void parallel_processCalcGeometry(WorkerBuffers buffers) {
 		int x, y, z;
-
 		buffers.indicesIntCount = 0;
 		buffers.verticesFloatCount = 0;
 		if (Config.CHUNK_REUSE_VERTS) {
@@ -201,7 +237,7 @@ public class Chunk implements Frustrumable {
 		}
 	}
 
-	public boolean parallel_processSaveGeometry(WorkerBuffers buffers) {
+	private boolean parallel_processSaveGeometry(WorkerBuffers buffers) {
 		chunkVertices = ByteBuffer.allocateDirect(buffers.verticesFloatCount * 4).order(ByteOrder.nativeOrder());
 		chunkNormals = ByteBuffer.allocateDirect(buffers.verticesFloatCount * 4).order(ByteOrder.nativeOrder());
 		chunkShortIndices = ByteBuffer.allocateDirect(buffers.indicesIntCount * 2).order(ByteOrder.nativeOrder());
@@ -270,14 +306,14 @@ public class Chunk implements Frustrumable {
 
 		// cache weights
 		boolean isEmpty = parallel_processCalcWeights(buffers);
-		
+
 		if (!isEmpty) {
 			// create polys
 			parallel_processCalcGeometry(buffers);
-			
+
 			// save polys in bytebuffers for rendering/physics
 			parallel_processSaveGeometry(buffers);
-			
+
 			parallel_processPhysics();
 			empty = false; // flag tells main loop that chunk can be used
 		}
@@ -285,6 +321,18 @@ public class Chunk implements Frustrumable {
 		if (!state.compareAndSet(PARALLEL_PROCESSING, PARALLEL_COMPLETE)) {
 			System.err.println("Error: Chunk parallel processing interrupted");
 			System.exit(1);
+		}
+
+		if (modifyComplete == null) {
+			// Weights aren't modified, so don't save them since they can be regenerated
+			this.modifiedWeights = null;
+		} else {
+			// Because the weights have been modified, they can't be regenerated
+			// from the TerrainGenerator, so we save them.
+			this.modifiedWeights = buffers.weights;
+			buffers.weights = new float[Config.CHUNK_DIVISION + 2][Config.CHUNK_DIVISION + 2][Config.CHUNK_DIVISION + 2];
+
+			modifyComplete.chunkCompletion();
 		}
 	}
 
@@ -340,6 +388,10 @@ public class Chunk implements Frustrumable {
 	}
 
 	// parallel OR serial
+	public ChunkIndex getChunkIndex() {
+		return index;
+	}
+
 	public Vec3 getVertexP(Vec3 n) {
 		Vec3 res = new Vec3(pos);
 
@@ -374,5 +426,11 @@ public class Chunk implements Frustrumable {
 		if (state.compareAndSet(SERIAL_INITIAL, PARALLEL_GARBAGE))
 			return;
 		while (state.get() != PARALLEL_COMPLETE);
+	}
+
+	public float[][][] getModifiedWeights() {
+		float ret[][][] = this.modifiedWeights;
+		this.modifiedWeights = null;
+		return ret;
 	}
 }

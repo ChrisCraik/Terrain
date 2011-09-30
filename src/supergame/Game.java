@@ -13,13 +13,16 @@ import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.input.Keyboard;
 
+import supergame.modify.BlockChunkModifier;
+import supergame.modify.SphereChunkModifier;
+
 public class Game {
 	public static final int FLOAT_SIZE = 4;
-	
+
 	public static boolean isRunning() {
 		return !done;
 	}
-	
+
 	public static Config config;
 
 	private static boolean done = false;
@@ -29,9 +32,9 @@ public class Game {
 	private boolean f1 = false;
 
 	private DisplayMode displayMode;
-	
+
 	private ChunkManager chunkManager;
-	
+
 	public static Collision collision;
 	/* TIMING */
 	public static int delta = 0;
@@ -46,7 +49,7 @@ public class Game {
 		long time = getTime();
 		delta = (int) (time - lastFrame);
 		lastFrame = time;
-		
+
 		// compute heartbeat
 		msSinceLastHeartbeat += delta;
 		if (msSinceLastHeartbeat > Config.MS_PER_HEARTBEAT) {
@@ -81,7 +84,7 @@ public class Game {
 					Collision.START_POS_Y/Config.CHUNK_DIVISION,
 					Collision.START_POS_Z/Config.CHUNK_DIVISION);
 			this.camera = new Camera(collision.character);
-			
+
 			while (!done) {
 				//System.out.println("----------");
 				PROFILE("GL draw");
@@ -139,27 +142,28 @@ public class Game {
 	private boolean render() {
 		collision.stepSimulation(delta / 1000f);
 		PROFILE("Collision");
-		
+
 		/*
 		Vector3f center = collision.character.getPos();
-		
-		chunkManager.updatePosition((long)Math.floor(center.x/Config.CHUNK_DIVISION), 
-				(long)Math.floor(center.y/Config.CHUNK_DIVISION), 
+		chunkManager.updatePosition((long)Math.floor(center.x/Config.CHUNK_DIVISION),
+				(long)Math.floor(center.y/Config.CHUNK_DIVISION),
 				(long)Math.floor(center.z/Config.CHUNK_DIVISION));
+				*/
+		chunkManager.updateWithPosition(0, 0, 0);
 		PROFILE("Update pos");
-		*/
-		
+
+
 		GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT); // Clear the screen and the depth buffer
 		GL11.glLoadIdentity(); // Reset The Current Modelview Matrix
 		camera.apply();
 		PROFILE("Cam stuff");
-		
+
 		collision.render();
 		PROFILE("Col rendr");
-		
+
 		chunkManager.renderChunks(camera);
 		PROFILE("chunk rdr");
-		
+
 		return true;
 	}
 
@@ -212,7 +216,7 @@ public class Game {
 		org.lwjgl.util.glu.GLU.gluPerspective(Camera.angle,
 				(float) displayMode.getWidth() / (float) displayMode.getHeight(), 0.1f, Camera.farD);
 		GL11.glMatrixMode(GL11.GL_MODELVIEW); // Select The Modelview Matrix
-		
+
 		// Really Nice Perspective Calculations
 		GL11.glHint(GL11.GL_PERSPECTIVE_CORRECTION_HINT, GL11.GL_NICEST);
 
@@ -252,6 +256,19 @@ public class Game {
 		}
 
 		Game thegame = new Game();
+
+		// generate a fort!
+		//    4 walls
+		new BlockChunkModifier(new Vector3f(-40, 0, -30), new Vector3f(2, 20, 10));
+		new BlockChunkModifier(new Vector3f(-20, 0, -30), new Vector3f(2, 20, 10));
+		new BlockChunkModifier(new Vector3f(-30, 0, -20), new Vector3f(10, 20, 2));
+		new BlockChunkModifier(new Vector3f(-30, 0, -40), new Vector3f(10, 20, 2));
+		//    4 turrets
+		new BlockChunkModifier(new Vector3f(-20, 0, -20), new Vector3f(3, 25, 3));
+		new BlockChunkModifier(new Vector3f(-20, 0, -40), new Vector3f(3, 25, 3));
+		new BlockChunkModifier(new Vector3f(-40, 0, -20), new Vector3f(3, 25, 3));
+		new BlockChunkModifier(new Vector3f(-40, 0, -40), new Vector3f(3, 25, 3));
+
 		thegame.run(fullscreen);
 	}
 }

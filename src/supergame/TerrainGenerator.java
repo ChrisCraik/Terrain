@@ -1,5 +1,7 @@
 package supergame;
 
+import javax.vecmath.Vector3f;
+
 public class TerrainGenerator {
 	public static Vec3 getNormal(float x, float y, float z) {
 		//first attempt: brute force
@@ -10,6 +12,10 @@ public class TerrainGenerator {
 		deltaZ = origin - getDensity(x, y, z + delta);
 
 		return new Vec3(deltaX, deltaY, deltaZ).normalize();
+	}
+
+	public static float getDensity(Vector3f p) {
+		return getDensity(p.x, p.y, p.z);
 	}
 
 	public static float getDensity(float x, float y, float z) {

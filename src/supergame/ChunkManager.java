@@ -2,13 +2,16 @@ package supergame;
 
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.Vector;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.lwjgl.Sys;
 
+import supergame.modify.ChunkModifier;
+
 /*
 Serial dict contains all cubes.
-Serial LRU containing 
+Serial LRU containing
 
 Main thread:
 
@@ -21,7 +24,7 @@ for each of the 3*n^2 chunks that are now in InterestCube:
 
 for each of the 3*n^2 chunks NO LONGER in InterestCube:
 	add to LRU (Should not be present)
-	
+
 for each chunk in dict:
 	if thread.state == RENDERABLE:
 		RENDER
@@ -30,14 +33,32 @@ while LRU.length > CHUNK_CACHE_SIZE:
 	pop
 	remove from dict
  */
-public class ChunkManager implements ChunkProvider {
+
+/**
+ * The ChunkManager holds all of the chunks in the engine and serves two main
+ * purposes
+ *
+ * 1 - To generate chunks surrounding the player, so that a player always has
+ * terrain around them. This is managed through a HashMap of ChunkIndex to
+ * chunk, where every time the player moves from one chunk to another, the chunk
+ * manager creates any chunks now within CHUNK_LOAD_DISTANCE of the player
+ *
+ * 2 - To generate chunk replacements as the terrain is modified - from
+ * building, digging, explosions or otherwise. This is done my creating a
+ * ChunkModifier for each modification, and calling the static step method each
+ * frame. Chunks being modified (as opposed to those just being loaded) are not
+ * immediately added to the global pool of chunks, but instead swapped with the
+ * chunks they replace atomically, once the generation of modified chunks is
+ * complete.
+ */
+public class ChunkManager implements ChunkProvider, ChunkProcessor {
 
 	long lastx, lasty, lastz;
 
 	private HashMap<ChunkIndex, Chunk> chunks;
 	private LinkedBlockingQueue<Chunk> dirtyChunks;
 	private LinkedHashSet<ChunkIndex> chunkCache;
-	
+
 	public static long startTime;
 
 	ChunkManager(long x, long y, long z) {
@@ -55,7 +76,7 @@ public class ChunkManager implements ChunkProvider {
 			new ChunkBakerThread(i, this).start();
 
 		startTime = Sys.getTime();
-		
+
 		sweepNearby(x, y, z, 2, false);
 		sweepNearby(x, y, z, Config.CHUNK_LOAD_DISTANCE, false);
 	}
@@ -75,12 +96,9 @@ public class ChunkManager implements ChunkProvider {
 					}
 	}
 
-	public Chunk getChunkToProcess() throws InterruptedException {
-		if (dirtyChunks.size() == 1)
-			System.out.println("\t\t\tCompleted in " + ((Sys.getTime()-startTime)*1.0)/Sys.getTimerResolution());
-		return dirtyChunks.take();
-	}
-
+	/**
+	 * Create a chunk at the parameter coordinates if it doesn't exist.
+	 */
 	private void prioritizeChunk(long x, long y, long z) {
 		ChunkIndex key = new ChunkIndex(x, y, z);
 		//System.out.println("Prioritizing chunk " + key.getVec3());
@@ -94,6 +112,11 @@ public class ChunkManager implements ChunkProvider {
 		}
 	}
 
+	/**
+	 * Delete the chunk at the parameter coordinates, as it's no longer needed.
+	 *
+	 * Eventually, this will just cache the chunk and only delete a chunk if the cache is full.
+	 */
 	private void deprioritizeChunk(long x, long y, long z) {
 		ChunkIndex key = new ChunkIndex(x, y, z);
 		//System.out.println("DEPrioritizing chunk "+key.getVec3()+"chunkCache size is "+chunkCache.size());
@@ -113,8 +136,12 @@ public class ChunkManager implements ChunkProvider {
 		*/
 	}
 
-	public void updatePosition(long x, long y, long z) {
+	public void updateWithPosition(long x, long y, long z) {
 		//NOTE: assumes constant CHUNK_LOAD_DISTANCE
+
+		// process modified chunks, swap them into place as needed
+		ChunkModifier.step(this);
+
 		long dx = x - lastx, dy = y - lasty, dz = z - lastz;
 
 		if (dx == 0 && dy == 0 && dz == 0)
@@ -154,7 +181,7 @@ public class ChunkManager implements ChunkProvider {
 		lastz = z;
 
 		Game.PROFILE("pos update");
-		
+
 		sweepNearby(x, y, z, 1, true);
 		Game.PROFILE("loc chunk stall");
 
@@ -166,5 +193,41 @@ public class ChunkManager implements ChunkProvider {
 		for (Chunk c : chunks.values())
 			if (c.serial_render(cam, newRenders > 0, true))
 				newRenders++;
+	}
+
+	@Override
+	public Chunk getChunkToProcess() throws InterruptedException {
+		if (dirtyChunks.size() == 1)
+			System.out.println("\t\t\tCompleted in " + ((Sys.getTime()-startTime)*1.0)/Sys.getTimerResolution());
+		return dirtyChunks.take();
+	}
+
+	@Override
+	public void processChunks(Vector<Chunk> chunksForProcessing) {
+		dirtyChunks.addAll(chunksForProcessing);
+	}
+
+	@Override
+	public void swapChunks(Vector<Chunk> chunksForSwapping) {
+		for (Chunk newChunk : chunksForSwapping) {
+			ChunkIndex i = newChunk.getChunkIndex();
+			Chunk oldChunk = chunks.remove(i);
+
+			if (oldChunk == null) {
+				System.err.println("swapped out nonexistant chunk...");
+				System.exit(1);
+			}
+
+			if (!oldChunk.processingIsComplete())
+				oldChunk.cancelParallelProcessing();
+			oldChunk.serial_clean();
+
+			chunks.put(i, newChunk);
+		}
+	}
+
+	@Override
+	public Chunk getChunk(ChunkIndex i) {
+		return chunks.get(i);
 	}
 }

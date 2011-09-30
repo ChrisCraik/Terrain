@@ -3,7 +3,7 @@ package supergame;
 public class ChunkIndex {
 	private final long x, y, z;
 
-	ChunkIndex(long x, long y, long z) {
+	public ChunkIndex(long x, long y, long z) {
 		this.x = x;
 		this.y = y;
 		this.z = z;
@@ -33,7 +33,7 @@ public class ChunkIndex {
 	public Vec3 getVec3() {
 		return new Vec3(x, y, z);
 	}
-	
+
 	@Override
 	public String toString() {
 		return String.format("ID:%d %d %d", x, y, z);
