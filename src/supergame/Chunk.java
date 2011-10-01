@@ -3,6 +3,7 @@ package supergame;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.vecmath.Vector3f;
@@ -21,18 +22,20 @@ public class Chunk implements Frustrumable {
 
 	private ArrayList<Vec3> triangles;
 
-	private ChunkIndex index;
+	private final ChunkIndex index;
 	private Vec3 pos; //cube's origin (not center)
 
-	private float modifiedWeights[][][];
-	private Chunk modifiedParent;
+
+	private float modifiedWeights[][][] = null;
+	HashMap<Integer, Vec3> modifyNormals = null; //TODO: turn this into a workers buffer array
+	private Chunk modifiedParent = null;
 	private final ChunkModifierInterface modifyComplete;
 
 	private static final int SERIAL_INITIAL = 0; // Chunk allocated, not yet processed
 	private static final int PARALLEL_PROCESSING = 1; // being processed by worker thread
 	private static final int PARALLEL_COMPLETE = 2; // Processing complete, render-able
 	private static final int PARALLEL_GARBAGE = 3; // Processing interrupted by chunk garbage collection
-	private AtomicInteger state;
+	private AtomicInteger state = new AtomicInteger(SERIAL_INITIAL);
 
 	private long meshId = 0;
 
@@ -46,7 +49,6 @@ public class Chunk implements Frustrumable {
 
 	public Chunk(ChunkIndex index) {
 		this.index = index;
-		this.state = new AtomicInteger(SERIAL_INITIAL);
 		this.modifyComplete = null;
 	}
 
@@ -56,7 +58,6 @@ public class Chunk implements Frustrumable {
 		// that modification is faster, or only save weights when a chunk is
 		// first modified.
 		this.index = index;
-		this.state = new AtomicInteger(SERIAL_INITIAL);
 		this.modifyComplete  = cm;
 		this.modifiedParent = other;
 	}
@@ -235,6 +236,43 @@ public class Chunk implements Frustrumable {
 			buffers.verticesFloatCount = triangles.size() * 3;
 			buffers.indicesIntCount = triangles.size();
 		}
+
+		if (modifyComplete != null) {
+			modifyNormals = new HashMap<Integer, Vec3>();
+			// manually calculate normals, because we have been modified since generation
+			for (int i=0; i<buffers.indicesIntCount; i+=3) {
+				Vec3 vectors[] = new Vec3[3];
+				for (int j=0; j<3; j++) {
+					vectors[j] = new Vec3(
+							buffers.vertices[buffers.indices[i+j]+0],
+							buffers.vertices[buffers.indices[i+j]+1],
+							buffers.vertices[buffers.indices[i+j]+2]);
+				}
+
+				Vec3 a = vectors[0].subtract(vectors[1]);
+				Vec3 b = vectors[0].subtract(vectors[2]);
+				Vec3 normal = a.cross(b).normalize();
+
+				System.out.printf("normal for triangle %d is %f %f %f\n",
+						i / 3,
+						normal.getX(),
+						normal.getY(),
+						normal.getZ());
+
+				for (int j=0; j<3; j++) {
+					int index = buffers.indices[i+j];
+					Vec3 normalSumForIndex = modifyNormals.get(index);
+					if (normalSumForIndex == null) {
+						// COPY normal into hash (since the value in hash will be modified)
+						modifyNormals.put(index, new Vec3(normal));
+					} else {
+						// add into normal (since they're all normalized, we
+						// can normalize the sum later to get the average)
+						normalSumForIndex.actuallyAdd(normal);
+					}
+				}
+			}
+		}
 	}
 
 	private boolean parallel_processSaveGeometry(WorkerBuffers buffers) {
@@ -253,7 +291,12 @@ public class Chunk implements Frustrumable {
 				chunkVertices.putFloat(vy);
 				chunkVertices.putFloat(vz);
 
-				Vec3 normal = TerrainGenerator.getNormal(vx, vy, vz);
+				Vec3 normal;
+				if (modifyComplete != null && modifyNormals.containsKey(i)) {
+					normal = modifyNormals.get(i).normalize();
+				} else {
+					normal = TerrainGenerator.getNormal(vx, vy, vz);
+				}
 
 				chunkNormals.putFloat(normal.getX());
 				chunkNormals.putFloat(normal.getY());

@@ -13,28 +13,37 @@ public class Vec3 {
 
 		return new Vector3f(x,y,z);
 	}
-	
-	float data[];
+
+	float data[] = new float[3];
 
 	public Vec3(float x, float y, float z) {
-		data = new float[3];
 		data[0] = x;
 		data[1] = y;
 		data[2] = z;
 	}
 
 	public Vec3(float heading, float pitch) {
-		data = new float[3];
 		data[0] = -(float) (Math.sin(heading * Math.PI / 180.0) * Math.cos(pitch * Math.PI / 180.0));
 		data[2] = (float) (Math.cos(heading * Math.PI / 180.0) * Math.cos(pitch * Math.PI / 180.0));
 		data[1] = (float) (Math.sin(pitch * Math.PI / 180.0));
 	}
 
 	public Vec3(Vec3 pos) {
-		data = new float[3];
 		data[0] = pos.getX();
 		data[1] = pos.getY();
 		data[2] = pos.getZ();
+	}
+
+	public void actuallyAdd(Vec3 other) {
+		data[0] += other.getX();
+		data[1] += other.getY();
+		data[2] += other.getZ();
+	}
+
+	public void actuallySubtract(Vec3 other) {
+		data[0] -= other.getX();
+		data[1] -= other.getY();
+		data[2] -= other.getZ();
 	}
 
 	public void GLdraw() {
