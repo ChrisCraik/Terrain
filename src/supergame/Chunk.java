@@ -14,6 +14,39 @@ import supergame.Camera.Frustrumable;
 import supergame.Camera.Inclusion;
 import supergame.modify.ChunkModifierInterface;
 
+/**
+ * A chunk is an NxN volumetric surface that is collide-able. It's 'processed'
+ * by one of N worker threads in parallel, which generates the necessary
+ * geometry for display and physics. parallel_ methods are those called
+ * (indirectly) by those processing threads. Serial methods (such as drawing
+ * the chunks) are for the UI thread.
+ *
+ * In order to be modified (for building, and destruction) chunks are replaced
+ * with copies that are modified. See the second constructor.
+ *
+ * First time processing:
+ *     1) Weights are calculated
+ *     2) Create geometry
+ *     3) Create index and vertex lists are created (the format used by OpenGL
+ *        & Bullet)
+ *     4) Generate point normals (for OpenGL) from TerrainGenerator
+ *
+ * Then the chunk is ready for rendering and collisions. But there's more:
+ *
+ * First modification:
+ *     1) Weights are calculated from the TerrainGenerator, combined with the
+ *        modification
+ *     2) (same as above)
+ *     3) (same as above)
+ *     4) Generate point normals by brute force, by averaging triangle normals
+ *     5) finally, the chunk's weights are saved so that later
+ *        modifications can use it as a starting point
+ *
+ * Further modifications:
+ *     1) Weights are taken from the previous chunk, and combined with the new
+ *        modification
+ *     2...5) same as with first modification
+ */
 public class Chunk implements Frustrumable {
 	public static Vec3[] rayDistribution;
 
@@ -24,7 +57,6 @@ public class Chunk implements Frustrumable {
 
 	private final ChunkIndex index;
 	private Vec3 pos; //cube's origin (not center)
-
 
 	private float modifiedWeights[][][] = null;
 	HashMap<Integer, Vec3> modifyNormals = null; //TODO: turn this into a workers buffer array
@@ -53,10 +85,6 @@ public class Chunk implements Frustrumable {
 	}
 
 	public Chunk(ChunkIndex index, Chunk other, ChunkModifierInterface cm) {
-		// TODO: copy weights from other to here, so that modifications can be
-		// further modified. Two ways of doing this - always save weights so
-		// that modification is faster, or only save weights when a chunk is
-		// first modified.
 		this.index = index;
 		this.modifyComplete  = cm;
 		this.modifiedParent = other;
@@ -251,13 +279,9 @@ public class Chunk implements Frustrumable {
 
 				Vec3 a = vectors[0].subtract(vectors[1]);
 				Vec3 b = vectors[0].subtract(vectors[2]);
-				Vec3 normal = a.cross(b).normalize();
 
-				System.out.printf("normal for triangle %d is %f %f %f\n",
-						i / 3,
-						normal.getX(),
-						normal.getY(),
-						normal.getZ());
+				// Note: don't normalize so that bigger polys have more weight
+				Vec3 normal = a.cross(b); //.normalize();
 
 				for (int j=0; j<3; j++) {
 					int index = buffers.indices[i+j];
