@@ -25,8 +25,8 @@ public class ChunkIndex {
 	public int hashCode() {
 		int hash;
 		hash = Long.valueOf(x).hashCode();
-		hash ^= Long.valueOf(y).hashCode();
-		hash ^= Long.valueOf(z).hashCode();
+		hash ^= Long.valueOf(y).hashCode()<<1;
+		hash ^= Long.valueOf(z).hashCode()<<2;
 		return hash;
 	}
 

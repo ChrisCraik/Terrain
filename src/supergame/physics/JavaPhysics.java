@@ -218,7 +218,7 @@ public class JavaPhysics implements Physics {
 
 	@Override
 	public long createCube(float size, float mass, float x, float y, float z) {
-		System.out.println("Creating cube:" + x + " " + y  + " " + z);
+		//System.out.println("Creating cube:" + x + " " + y  + " " + z);
 		Transform startTransform = new Transform();
 		startTransform.setIdentity();
 		startTransform.origin.set(x,y,z);

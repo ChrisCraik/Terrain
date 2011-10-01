@@ -7,38 +7,38 @@ public class Config {
 	public static int WORKER_THREADS = 3;
 	public static int RESOLUTION_X = 1024;
 	public static int RESOLUTION_Y = 768;
-	
+
 	// CHUNKS
 	public static float METERS_PER_SUBCHUNK = 1;
-	public static int CHUNK_DIVISION = 32;
-	public static int CHUNK_LOAD_DISTANCE = 4;
+	public static int CHUNK_DIVISION = 16;
+	public static int CHUNK_LOAD_DISTANCE = 8;
 	public static int CHUNK_CACHE_SIZE = 4096;
 	public static boolean CHUNK_REUSE_VERTS = true;
 	public static boolean CHUNK_PHYSICS = true;
-	
+
 	// GRAPHICS
 	public static int FRAME_CAP = 60;
-	
+
 	// AMBIENT OCCLUSION
 	public static boolean USE_AMBIENT_OCCLUSION = false;
 	public static int AMB_OCC_RAY_COUNT = 16;
 	public static int AMB_OCC_BIGRAY_STEPS = 6;
 	public static float AMB_OCC_BIGRAY_STEP_SIZE = 1f;
-	
+
 	//FRUSTUM CULLING
 	public static boolean FRUSTUM_CULLING = true; //enable frustum culling
 	public static boolean FROZEN_FRUSTUM_POS = false; //used to test view frustum culling
 	public static boolean FROZEN_FRUSTUM_HEAD = false;
 	public static boolean FROZEN_FRUSTUM_PITCH = false;
-	
+
 	//CONTROL
 	public static boolean PLAYER_MIDAIR_CONTROL = false;
 	public static float PLAYER_JUMP_SPEED = 25;
-	
+
 	//PHYSICS
 	public static float PHYSICS_GRAVITY = -10;
 	public static final boolean PHYSICS_USE_NATIVE = false;
-	
+
 	public static void setOption(String fieldname, String value) {
 		try {
 			Field f = Config.class.getField(fieldname);
@@ -66,10 +66,10 @@ public class Config {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 	}
-	
-	public static void parseConfig(String [][] settings) {		
+
+	public static void parseConfig(String [][] settings) {
 		for (String[] optionValue : settings)
 			setOption(optionValue[0], optionValue[1]);
 

@@ -223,10 +223,10 @@ public class Chunk implements Frustrumable {
 					else
 						posCount++;
 				}
-		return (negCount == 0) || (posCount == 0); // return true if empty
+		return (negCount != 0) && (posCount != 0); // return false if empty
 	}
 
-	private void parallel_processCalcGeometry(WorkerBuffers buffers) {
+	private boolean parallel_processCalcGeometry(WorkerBuffers buffers) {
 		int x, y, z;
 		buffers.indicesIntCount = 0;
 		buffers.verticesFloatCount = 0;
@@ -265,6 +265,9 @@ public class Chunk implements Frustrumable {
 			buffers.indicesIntCount = triangles.size();
 		}
 
+		if (buffers.verticesFloatCount == 0 || buffers.indicesIntCount == 0)
+			return false;
+
 		if (modifyComplete != null) {
 			modifyNormals = new HashMap<Integer, Vec3>();
 			// manually calculate normals, because we have been modified since generation
@@ -297,6 +300,7 @@ public class Chunk implements Frustrumable {
 				}
 			}
 		}
+		return true;
 	}
 
 	private boolean parallel_processSaveGeometry(WorkerBuffers buffers) {
@@ -359,6 +363,24 @@ public class Chunk implements Frustrumable {
 		return false;
 	}
 
+	private void parallel_processSetEmpty(WorkerBuffers buffers) {
+		if (!parallel_processCalcWeights(buffers)) {
+			// if weights all negative or positive, no geometry
+			return;
+		}
+
+		if (!parallel_processCalcGeometry(buffers)) {
+			// no geometry generated (probably due to rounding issues)
+			return;
+		}
+
+		// save polys in bytebuffers for rendering/physics
+		parallel_processSaveGeometry(buffers);
+
+		parallel_processPhysics();
+		empty = false; // flag tells main loop that chunk can be used
+	}
+
 	public void parallel_process(Object workerBuffers) {
 		if (!state.compareAndSet(SERIAL_INITIAL, PARALLEL_PROCESSING))
 			return;
@@ -371,19 +393,7 @@ public class Chunk implements Frustrumable {
 		buffers.verticesFloatCount = 0;
 		buffers.indicesIntCount = 0;
 
-		// cache weights
-		boolean isEmpty = parallel_processCalcWeights(buffers);
-
-		if (!isEmpty) {
-			// create polys
-			parallel_processCalcGeometry(buffers);
-
-			// save polys in bytebuffers for rendering/physics
-			parallel_processSaveGeometry(buffers);
-
-			parallel_processPhysics();
-			empty = false; // flag tells main loop that chunk can be used
-		}
+		parallel_processSetEmpty(buffers);
 
 		if (!state.compareAndSet(PARALLEL_PROCESSING, PARALLEL_COMPLETE)) {
 			System.err.println("Error: Chunk parallel processing interrupted");
