@@ -7,6 +7,7 @@ import java.util.Random;
 
 import javax.vecmath.Vector3f;
 
+import org.lwjgl.BufferUtils;
 import org.lwjgl.Sys;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
@@ -194,8 +195,7 @@ public class Game {
 	}
 
 	public static FloatBuffer makeFB(float[] floatarray) {
-		FloatBuffer fb = ByteBuffer.allocateDirect(floatarray.length * FLOAT_SIZE).order(ByteOrder.nativeOrder())
-				.asFloatBuffer();
+		FloatBuffer fb = BufferUtils.createFloatBuffer(floatarray.length);
 		fb.put(floatarray).flip();
 		return fb;
 	}

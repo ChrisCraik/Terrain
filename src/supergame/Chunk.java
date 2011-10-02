@@ -1,13 +1,13 @@
 package supergame;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.vecmath.Vector3f;
 
+import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 
 import supergame.Camera.Frustrumable;
@@ -74,6 +74,7 @@ public class Chunk implements Frustrumable {
 	public static final float colors[][][] = { { { 0, 1, 0, 1 }, { 1, 0, 0, 1 } },
 			{ { 1, 0.5f, 0, 1 }, { 0.5f, 0, 1, 1 } }, { { 0.9f, 0.9f, 0.9f, 1 }, { 0.4f, 0.4f, 0.4f, 1 } } };
 
+	// physics engine needs ByteBuffers, so we don't use others for simplicity
 	private ByteBuffer chunkShortIndices, chunkIntIndices, chunkVertices, chunkNormals;
 
 
@@ -304,10 +305,10 @@ public class Chunk implements Frustrumable {
 	}
 
 	private boolean parallel_processSaveGeometry(WorkerBuffers buffers) {
-		chunkVertices = ByteBuffer.allocateDirect(buffers.verticesFloatCount * 4).order(ByteOrder.nativeOrder());
-		chunkNormals = ByteBuffer.allocateDirect(buffers.verticesFloatCount * 4).order(ByteOrder.nativeOrder());
-		chunkShortIndices = ByteBuffer.allocateDirect(buffers.indicesIntCount * 2).order(ByteOrder.nativeOrder());
-		chunkIntIndices = ByteBuffer.allocateDirect(buffers.indicesIntCount * 4).order(ByteOrder.nativeOrder());
+		chunkVertices = BufferUtils.createByteBuffer(buffers.verticesFloatCount * 4);
+		chunkNormals = BufferUtils.createByteBuffer(buffers.verticesFloatCount * 4);
+		chunkShortIndices = BufferUtils.createByteBuffer(buffers.indicesIntCount * 2);
+		chunkIntIndices = BufferUtils.createByteBuffer(buffers.indicesIntCount * 4);
 
 		if (Config.CHUNK_REUSE_VERTS) {
 			for (int i = 0; i < buffers.verticesFloatCount; i += 3) {

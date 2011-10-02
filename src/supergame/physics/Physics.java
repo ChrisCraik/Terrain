@@ -15,12 +15,12 @@ public interface Physics {
 	/**
 	 * Create a static collision mesh (such as terrain) that can be collided
 	 * against but that is immobile. This function is intended to simply take a mesh as defined for OpenGL rendering as input.
-	 * @param coords List of points in the mesh, with each three floating point(float or double) numbers representing a x,y,z coordinate
-	 * @param coordBytes Number of bytes used to represent a single floating point coordinate. 4 for 'float' or 8 for 'double'
-	 * @param indices List of points that make up the triangles of the mesh. Each point in 3d space is represented by its index in the coords list
+	 * @param chunkVertices List of points in the mesh, with each three floating point(float or double) numbers representing a x,y,z coordinate
+	 * @param indexBytes Number of bytes used to represent an index. 2 for 'short' or 4 for 'int'
+	 * @param chunkIndices List of points that make up the triangles of the mesh. Each point in 3d space is represented by its index in the coords list
 	 * @return unique identifier of the mesh created, used in registerMesh() to add the mesh to the environment
 	 */
-	long createMesh(ByteBuffer coords, int indexBytes, ByteBuffer indices);
+	long createMesh(ByteBuffer chunkVertices, int indexBytes, ByteBuffer chunkIndices);
 
 	/**
 	 * Add a static mesh to the current dynamics simulation
