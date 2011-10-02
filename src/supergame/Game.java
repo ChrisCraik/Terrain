@@ -1,11 +1,7 @@
 package supergame;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.util.Random;
-
-import javax.vecmath.Vector3f;
 
 import org.lwjgl.BufferUtils;
 import org.lwjgl.Sys;
@@ -14,8 +10,7 @@ import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.input.Keyboard;
 
-import supergame.modify.BlockChunkModifier;
-import supergame.modify.SphereChunkModifier;
+import supergame.modify.ChunkCastle;
 
 public class Game {
 	public static final int FLOAT_SIZE = 4;
@@ -101,7 +96,7 @@ public class Game {
 				Display.sync(Config.FRAME_CAP);
 				PROFILE("Display sync");
 			}
-			cleanup();
+			Display.destroy();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -243,10 +238,6 @@ public class Game {
 		GL11.glEnable(GL11.GL_LIGHTING);
 	}
 
-	private static void cleanup() {
-		Display.destroy();
-	}
-
 	public static void main(String args[]) {
 		boolean fullscreen = false;
 		if (args.length > 0) {
@@ -257,17 +248,7 @@ public class Game {
 
 		Game thegame = new Game();
 
-		// generate a fort!
-		//    4 walls
-		new BlockChunkModifier(new Vector3f(-40, 0, -30), new Vector3f(2, 20, 10));
-		new BlockChunkModifier(new Vector3f(-20, 0, -30), new Vector3f(2, 20, 10));
-		new BlockChunkModifier(new Vector3f(-30, 0, -20), new Vector3f(10, 20, 2));
-		new BlockChunkModifier(new Vector3f(-30, 0, -40), new Vector3f(10, 20, 2));
-		//    4 turrets
-		new BlockChunkModifier(new Vector3f(-20, 0, -20), new Vector3f(3, 25, 3));
-		new BlockChunkModifier(new Vector3f(-20, 0, -40), new Vector3f(3, 25, 3));
-		new BlockChunkModifier(new Vector3f(-40, 0, -20), new Vector3f(3, 25, 3));
-		new BlockChunkModifier(new Vector3f(-40, 0, -40), new Vector3f(3, 25, 3));
+		ChunkCastle.create();
 
 		thegame.run(fullscreen);
 	}
