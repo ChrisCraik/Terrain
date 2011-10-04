@@ -7,23 +7,26 @@ import javax.vecmath.Vector3f;
 import supergame.ChunkIndex;
 
 public class BlockChunkModifier extends ChunkModifier {
-	private Vector3f mPosition;
-	private Vector3f mSize;
+	private final Vector3f mPosition;
+	private final Vector3f mSize;
+	private final float mIncrement;
 
-	public BlockChunkModifier(Vector3f position, Vector3f size) {
+	public BlockChunkModifier(Vector3f position, Vector3f size, float increment) {
 		mPosition = position;
 		mSize = size;
+		mIncrement = increment;
 	}
 
 	@Override
-	public float getModification(Vector3f p) {
+	public float getModification(Vector3f p, float current) {
 		if (p.x < mPosition.x - mSize.x || p.x > mPosition.x + mSize.x)
-			return 0;
+			return current;
 		if (p.y < mPosition.y - mSize.y || p.y > mPosition.y + mSize.y)
-			return 0;
+			return current;
 		if (p.z < mPosition.z - mSize.z || p.z > mPosition.z + mSize.z)
-			return 0;
-		return 5;
+			return current;
+
+		return Math.min(1.0f, mIncrement + current);
 	}
 
 	@Override

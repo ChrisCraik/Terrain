@@ -4,18 +4,10 @@ import java.util.LinkedList;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.vecmath.Vector3f;
-
 import supergame.Chunk;
 import supergame.ChunkIndex;
 import supergame.ChunkProcessor;
 import supergame.Config;
-
-interface ChunkModifyComplete {
-	public float getModification(Vector3f p);
-
-	public void chunkCompletion();
-}
 
 /**
  * Class used for processing of terrain modifications.
@@ -25,9 +17,9 @@ interface ChunkModifyComplete {
 public abstract class ChunkModifier implements ChunkModifierInterface {
 	private static LinkedList<ChunkModifier> changeList = new LinkedList<ChunkModifier>();
 
-	private AtomicInteger mDirtyCount;
-	private Vector<Chunk> mChunkList;
-	private State mState;
+	private AtomicInteger mDirtyCount = null;
+	private Vector<Chunk> mChunkList = null;
+	private State mState = State.CREATED;
 
 	private enum State {
 		CREATED, STARTED, FINISHED
@@ -41,7 +33,7 @@ public abstract class ChunkModifier implements ChunkModifierInterface {
 	 * processing 2) completed replacement chunks that should be swapped in
 	 * atomically
 	 * 
-	 * TODO: Multiple independent chunks processing in parallel
+	 * TODO: Multiple independent modifiers processing in parallel
 	 */
 	public static void step(ChunkProcessor cp) {
 		ChunkModifier currentModifier = changeList.peekFirst();
@@ -59,8 +51,6 @@ public abstract class ChunkModifier implements ChunkModifierInterface {
 	}
 
 	public ChunkModifier() {
-		mState = State.CREATED;
-
 		changeList.addLast(this);
 	}
 

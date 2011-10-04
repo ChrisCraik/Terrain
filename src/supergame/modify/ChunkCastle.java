@@ -14,20 +14,24 @@ public class ChunkCastle {
 			widthOffset *= -1;
 
 		if (rotate == 0) {
-			new BlockChunkModifier(new Vector3f(widthOffset, heightOffset, depthOffset),
-					new Vector3f(width, height, depth));
+			new BlockChunkModifier(
+					new Vector3f(widthOffset, heightOffset, depthOffset),
+					new Vector3f(width, height, depth), 5);
 		} else if (rotate == 90) {
 			// z <= x, x <= -z
-			new BlockChunkModifier(new Vector3f(-depthOffset, heightOffset, widthOffset),
-					new Vector3f(depth, height, width));
+			new BlockChunkModifier(
+					new Vector3f(-depthOffset, heightOffset, widthOffset),
+					new Vector3f(depth, height, width), 5);
 		} else if (rotate == 180) {
 			// x <= -x, z <= -z
-			new BlockChunkModifier(new Vector3f(-widthOffset, heightOffset, -depthOffset),
-					new Vector3f(width, height, depth));
+			new BlockChunkModifier(
+					new Vector3f(-widthOffset, heightOffset, -depthOffset),
+					new Vector3f(width, height, depth), 5);
 		} else if (rotate == 270) {
 			// z <= -x, x <= z
-			new BlockChunkModifier(new Vector3f(depthOffset, heightOffset, -widthOffset),
-					new Vector3f(depth, height, width));
+			new BlockChunkModifier(
+					new Vector3f(depthOffset, heightOffset, -widthOffset),
+					new Vector3f(depth, height, width), 5);
 		}
 	}
 

@@ -217,7 +217,9 @@ public class Chunk implements Frustrumable {
 					}
 
 					if (modifyComplete != null)
-						buffers.weights[x][y][z] += modifyComplete.getModification(localPos);
+						buffers.weights[x][y][z] = modifyComplete.getModification(
+								localPos,
+								buffers.weights[x][y][z]);
 
 					if (buffers.weights[x][y][z] < 0)
 						negCount++;

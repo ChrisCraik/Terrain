@@ -24,17 +24,17 @@ public class SphereChunkModifier extends ChunkModifier {
 	}
 
 	@Override
-	public float getModification(Vector3f p) {
+	public float getModification(Vector3f p, float current) {
 		Vector3f origin = new Vector3f(mPosition);
 
 		origin.sub(p);
 		if (origin.length() <= mRadius) {
 			// returning some positive constant here will give a vaguely round
 			// shape, but giving a variant density over the surface smoothes it
-			
-			return 2*(mRadius - origin.length());
+
+			return Math.min(1.0f, current + 2*(mRadius - origin.length()));
 		}
 
-		return 0;
+		return current;
 	}
 }
