@@ -11,7 +11,7 @@ import supergame.Config;
 
 /**
  * Class used for processing of terrain modifications.
- * 
+ *
  * the engine's ChunkManager requires only
  */
 public abstract class ChunkModifier implements ChunkModifierInterface {
@@ -28,11 +28,11 @@ public abstract class ChunkModifier implements ChunkModifierInterface {
 	/**
 	 * Tell the chunk modifier system to process modifications and kick off new
 	 * chunk generation.
-	 * 
+	 *
 	 * It returns two things: 1) new replacement chunks that need to start
 	 * processing 2) completed replacement chunks that should be swapped in
 	 * atomically
-	 * 
+	 *
 	 * TODO: Multiple independent modifiers processing in parallel
 	 */
 	public static void step(ChunkProcessor cp) {
@@ -77,7 +77,7 @@ public abstract class ChunkModifier implements ChunkModifierInterface {
 	/**
 	 * If the ChunkModifier has completed, swap it out through the supplied
 	 * ChunkProcessor and return true.
-	 * 
+	 *
 	 * @param cp
 	 *            ChunkProcessor used to swap new chunks with old ones
 	 * @return true if the ChunkModifier has completed chunk generation
@@ -93,25 +93,25 @@ public abstract class ChunkModifier implements ChunkModifierInterface {
 	/**
 	 * Calculate a list of chunk coordinates that will need to be regenerated in
 	 * applying this modification
-	 * 
+	 *
 	 * @return vector of chunk indices affected by the modification
 	 */
 	protected abstract Vector<ChunkIndex> getIndexList();
 
 	/**
 	 * Helper method for getIndexList, when a simple boundingBox will suffice
-	 * 
+	 *
 	 * @return vector of chunk indices containing the bounding box
 	 */
 	protected static Vector<ChunkIndex> getBoundingIndexList(float xPos,
 			float yPos, float zPos, float xSize, float ySize, float zSize) {
 		Vector<ChunkIndex> list = new Vector<ChunkIndex>();
-		long minX = (long) Math.floor((xPos - xSize) / Config.CHUNK_DIVISION);
-		long maxX = (long) Math.floor((xPos + xSize) / Config.CHUNK_DIVISION);
-		long minY = (long) Math.floor((yPos - ySize) / Config.CHUNK_DIVISION);
-		long maxY = (long) Math.floor((yPos + ySize) / Config.CHUNK_DIVISION);
-		long minZ = (long) Math.floor((zPos - zSize) / Config.CHUNK_DIVISION);
-		long maxZ = (long) Math.floor((zPos + zSize) / Config.CHUNK_DIVISION);
+		long minX = (long) Math.floor((xPos - xSize - 1) / Config.CHUNK_DIVISION);
+		long maxX = (long) Math.floor((xPos + xSize + 1) / Config.CHUNK_DIVISION);
+		long minY = (long) Math.floor((yPos - ySize - 1) / Config.CHUNK_DIVISION);
+		long maxY = (long) Math.floor((yPos + ySize + 1) / Config.CHUNK_DIVISION);
+		long minZ = (long) Math.floor((zPos - zSize - 1) / Config.CHUNK_DIVISION);
+		long maxZ = (long) Math.floor((zPos + zSize + 1) / Config.CHUNK_DIVISION);
 
 		for (long x = minX; x <= maxX; x++)
 			for (long y = minY; y <= maxY; y++)

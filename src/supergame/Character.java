@@ -7,11 +7,13 @@ import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 
 import supergame.Camera.CameraControllable;
+import supergame.modify.BlockChunkModifier;
 
 public class Character implements CameraControllable {
 
 	public long mCharacterId;
 	private float mHeading, mPitch;
+	private Vector3f mLookPos;
 
 	Character(long characterId) {
 		mCharacterId = characterId;
@@ -29,30 +31,29 @@ public class Character implements CameraControllable {
 		//GL11.glRotatef(pitch, 1, 0, 0);
 		Game.collision.drawCube(new Vector3f(2, 2, 2));
 		GL11.glPopMatrix();
+
+		mLookPos = Vec3.HPVector(180 - mHeading, mPitch);
+		mLookPos.scale(3);
+		mLookPos.add(position);
+		mLookPos.set(
+				(float)Math.floor(mLookPos.x + 0.5),
+				(float)Math.floor(mLookPos.y + 0.5),
+				(float)Math.floor(mLookPos.z + 0.5));
+		GL11.glPushMatrix();
+		GL11.glTranslatef(mLookPos.x, mLookPos.y, mLookPos.z);
+		Game.collision.drawCube(new Vector3f(0.2f,0.2f,0.2f));
+		GL11.glPopMatrix();
 	}
 
 	private static int msSinceShoot = 0;
 
 	void move() {
 		msSinceShoot += Game.delta;
-		if (msSinceShoot > 500 && Mouse.isButtonDown(0)) {
+		if (msSinceShoot > 500 && (Mouse.isButtonDown(0) || Mouse.isButtonDown(1))) {
 			msSinceShoot = 0;
-			float mass = 0.5f;
-			Vector3f lookDir = Vec3.HPVector(180 - mHeading, mPitch);
-			/*
-			Transform xform = ghostObject.getWorldTransform(new Transform());
 
-			startTransform.setIdentity();
-			startTransform.origin.set(lookDir);
-			startTransform.origin.scale(2);
-			startTransform.origin.add(xform.origin);
-
-			boxShape.calculateLocalInertia(mass, localInertia);
-			RigidBody cube = Game.collision.spawnCube(mass, boxShape,
-					startTransform, localInertia);
-			lookDir.scale(20);
-			cube.applyCentralImpulse(lookDir);
-			*/
+			float increment = Mouse.isButtonDown(0) ? 0.25f : -0.25f;
+			new BlockChunkModifier(mLookPos, new Vector3f(1,1,1), increment);
 		}
 
 		Vector3f forwardDir = Vec3.HPVector(180 - mHeading, 0);
