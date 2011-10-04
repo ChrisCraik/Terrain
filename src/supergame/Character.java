@@ -10,41 +10,35 @@ import supergame.Camera.CameraControllable;
 
 public class Character implements CameraControllable {
 
-	public long characterId;
-	private float heading, pitch;
+	public long mCharacterId;
+	private float mHeading, mPitch;
 
 	Character(long characterId) {
-		this.characterId = characterId;
-		heading = 0;
-		pitch = 0;
+		mCharacterId = characterId;
+		mHeading = 0;
+		mPitch = 0;
 	}
 
 	private static Vector3f position = new Vector3f();
-	
+
 	void render() {
-		Game.collision.physics.queryCharacterPosition(characterId, position);
+		Game.collision.physics.queryCharacterPosition(mCharacterId, position);
 		GL11.glPushMatrix();
 		GL11.glTranslatef(position.x, position.y, position.z);
-		GL11.glRotatef(heading, 0, 1, 0);
+		GL11.glRotatef(mHeading, 0, 1, 0);
 		//GL11.glRotatef(pitch, 1, 0, 0);
 		Game.collision.drawCube(new Vector3f(2, 2, 2));
 		GL11.glPopMatrix();
 	}
-/*
-	private static BoxShape boxShape = new BoxShape(new Vector3f(0.5f, 0.5f,
-			0.5f));
-	private static Transform startTransform = new Transform();
-	private static Vector3f localInertia = new Vector3f(0, 0, 0);
-	*/
+
 	private static int msSinceShoot = 0;
 
 	void move() {
-
 		msSinceShoot += Game.delta;
 		if (msSinceShoot > 500 && Mouse.isButtonDown(0)) {
 			msSinceShoot = 0;
 			float mass = 0.5f;
-			Vector3f lookDir = Vec3.HPVector(180 - heading, pitch);
+			Vector3f lookDir = Vec3.HPVector(180 - mHeading, mPitch);
 			/*
 			Transform xform = ghostObject.getWorldTransform(new Transform());
 
@@ -61,8 +55,8 @@ public class Character implements CameraControllable {
 			*/
 		}
 
-		Vector3f forwardDir = Vec3.HPVector(180 - heading, 0);
-		Vector3f strafeDir = Vec3.HPVector(-heading + 90, 0);
+		Vector3f forwardDir = Vec3.HPVector(180 - mHeading, 0);
+		Vector3f strafeDir = Vec3.HPVector(-mHeading + 90, 0);
 
 		// set walkDirection for character
 		Vector3f walkDirection = new Vector3f(0, 0, 0);
@@ -80,19 +74,19 @@ public class Character implements CameraControllable {
 		walkDirection.scale(0.15f);
 
 		boolean applyIfJumping = Config.PLAYER_MIDAIR_CONTROL;
-		Game.collision.physics.controlCharacter(characterId, applyIfJumping,
+		Game.collision.physics.controlCharacter(mCharacterId, applyIfJumping,
 				Keyboard.isKeyDown(Keyboard.KEY_SPACE), walkDirection.x,
 				walkDirection.y, walkDirection.z);
 	}
 
 	@Override
 	public void setHeadingPitch(float heading, float pitch) {
-		this.heading = heading;
-		this.pitch = pitch;
+		mHeading = heading;
+		mPitch = pitch;
 	}
 
 	@Override
 	public void getPos(Vector3f pos) {
-		Game.collision.physics.queryCharacterPosition(characterId, pos);
+		Game.collision.physics.queryCharacterPosition(mCharacterId, pos);
 	}
 }

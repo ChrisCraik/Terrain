@@ -14,55 +14,61 @@ public class Vec3 {
 		return new Vector3f(x,y,z);
 	}
 
-	float data[] = new float[3];
+	float mData[] = new float[3];
 
 	public Vec3(float x, float y, float z) {
-		data[0] = x;
-		data[1] = y;
-		data[2] = z;
+		mData[0] = x;
+		mData[1] = y;
+		mData[2] = z;
 	}
 
 	public Vec3(float heading, float pitch) {
-		data[0] = -(float) (Math.sin(heading * Math.PI / 180.0) * Math.cos(pitch * Math.PI / 180.0));
-		data[2] = (float) (Math.cos(heading * Math.PI / 180.0) * Math.cos(pitch * Math.PI / 180.0));
-		data[1] = (float) (Math.sin(pitch * Math.PI / 180.0));
+		mData[0] = -(float) (Math.sin(heading * Math.PI / 180.0) * Math.cos(pitch * Math.PI / 180.0));
+		mData[2] = (float) (Math.cos(heading * Math.PI / 180.0) * Math.cos(pitch * Math.PI / 180.0));
+		mData[1] = (float) (Math.sin(pitch * Math.PI / 180.0));
 	}
 
 	public Vec3(Vec3 pos) {
-		data[0] = pos.getX();
-		data[1] = pos.getY();
-		data[2] = pos.getZ();
+		mData[0] = pos.getX();
+		mData[1] = pos.getY();
+		mData[2] = pos.getZ();
 	}
 
 	public void actuallyAdd(Vec3 other) {
-		data[0] += other.getX();
-		data[1] += other.getY();
-		data[2] += other.getZ();
+		mData[0] += other.getX();
+		mData[1] += other.getY();
+		mData[2] += other.getZ();
 	}
 
 	public void actuallySubtract(Vec3 other) {
-		data[0] -= other.getX();
-		data[1] -= other.getY();
-		data[2] -= other.getZ();
+		mData[0] -= other.getX();
+		mData[1] -= other.getY();
+		mData[2] -= other.getZ();
+	}
+
+	public void set(float x, float y, float z) {
+		mData[0] = x;
+		mData[1] = y;
+		mData[2] = z;
 	}
 
 	public void GLdraw() {
-		GL11.glVertex3f(data[0], data[1], data[2]);
+		GL11.glVertex3f(mData[0], mData[1], mData[2]);
 	}
 	public void GLnormal() {
-		GL11.glNormal3f(data[0], data[1], data[2]);
+		GL11.glNormal3f(mData[0], mData[1], mData[2]);
 	}
 
 	public Vec3 multiply(float f) {
-		return new Vec3(data[0] * f, data[1] * f, data[2] * f);
+		return new Vec3(mData[0] * f, mData[1] * f, mData[2] * f);
 	}
 
 	public Vec3 add(Vec3 b) {
-		return new Vec3(data[0] + b.getX(), data[1] + b.getY(), data[2] + b.getZ());
+		return new Vec3(mData[0] + b.getX(), mData[1] + b.getY(), mData[2] + b.getZ());
 	}
 
 	public Vec3 subtract(Vec3 b) {
-		return new Vec3(data[0] - b.getX(), data[1] - b.getY(), data[2] - b.getZ());
+		return new Vec3(mData[0] - b.getX(), mData[1] - b.getY(), mData[2] - b.getZ());
 	}
 
 	public Vec3 cross(Vec3 b) {
@@ -72,27 +78,27 @@ public class Vec3 {
 
 	public Vec3 normalize() {
 		float l = length();
-		return new Vec3(data[0] / l, data[1] / l, data[2] / l);
+		return new Vec3(mData[0] / l, mData[1] / l, mData[2] / l);
 	}
 
 	public float length() {
-		return (float) Math.sqrt(data[0] * data[0] + data[1] * data[1] + data[2] * data[2]);
+		return (float) Math.sqrt(mData[0] * mData[0] + mData[1] * mData[1] + mData[2] * mData[2]);
 	}
 
 	public float getX() {
-		return data[0];
+		return mData[0];
 	}
 
 	public float getY() {
-		return data[1];
+		return mData[1];
 	}
 
 	public float getZ() {
-		return data[2];
+		return mData[2];
 	}
 
 	public String toString() {
-		return String.format("Vec3: (%3f %3f %3f)", data[0], data[1], data[2]);
+		return String.format("Vec3: (%3f %3f %3f)", mData[0], mData[1], mData[2]);
 	}
 
 	public float innerProduct(Vec3 point) {
@@ -101,6 +107,6 @@ public class Vec3 {
 
 	//Into functions - change internal vector state
 	public void addInto(int index, float offset) {
-		data[index] += offset;
+		mData[index] += offset;
 	}
 }

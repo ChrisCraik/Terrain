@@ -154,6 +154,11 @@ public class Game {
 		camera.apply();
 		PROFILE("Cam stuff");
 
+
+		// re-apply the light each frame, after the camera transformations
+		GL11.glLight(GL11.GL_LIGHT0, GL11.GL_POSITION,
+				Game.makeFB(new float[] { 0, 1, 0.5f, 0 })); // from above!
+
 		collision.render();
 		PROFILE("Col rendr");
 
@@ -208,7 +213,7 @@ public class Game {
 		GL11.glLoadIdentity(); // Reset The Projection Matrix
 
 		// Calculate The Aspect Ratio Of The Window
-		org.lwjgl.util.glu.GLU.gluPerspective(Camera.angle,
+		org.lwjgl.util.glu.GLU.gluPerspective(Camera.FOV,
 				(float) displayMode.getWidth() / (float) displayMode.getHeight(), 0.1f, Camera.farD);
 		GL11.glMatrixMode(GL11.GL_MODELVIEW); // Select The Modelview Matrix
 

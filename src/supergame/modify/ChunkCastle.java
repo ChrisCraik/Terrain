@@ -37,7 +37,7 @@ public class ChunkCastle {
 	 */
 	public static void create() {
 		final int wallDistance = 30;
-		final int wallHeight = 20;
+		final int wallHeight = 15;
 		final int wallThickness = 4;
 		final int wallRailHeight = 1;
 		final int turretHeight = 30;

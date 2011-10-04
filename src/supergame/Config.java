@@ -32,6 +32,7 @@ public class Config {
 	public static boolean FROZEN_FRUSTUM_PITCH = false;
 
 	//CONTROL
+	public static boolean PLAYER_CONTROLS_CAMERA = true;
 	public static boolean PLAYER_MIDAIR_CONTROL = false;
 	public static float PLAYER_JUMP_SPEED = 25;
 
