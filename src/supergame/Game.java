@@ -5,10 +5,10 @@ import java.util.Random;
 
 import org.lwjgl.BufferUtils;
 import org.lwjgl.Sys;
+import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
-import org.lwjgl.input.Keyboard;
 
 import supergame.modify.ChunkCastle;
 

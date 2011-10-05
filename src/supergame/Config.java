@@ -1,6 +1,6 @@
 package supergame;
 
-import java.lang.reflect.*;
+import java.lang.reflect.Field;
 
 public class Config {
 	public static int MS_PER_HEARTBEAT = 2000;

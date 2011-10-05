@@ -6,6 +6,7 @@ import java.util.Vector;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.lwjgl.Sys;
+import org.lwjgl.opengl.GL11;
 
 import supergame.modify.ChunkModifier;
 
@@ -55,9 +56,9 @@ public class ChunkManager implements ChunkProvider, ChunkProcessor {
 
 	long lastx, lasty, lastz;
 
-	private HashMap<ChunkIndex, Chunk> chunks;
-	private LinkedBlockingQueue<Chunk> dirtyChunks;
-	private LinkedHashSet<ChunkIndex> chunkCache;
+	private final HashMap<ChunkIndex, Chunk> chunks;
+	private final LinkedBlockingQueue<Chunk> dirtyChunks;
+	private final LinkedHashSet<ChunkIndex> chunkCache;
 
 	public static long startTime;
 
@@ -189,6 +190,8 @@ public class ChunkManager implements ChunkProvider, ChunkProcessor {
 	}
 
 	public void renderChunks(Camera cam) {
+		GL11.glMaterial(GL11.GL_FRONT, GL11.GL_DIFFUSE,
+				Game.makeFB(new float[] { 0.4f, 0.3f, 0.0f, 1 }));
 		int newRenders = 10; // only render this many NEW chunks
 		for (Chunk c : chunks.values())
 			if (c.serial_render(cam, newRenders > 0, true))

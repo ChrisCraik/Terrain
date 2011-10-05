@@ -28,7 +28,9 @@ public class Character implements CameraControllable {
 		GL11.glPushMatrix();
 		GL11.glTranslatef(position.x, position.y, position.z);
 		GL11.glRotatef(mHeading, 0, 1, 0);
-		//GL11.glRotatef(pitch, 1, 0, 0);
+		GL11.glRotatef(mPitch, 1, 0, 0);
+		GL11.glMaterial(GL11.GL_FRONT, GL11.GL_DIFFUSE,
+				Game.makeFB(new float[] { 0.5f, 0.5f, 0.5f, 0.5f }));
 		Game.collision.drawCube(new Vector3f(2, 2, 2));
 		GL11.glPopMatrix();
 
@@ -41,7 +43,7 @@ public class Character implements CameraControllable {
 				(float)Math.floor(mLookPos.z + 0.5));
 		GL11.glPushMatrix();
 		GL11.glTranslatef(mLookPos.x, mLookPos.y, mLookPos.z);
-		Game.collision.drawCube(new Vector3f(0.2f,0.2f,0.2f));
+		Game.collision.drawCube(new Vector3f(0.1f,0.1f,0.1f));
 		GL11.glPopMatrix();
 	}
 
@@ -49,11 +51,13 @@ public class Character implements CameraControllable {
 
 	void move() {
 		msSinceShoot += Game.delta;
-		if (msSinceShoot > 500 && (Mouse.isButtonDown(0) || Mouse.isButtonDown(1))) {
+		if (msSinceShoot > 200 && (Mouse.isButtonDown(0) || Mouse.isButtonDown(1))) {
 			msSinceShoot = 0;
 
-			float increment = Mouse.isButtonDown(0) ? 0.25f : -0.25f;
-			new BlockChunkModifier(mLookPos, new Vector3f(1,1,1), increment);
+			float increment = 0.5f;
+			if (Mouse.isButtonDown(1))
+				increment *= -1;
+			new BlockChunkModifier(mLookPos, new Vector3f(0.5f,0.5f,0.5f), increment);
 		}
 
 		Vector3f forwardDir = Vec3.HPVector(180 - mHeading, 0);
