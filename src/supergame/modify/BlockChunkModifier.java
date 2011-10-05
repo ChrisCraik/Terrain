@@ -26,7 +26,7 @@ public class BlockChunkModifier extends ChunkModifier {
 		if (p.z < mPosition.z - mSize.z || p.z > mPosition.z + mSize.z)
 			return current;
 
-		return Math.min(1.0f, mIncrement + current);
+		return Math.max(-1, Math.min(1, mIncrement + current));
 	}
 
 	@Override
