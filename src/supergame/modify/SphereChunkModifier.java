@@ -10,10 +10,12 @@ public class SphereChunkModifier extends ChunkModifier {
 
 	private final Vector3f mPosition;
 	private final float mRadius;
+	private final boolean mPositive;
 
-	public SphereChunkModifier(Vector3f position, float radius) {
+	public SphereChunkModifier(Vector3f position, float radius, boolean positive) {
 		mPosition = position;
 		mRadius = radius;
+		mPositive = positive;
 	}
 
 	@Override
@@ -31,8 +33,10 @@ public class SphereChunkModifier extends ChunkModifier {
 		if (origin.length() <= mRadius) {
 			// returning some positive constant here will give a vaguely round
 			// shape, but giving a variant density over the surface smoothes it
-
-			return Math.min(1.0f, current + 2*(mRadius - origin.length()));
+			float newVal = 2*(mRadius - origin.length());
+			if (!mPositive)
+				newVal *= -1;
+			return Math.max(-1, Math.min(1, current + newVal));
 		}
 
 		return current;

@@ -9,10 +9,15 @@ import supergame.Camera.CameraControllable;
 
 public class Character implements CameraControllable {
 
-	public long mCharacterId;
+	public final long mCharacterId;
 	private float mHeading, mPitch;
-	private Vector3f mLookPos;
 	private final Equipment mEquipment = new Equipment();
+
+	// temporary vectors used for intermediate calculations. should not be
+	// queried outside of the functions that set them.
+	private final Vector3f mPosition = new Vector3f();
+	private final Vector3f mForwardDir = new Vector3f();
+	private final Vector3f mStrafeDir = new Vector3f();
 
 	Character(long characterId) {
 		mCharacterId = characterId;
@@ -20,40 +25,38 @@ public class Character implements CameraControllable {
 		mPitch = 0;
 	}
 
-	private static Vector3f position = new Vector3f();
-
 	void render() {
 		GL11.glMaterial(GL11.GL_FRONT, GL11.GL_DIFFUSE,
 				Game.makeFB(new float[] { 0.5f, 0.5f, 0.5f, 0.5f }));
 
-		Game.collision.physics.queryCharacterPosition(mCharacterId, position);
+		Game.collision.physics.queryCharacterPosition(mCharacterId, mPosition);
 		GL11.glPushMatrix();
-		GL11.glTranslatef(position.x, position.y, position.z);
+		GL11.glTranslatef(mPosition.x, mPosition.y, mPosition.z);
 		GL11.glRotatef(mHeading, 0, 1, 0);
 		GL11.glRotatef(mPitch, 1, 0, 0);
-		Game.collision.drawCube(new Vector3f(2, 2, 2));
+		Game.collision.drawCube(2, 2, 2);
 		GL11.glPopMatrix();
 
-		mEquipment.updatePositionLook(position, mHeading, mPitch);
+		mEquipment.updatePositionLook(mPosition, mHeading, mPitch);
 		mEquipment.render();
 	}
 
 	void move() {
-		Vector3f forwardDir = Vec3.HPVector(180 - mHeading, 0);
-		Vector3f strafeDir = Vec3.HPVector(-mHeading + 90, 0);
+		Vec3.HPVector(mForwardDir, 180 - mHeading, 0);
+		Vec3.HPVector(mStrafeDir, 90 - mHeading, 0);
 
 		mEquipment.pollInput();
 
 		// set walkDirection for character
 		Vector3f walkDirection = new Vector3f(0, 0, 0);
 		if (Keyboard.isKeyDown(Keyboard.KEY_W))
-			walkDirection.add(forwardDir);
+			walkDirection.add(mForwardDir);
 		if (Keyboard.isKeyDown(Keyboard.KEY_S))
-			walkDirection.sub(forwardDir);
+			walkDirection.sub(mForwardDir);
 		if (Keyboard.isKeyDown(Keyboard.KEY_A))
-			walkDirection.add(strafeDir);
+			walkDirection.add(mStrafeDir);
 		if (Keyboard.isKeyDown(Keyboard.KEY_D))
-			walkDirection.sub(strafeDir);
+			walkDirection.sub(mStrafeDir);
 
 		if (walkDirection.length() > 1f)
 			walkDirection.normalize();

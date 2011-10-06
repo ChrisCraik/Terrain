@@ -4,8 +4,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 
-import javax.vecmath.Vector3f;
-
 import org.lwjgl.opengl.GL11;
 
 import supergame.physics.JavaPhysics;
@@ -34,9 +32,9 @@ public class Collision {
 		float start_x = START_POS_X - ARRAY_SIZE_X / 2;
 		float start_y = START_POS_Y;
 		float start_z = START_POS_Z - ARRAY_SIZE_Z / 2;
-		
+
 		bodyList.add(physics.createCube(15, 0, 0, 0, 0));
-		
+
 		float mass = 1;
 		for (int k = 0; k < ARRAY_SIZE_Y; k++) {
 			for (int i = 0; i < ARRAY_SIZE_X; i++) {
@@ -51,11 +49,12 @@ public class Collision {
 	}
 
 	private static int displayList = -1;
-	public void drawCube(Vector3f size) {
-		GL11.glScalef(size.x, size.y, size.z);
+	public void drawCube(float x, float y, float z) {
+		GL11.glPushMatrix();
+		GL11.glScalef(x, y, z);
 		if (displayList == -1) {
 			displayList = GL11.glGenLists(1);
-			GL11.glNewList(displayList, GL11.GL_COMPILE);
+			GL11.glNewList(displayList, GL11.GL_COMPILE_AND_EXECUTE);
 			GL11.glBegin(GL11.GL_QUADS); // Start Drawing Quads
 			// Front Face
 			GL11.glNormal3f(0f, 0f, 1f); // Normal Facing Forward
@@ -97,6 +96,7 @@ public class Collision {
 			GL11.glEndList();
 		} else
 			GL11.glCallList(displayList);
+		GL11.glPopMatrix();
 	}
 
 	public void stepSimulation(float duration) {
@@ -105,16 +105,16 @@ public class Collision {
 	}
 
 	private static ByteBuffer matrix = ByteBuffer.allocateDirect(16 * 4).order(ByteOrder.nativeOrder());
-	
+
 	public void render() {
 		character.render();
 		for (int i=0; i<bodyList.size(); i++) {
 			int size = 0==i ? 15 : 1;
 			physics.queryObject(bodyList.get(i), matrix);
-			
+
 			GL11.glPushMatrix();
 			GL11.glMultMatrix(matrix.asFloatBuffer());
-			drawCube(new Vector3f(size, size, size));
+			drawCube(size, size, size);
 			GL11.glPopMatrix();
 		}
 	}
