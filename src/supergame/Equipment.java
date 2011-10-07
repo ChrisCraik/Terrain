@@ -92,7 +92,7 @@ public class Equipment {
 				break;
 
 			case(SHOVEL) :
-				new SphereChunkModifier(mTargetVoxelPos, 1, Mouse.isButtonDown(1));
+				new SphereChunkModifier(mTargetVoxelPos, 2, Mouse.isButtonDown(0));
 				break;
 
 			case(ROCKET) :
