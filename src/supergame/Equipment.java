@@ -14,11 +14,11 @@ public class Equipment {
 	static final int TROWEL = 1;
 	static final int SHOVEL = 2;
 	static final int ROCKET = 3;
-	static final int MIN_TARGET = 1;
-	static final int MAX_TARGET = 10;
+	static final float MIN_TARGET = 1;
+	static final float MAX_TARGET = 10;
 
 	private int mTool = 0;
-	private int mTargetDistance = 5;
+	private float mTargetDistance = 5;
 
 	private final Vector3f mTargetPos =  new Vector3f();
 	private final Vector3f mTargetVoxelPos = new Vector3f();
@@ -71,12 +71,18 @@ public class Equipment {
 		while (Keyboard.next()) {
 			if (Keyboard.getEventKey() == Keyboard.KEY_UP
 					&& Keyboard.getEventKeyState()) {
-				mTargetDistance = Math.min(mTargetDistance + 1, MAX_TARGET);
+				mTargetDistance += 1;
 			} else if (Keyboard.getEventKey() == Keyboard.KEY_DOWN
 					&& Keyboard.getEventKeyState()) {
-				mTargetDistance = Math.max(mTargetDistance - 1, MIN_TARGET);
+				mTargetDistance -= 1;
 			}
 		}
+		mTargetDistance += Mouse.getDWheel()/1000.0;
+
+		mTargetDistance = Math.min(mTargetDistance, MAX_TARGET);
+		mTargetDistance = Math.max(mTargetDistance, MIN_TARGET);
+
+		System.out.println(mTargetDistance);
 
 		msSinceShoot += Game.delta;
 		if (msSinceShoot > 200 && (Mouse.isButtonDown(0) || Mouse.isButtonDown(1))) {
