@@ -28,7 +28,6 @@ import com.bulletphysics.dynamics.constraintsolver.SequentialImpulseConstraintSo
 import com.bulletphysics.linearmath.DefaultMotionState;
 import com.bulletphysics.linearmath.Transform;
 import com.bulletphysics.util.ObjectArrayList;
-import com.sun.tools.javac.util.Pair;
 
 public class JavaPhysics implements Physics {
 
@@ -46,15 +45,24 @@ public class JavaPhysics implements Physics {
 	// keep track of the shapes, we release memory at exit.
 	// make sure to re-use collision shapes among rigid bodies whenever
 	// possible!
-	private ObjectArrayList<CollisionShape> collisionShapes = new ObjectArrayList<CollisionShape>();
+	private final ObjectArrayList<CollisionShape> collisionShapes = new ObjectArrayList<CollisionShape>();
 	private DiscreteDynamicsWorld dynamicsWorld;
 
-	private Map<Long, RigidBody> rigidBodyMap = new HashMap<Long, RigidBody>();
+	private class CharPhysics {
+		public CharPhysics(KinematicCharacterController controller, PairCachingGhostObject ghostObject) {
+			mController = controller;
+			mGhostObject = ghostObject;
+		}
+		public KinematicCharacterController mController;
+		public PairCachingGhostObject mGhostObject;
+	}
+
+	private final Map<Long, RigidBody> rigidBodyMap = new HashMap<Long, RigidBody>();
 	private long nextRigidBodyId = 1;
-	private Map<Long, Pair<KinematicCharacterController, PairCachingGhostObject>> characterMap = new HashMap<Long, Pair<KinematicCharacterController, PairCachingGhostObject>>();
+	private final Map<Long, CharPhysics> characterMap = new HashMap<Long, CharPhysics>();
 	private long nextCharacterId = 1;
 
-	private float matrixArray[] = new float[16];
+	private final float matrixArray[] = new float[16];
 
 
 	@Override
@@ -184,14 +192,15 @@ public class JavaPhysics implements Physics {
 		dynamicsWorld.addAction(character);
 
 		long newCharacterId = nextCharacterId++;
-		characterMap.put(newCharacterId, new Pair<KinematicCharacterController,PairCachingGhostObject>(character, ghostObject));
+
+		characterMap.put(newCharacterId, new CharPhysics(character, ghostObject));
 		return newCharacterId;
 	}
 
 	@Override
 	public void controlCharacter(long characterId, boolean applyIfJumping, boolean jump,
 			float x, float y, float z) {
-		KinematicCharacterController character = characterMap.get(characterId).fst;
+		KinematicCharacterController character = characterMap.get(characterId).mController;
 		if (character.onGround() || applyIfJumping)
 			character.setWalkDirection(new Vector3f(x,y,z));
 		if (character.onGround() && jump)
@@ -200,7 +209,7 @@ public class JavaPhysics implements Physics {
 
 	@Override
 	public void queryCharacterPosition(long characterId, Vector3f position) {
-		PairCachingGhostObject ghostObject = characterMap.get(characterId).snd;
+		PairCachingGhostObject ghostObject = characterMap.get(characterId).mGhostObject;
 		Transform world = new Transform();
 		ghostObject.getWorldTransform(world);
 
@@ -214,7 +223,7 @@ public class JavaPhysics implements Physics {
 	}
 
 	private static final Vector3f inertia = new Vector3f(0,0,0);
-	private Map<Float, CollisionShape> boxShapes = new HashMap<Float, CollisionShape>();
+	private final Map<Float, CollisionShape> boxShapes = new HashMap<Float, CollisionShape>();
 
 	@Override
 	public long createCube(float size, float mass, float x, float y, float z) {

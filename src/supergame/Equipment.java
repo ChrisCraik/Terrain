@@ -82,8 +82,6 @@ public class Equipment {
 		mTargetDistance = Math.min(mTargetDistance, MAX_TARGET);
 		mTargetDistance = Math.max(mTargetDistance, MIN_TARGET);
 
-		System.out.println(mTargetDistance);
-
 		msSinceShoot += Game.delta;
 		if (msSinceShoot > 200 && (Mouse.isButtonDown(0) || Mouse.isButtonDown(1))) {
 			msSinceShoot = 0;
