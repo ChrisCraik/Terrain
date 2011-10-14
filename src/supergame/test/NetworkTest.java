@@ -70,20 +70,34 @@ public class NetworkTest {
 		}
 	}
 
-	private void transmitServerToClient(double timestamp,
-			GameServer serverNetwork, GameClient clientNetwork) {
-		clientNetwork.applyEntityChanges(timestamp,
-				serverNetwork.getEntityChanges());
+	private abstract class Transmit {
+		abstract void transmitServerToClient(double timestamp,
+				GameServer serverNetwork,
+				GameClient clientNetwork);
 	}
+
+	private final Transmit simpleTransmit = new Transmit() {
+		@Override
+		public void transmitServerToClient(double timestamp,
+				GameServer serverNetwork, GameClient clientNetwork) {
+			clientNetwork.applyEntityChanges(
+					timestamp,
+					serverNetwork.getEntityChanges());
+		}
+	};
 
 	@Test
 	public void testSimpleEntityTransmit() {
+		testSimpleEntityTransmit(simpleTransmit);
+	}
+
+	public void testSimpleEntityTransmit(Transmit t) {
 		// create a server side object, verify it's replicated client side
 		TestSimpleEntity serverEnt = new TestSimpleEntity();
 		server.registerEntity(serverEnt);
 
 		// send server data to client (and create remote object)
-		transmitServerToClient(-1, server, client);
+		t.transmitServerToClient(-1, server, client);
 
 		// verify entity on client
 		Collection<Entity> entities = client.getEntities();
@@ -104,7 +118,7 @@ public class NetworkTest {
 			assertEquals(clientEnt.mY - 1, serverEnt.mY, 0.001);
 
 			// send server data to client
-			transmitServerToClient(i, server, client);
+			t.transmitServerToClient(i, server, client);
 		}
 	}
 
@@ -144,13 +158,17 @@ public class NetworkTest {
 
 	@Test
 	public void testInterpEntityTransmit() {
+		testInterpEntityTransmit(simpleTransmit);
+	}
+
+	public void testInterpEntityTransmit(Transmit t) {
 		// create a server side object, verify it's replicated client side
 		TestInterpEntity serverEnt = new TestInterpEntity();
 		server.registerEntity(serverEnt);
 		serverEnt.update(-1, -1, 1);
 
 		// send server data to client (and create remote object)
-		transmitServerToClient(-1, server, client);
+		t.transmitServerToClient(-1, server, client);
 
 		// verify entity on client
 		Collection<Entity> entities = client.getEntities();
@@ -180,7 +198,7 @@ public class NetworkTest {
 			}
 
 			// send server data to client
-			transmitServerToClient(timestamp, server, client);
+			t.transmitServerToClient(timestamp, server, client);
 		}
 	}
 }
