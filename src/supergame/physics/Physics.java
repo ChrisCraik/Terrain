@@ -9,7 +9,7 @@ public interface Physics {
 	 * Create an empty physics environment
 	 */
 	void initialize(float gravity, float chunkSize);
-	
+
 	void stepSimulation(float timeStep, int maxSubSteps);
 
 	/**
@@ -31,7 +31,7 @@ public interface Physics {
 
 	long createCharacter(float x, float y, float z);
 
-	void controlCharacter(long character, boolean applyIfJumping, boolean jump, float x, float y, float z);
+	void controlCharacter(long character, float strengthWhileJumping, boolean jump, float x, float y, float z);
 
 	public void queryCharacterPosition(long characterId, Vector3f position);
 

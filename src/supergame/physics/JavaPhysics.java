@@ -52,9 +52,11 @@ public class JavaPhysics implements Physics {
 		public CharPhysics(KinematicCharacterController controller, PairCachingGhostObject ghostObject) {
 			mController = controller;
 			mGhostObject = ghostObject;
+			mMoveDirection = new Vector3f(); // TODO: use this for smoother air control
 		}
 		public KinematicCharacterController mController;
 		public PairCachingGhostObject mGhostObject;
+		public Vector3f mMoveDirection;
 	}
 
 	private final Map<Long, RigidBody> rigidBodyMap = new HashMap<Long, RigidBody>();
@@ -198,11 +200,16 @@ public class JavaPhysics implements Physics {
 	}
 
 	@Override
-	public void controlCharacter(long characterId, boolean applyIfJumping, boolean jump,
+	public void controlCharacter(long characterId, float strengthIfJumping, boolean jump,
 			float x, float y, float z) {
 		KinematicCharacterController character = characterMap.get(characterId).mController;
-		if (character.onGround() || applyIfJumping)
-			character.setWalkDirection(new Vector3f(x,y,z));
+
+		Vector3f direction = new Vector3f(x,y,z);
+		if (character.onGround()) {
+
+		}
+			direction.scale(strengthIfJumping);
+		character.setWalkDirection(direction);
 		if (character.onGround() && jump)
 			character.jump();
 	}

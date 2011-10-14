@@ -13,8 +13,10 @@ public class Equipment {
 	static final int NOTHING = 0;
 	static final int TROWEL = 1;
 	static final int SHOVEL = 2;
-	static final int ROCKET = 3;
-	static final float MIN_TARGET = 1;
+	static final int BLOCK_SHOVEL = 3;
+	static final int BIG_BLOCK_SHOVEL = 4;
+	static final int ROCKET = 5;
+	static final float MIN_TARGET = 3;
 	static final float MAX_TARGET = 10;
 
 	private int mTool = 0;
@@ -55,6 +57,7 @@ public class Equipment {
 	}
 
 	public void pollInput() {
+		// TODO: make this not dumb
 		if (Keyboard.isKeyDown(Keyboard.KEY_0)) {
 			mTool = 0;
 		}
@@ -66,6 +69,12 @@ public class Equipment {
 		}
 		if (Keyboard.isKeyDown(Keyboard.KEY_3)) {
 			mTool = 3;
+		}
+		if (Keyboard.isKeyDown(Keyboard.KEY_4)) {
+			mTool = 4;
+		}
+		if (Keyboard.isKeyDown(Keyboard.KEY_5)) {
+			mTool = 5;
 		}
 
 		while (Keyboard.next()) {
@@ -97,6 +106,14 @@ public class Equipment {
 
 			case(SHOVEL) :
 				new SphereChunkModifier(mTargetVoxelPos, 2, Mouse.isButtonDown(0));
+				break;
+
+			case (BLOCK_SHOVEL) :
+				new BlockChunkModifier(mTargetVoxelPos, new Vector3f(1, 1, 1), increment);
+				break;
+
+			case (BIG_BLOCK_SHOVEL) :
+				new BlockChunkModifier(mTargetVoxelPos, new Vector3f(2, 2, 2), increment * 2);
 				break;
 
 			case(ROCKET) :

@@ -62,8 +62,8 @@ public class Character implements CameraControllable {
 			walkDirection.normalize();
 		walkDirection.scale(0.15f);
 
-		boolean applyIfJumping = Config.PLAYER_MIDAIR_CONTROL;
-		Game.collision.physics.controlCharacter(mCharacterId, applyIfJumping,
+		float strengthIfJumping = Config.PLAYER_MIDAIR_CONTROL;
+		Game.collision.physics.controlCharacter(mCharacterId, strengthIfJumping,
 				Keyboard.isKeyDown(Keyboard.KEY_SPACE), walkDirection.x,
 				walkDirection.y, walkDirection.z);
 	}

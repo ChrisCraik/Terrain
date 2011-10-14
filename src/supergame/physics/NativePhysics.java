@@ -21,13 +21,13 @@ public class NativePhysics implements Physics {
 	public native void nativeQueryCharacterPosition(long character, Vector3f position);
 
 	public native void nativeControlCharacter(long character,
-			boolean applyIfJumping, boolean jump, float x, float y, float z);
+			float strengthIfJumping, boolean jump, float x, float y, float z);
 
 	public native long nativeCreateCube(float size, float mass, float x,
 			float y, float z);
 
 	public native void nativeQueryObject(long object, ByteBuffer matrix);
-	
+
 	static {
 		System.err.println(System.getProperty("java.library.path"));
 		try {
@@ -70,9 +70,9 @@ public class NativePhysics implements Physics {
 	}
 
 	@Override
-	public void controlCharacter(long character, boolean applyIfJumping, boolean jump,
+	public void controlCharacter(long character, float strengthIfJumping, boolean jump,
 			float x, float y, float z) {
-		nativeControlCharacter(character, applyIfJumping, jump, x, y, z);
+		nativeControlCharacter(character, strengthIfJumping, jump, x, y, z);
 	}
 
 	@Override
