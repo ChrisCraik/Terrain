@@ -4,7 +4,9 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
+import java.io.IOException;
 import java.util.Collection;
 
 import org.junit.After;
@@ -13,9 +15,15 @@ import org.junit.Test;
 
 import supergame.network.GameClient;
 import supergame.network.GameServer;
-import supergame.network.PiecewiseLerp;
 import supergame.network.Structs.Entity;
-import supergame.network.Structs.EntityData;
+import supergame.network.Structs.State;
+import supergame.test.NetworkTestHelpers.TestInterpData;
+import supergame.test.NetworkTestHelpers.TestInterpEntity;
+import supergame.test.NetworkTestHelpers.TestSimpleData;
+import supergame.test.NetworkTestHelpers.TestSimpleEntity;
+
+import com.esotericsoftware.kryonet.Connection;
+import com.esotericsoftware.kryonet.Listener;
 
 public class NetworkTest {
 	GameClient client;
@@ -31,46 +39,18 @@ public class NetworkTest {
 		client.registerEntityPacket(TestInterpData.class, TestInterpEntity.class);
 		server.registerEntityPacket(TestSimpleData.class, TestSimpleEntity.class);
 		server.registerEntityPacket(TestInterpData.class, TestInterpEntity.class);
+		client.getClient().start();
+		server.getServer().start();
 	}
 
 	@After
 	public void tearDown() {
-		client.getEndPoint().close();
-		server.getEndPoint().close();
-	}
-
-	public static class TestSimpleData extends EntityData {
-		float pos[] = new float[2];
-	}
-
-	public static class TestSimpleEntity extends Entity {
-		public float mX = 0, mY = 0;
-
-		// class has NO CONSTRUCTOR or SINGLE CONSTRUCTOR WITHOUT ARGUMENTS
-
-		@Override
-		public void apply(double timestamp, EntityData packet) {
-			assert (packet instanceof TestSimpleData);
-			TestSimpleData data = (TestSimpleData) packet;
-			mX = data.pos[0];
-			mY = data.pos[1];
-		}
-
-		@Override
-		public EntityData getState() {
-			TestSimpleData t = new TestSimpleData();
-			t.pos[0] = mX;
-			t.pos[1] = mY;
-			return t;
-		}
-
-		public void update() {
-			mX += 1;
-			mY -= 1;
-		}
+		client.getClient().close();
+		server.getServer().close();
 	}
 
 	private abstract class Transmit {
+		public void init(GameServer serverNetwork, final GameClient clientNetwork) {};
 		abstract void transmitServerToClient(double timestamp,
 				GameServer serverNetwork,
 				GameClient clientNetwork);
@@ -86,10 +66,63 @@ public class NetworkTest {
 		}
 	};
 
-	@Test
-	public void testSimpleEntityTransmit() {
-		testSimpleEntityTransmit(simpleTransmit);
-	}
+	private final Transmit loopbackTransmit = new Transmit() {
+		State mClientState = null;
+
+		@Override
+		public void init(GameServer serverNetwork,
+				final GameClient clientNetwork) {
+			try {
+				serverNetwork.getServer().bind(12415, 12415);
+				clientNetwork.getClient().connect(5000, "localhost", 12415, 12415);
+			} catch (IOException e) {
+				fail("connection issues");
+				e.printStackTrace();
+			}
+
+			clientNetwork.getClient().addListener(new Listener() {
+				@Override
+				public void received(Connection connection, Object object) {
+					synchronized (loopbackTransmit) {
+						if (object instanceof State) {
+							mClientState = (State) object;
+							loopbackTransmit.notify();
+						} else {
+							fail("incorrect data transmission format!");
+						}
+					}
+				}
+			});
+		}
+
+		@Override
+		public void transmitServerToClient(double timestamp,
+				GameServer serverNetwork, GameClient clientNetwork) {
+
+			State serverState = new State();
+			serverState.timestamp = timestamp;
+			serverState.data = serverNetwork.getEntityChanges();
+
+			// TODO: don't assume non-trivial time
+			serverNetwork.getServer().sendToAllTCP(serverState);
+
+			try {
+				synchronized(loopbackTransmit) {
+					if (mClientState == null) {
+						loopbackTransmit.wait(1000);
+					}
+				}
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+				fail("network wait ");
+			}
+			if (mClientState == null)
+				fail("transmission failed after 5000ms");
+
+			clientNetwork.applyEntityChanges(mClientState.timestamp, mClientState.data);
+			mClientState = null;
+		}
+	};
 
 	public void testSimpleEntityTransmit(Transmit t) {
 		// create a server side object, verify it's replicated client side
@@ -120,45 +153,6 @@ public class NetworkTest {
 			// send server data to client
 			t.transmitServerToClient(i, server, client);
 		}
-	}
-
-	// unique class solely for differentiation
-	public static class TestInterpData extends TestSimpleData {};
-
-	public static class TestInterpEntity extends Entity {
-		PiecewiseLerp mPosition = new PiecewiseLerp(4);
-
-		// class has NO CONSTRUCTOR or SINGLE CONSTRUCTOR WITHOUT ARGUMENTS
-
-		@Override
-		public void apply(double timestamp, EntityData packet) {
-			assert (packet instanceof TestInterpData);
-			TestInterpData data = (TestInterpData) packet;
-			mPosition.addSample(timestamp, data.pos);
-		}
-
-		@Override
-		public EntityData getState() {
-			// TODO: avoid allocation, pass in object to populate
-			TestInterpData t = new TestInterpData();
-			mPosition.sampleLatest(t.pos);
-			return t;
-		}
-
-		public boolean sample(double timestamp, float[] pos) {
-			return mPosition.sample(timestamp, pos);
-		}
-
-		public void update(double timestamp, float x, float y) {
-			// TODO: avoid the allocation, but make more clear that it's just
-			// doing a store underneath, not a copy of the array
-			mPosition.addSample(timestamp, new float[] { x, y });
-		}
-	}
-
-	@Test
-	public void testInterpEntityTransmit() {
-		testInterpEntityTransmit(simpleTransmit);
 	}
 
 	public void testInterpEntityTransmit(Transmit t) {
@@ -201,4 +195,23 @@ public class NetworkTest {
 			t.transmitServerToClient(timestamp, server, client);
 		}
 	}
+
+	@Test
+	public void testSimpleEntityWithoutNetwork() {
+		testSimpleEntityTransmit(simpleTransmit);
+	}
+
+	@Test
+	public void testInterpEntityWithoutNetwork() {
+		testInterpEntityTransmit(simpleTransmit);
+	}
+
+	@Test
+	public void testNetworkEntitySerialization() {
+		// connect, register callback
+		loopbackTransmit.init(server, client);
+
+		testInterpEntityTransmit(loopbackTransmit);
+	}
+
 }

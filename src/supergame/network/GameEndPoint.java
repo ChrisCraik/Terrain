@@ -4,10 +4,9 @@ import java.util.Collection;
 import java.util.HashMap;
 
 import supergame.network.Structs.Entity;
+import supergame.network.Structs.State;
 
 import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.compress.DeflateCompressor;
-import com.esotericsoftware.kryo.serialize.MapSerializer;
 import com.esotericsoftware.kryonet.EndPoint;
 
 public abstract class GameEndPoint {
@@ -31,14 +30,13 @@ public abstract class GameEndPoint {
 		mEndPoint = endPoint;
 		Kryo kryo = endPoint.getKryo();
 
-		// Register the hashmap as compressed, so the final hashmap we send over
-		// the network is compressed
-		kryo.register(HashMap.class, new DeflateCompressor(new MapSerializer(
-				kryo)));
-
+		kryo.register(float[].class);
+		kryo.register(HashMap.class);
 		kryo.register(Structs.EntityData.class);
 		kryo.register(Structs.PositionData.class);
-		endPoint.start();
+
+		// TODO: compress the State class
+		kryo.register(State.class);
 	}
 
 	public void registerEntityPacket(Class dataClass, Class entityClass) {
