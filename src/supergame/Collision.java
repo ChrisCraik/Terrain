@@ -27,7 +27,6 @@ public class Collision {
 	Collision() {
 		physics = Config.PHYSICS_USE_NATIVE ? new NativePhysics() : new JavaPhysics();
 		physics.initialize(Config.PHYSICS_GRAVITY, Config.CHUNK_DIVISION);
-		character = new Character(physics.createCharacter(START_POS_X, START_POS_Y + 40, START_POS_Z));
 
 		float start_x = START_POS_X - ARRAY_SIZE_X / 2;
 		float start_y = START_POS_Y;
@@ -100,14 +99,18 @@ public class Collision {
 	}
 
 	public void stepSimulation(float duration) {
-		character.move();
+		if (character != null) {
+			character.move();
+		}
 		physics.stepSimulation(duration, 10);
 	}
 
 	private static ByteBuffer matrix = ByteBuffer.allocateDirect(16 * 4).order(ByteOrder.nativeOrder());
 
 	public void render() {
-		character.render();
+		if (character != null) {
+			character.render();
+		}
 		for (int i=0; i<bodyList.size(); i++) {
 			int size = 0==i ? 15 : 1;
 			physics.queryObject(bodyList.get(i), matrix);
@@ -117,5 +120,9 @@ public class Collision {
 			drawCube(size, size, size);
 			GL11.glPopMatrix();
 		}
+	}
+
+	public void createCharacter() {
+		character = new Character(physics.createCharacter(START_POS_X, START_POS_Y + 40, START_POS_Z));
 	}
 }

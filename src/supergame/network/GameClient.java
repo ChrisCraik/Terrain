@@ -37,9 +37,9 @@ public class GameClient extends GameEndPoint {
 			} else {
 				// NEW ENTITY
 				assert (mPacketToClassMap.containsKey(data.getClass()));
-				Class entityClass = mPacketToClassMap.get(data.getClass());
+				Class<? extends Entity> entityClass = mPacketToClassMap.get(data.getClass());
 				try {
-					Entity newEntity = (Entity) entityClass.newInstance();
+					Entity newEntity = entityClass.newInstance();
 					registerEntity(newEntity, id);
 					newEntity.apply(timestamp, data);
 				} catch (InstantiationException e) {

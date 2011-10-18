@@ -8,30 +8,32 @@ import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
 
 public class Camera {
-	private Vector3f mPosition;
+	private final Vector3f mPosition;
 	private float mPitchAngle = -64, mHeadingAngle = 56;
 	private CameraControllable mControllable;
-	private Plane mFrustumPlanes[];
+	private final Plane mFrustumPlanes[];
 
 	public interface CameraControllable {
 		void setHeadingPitch(float heading, float pitch);
 		void getPos(Vector3f pos);
 	}
 
-	Camera(CameraControllable controllable) {
+	Camera() {
 		mPosition = new Vector3f(15, 40, 8);
 		Mouse.setGrabbed(true);
 		mFrustumPlanes = new Plane[6];
 		for (int i = 0; i < 6; i++)
 			mFrustumPlanes[i] = new Plane();
 
-		this.mControllable = controllable;
-
 		//initialize mouse position
 		DisplayMode dm = Display.getDisplayMode();
 		int height = dm.getHeight();
 		int width = dm.getWidth();
 		Mouse.setCursorPosition(width / 2, height / 2);
+	}
+
+	public void setControllable(CameraControllable controllable) {
+		mControllable = controllable;
 	}
 
 	private final int TOP = 0;
@@ -59,6 +61,7 @@ public class Camera {
 			this.mOffset = -this.mNormal.innerProduct(this.mPoint);
 		}
 
+		@Override
 		public String toString() {
 			return "Normal:" + mNormal + ", point:" + mPoint + ", d=" + mOffset;
 		}

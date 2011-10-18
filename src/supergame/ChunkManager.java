@@ -200,8 +200,10 @@ public class ChunkManager implements ChunkProvider, ChunkProcessor {
 
 	@Override
 	public Chunk getChunkToProcess() throws InterruptedException {
-		if (dirtyChunks.size() == 1)
+		if (dirtyChunks.size() == 1 && startTime != 0) {
 			System.out.println("\t\t\tCompleted in " + ((Sys.getTime()-startTime)*1.0)/Sys.getTimerResolution());
+			startTime = 0;
+		}
 		return dirtyChunks.take();
 	}
 

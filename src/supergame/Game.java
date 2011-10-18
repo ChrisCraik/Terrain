@@ -30,6 +30,7 @@ public class Game {
 	private DisplayMode displayMode;
 
 	private ChunkManager chunkManager;
+	private InputProcessor inputProcessor;
 
 	public static Collision collision;
 	/* TIMING */
@@ -79,7 +80,8 @@ public class Game {
 			chunkManager = new ChunkManager(Collision.START_POS_X/Config.CHUNK_DIVISION,
 					Collision.START_POS_Y/Config.CHUNK_DIVISION,
 					Collision.START_POS_Z/Config.CHUNK_DIVISION);
-			this.camera = new Camera(collision.character);
+			camera = new Camera();
+			inputProcessor = new InputProcessor();
 
 			while (!done) {
 				//System.out.println("----------");
@@ -89,6 +91,14 @@ public class Game {
 				pollVideo();
 				PROFILE("pollVideo");
 				camera.pollInput();
+				if (inputProcessor != null) {
+					if (inputProcessor.processInput()) {
+						// TODO: connect or host. game is starting.
+						collision.createCharacter();
+						camera.setControllable(collision.character);
+						inputProcessor = null;
+					}
+				}
 				PROFILE("pollInput");
 				render();
 				Display.update();

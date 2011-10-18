@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.HashMap;
 
 import supergame.network.Structs.Entity;
+import supergame.network.Structs.EntityData;
 import supergame.network.Structs.State;
 
 import com.esotericsoftware.kryo.Kryo;
@@ -22,8 +23,7 @@ public abstract class GameEndPoint {
 	 * classes. If a new object update of type K shows up, the client should
 	 * create an object of type mPacketToClassMap.get(K)
 	 */
-	@SuppressWarnings("rawtypes")
-	protected final HashMap<Class, Class> mPacketToClassMap = new HashMap<Class, Class>();
+	protected final HashMap<Class<? extends EntityData>, Class<? extends Entity>> mPacketToClassMap = new HashMap<Class<? extends EntityData>, Class<? extends Entity>>();
 
 	// This registers objects that are going to be sent over the network.
 	public GameEndPoint(EndPoint endPoint) {
@@ -39,7 +39,8 @@ public abstract class GameEndPoint {
 		kryo.register(State.class);
 	}
 
-	public void registerEntityPacket(Class dataClass, Class entityClass) {
+	public void registerEntityPacket(Class<? extends EntityData> dataClass,
+			Class<? extends Entity> entityClass) {
 		mEndPoint.getKryo().register(dataClass);
 		mPacketToClassMap.put(dataClass, entityClass);
 	}
