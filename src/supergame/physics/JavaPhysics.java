@@ -27,7 +27,6 @@ import com.bulletphysics.dynamics.character.KinematicCharacterController;
 import com.bulletphysics.dynamics.constraintsolver.SequentialImpulseConstraintSolver;
 import com.bulletphysics.linearmath.DefaultMotionState;
 import com.bulletphysics.linearmath.Transform;
-import com.bulletphysics.util.ObjectArrayList;
 
 public class JavaPhysics implements Physics {
 
@@ -42,10 +41,6 @@ public class JavaPhysics implements Physics {
 	// maximum number of objects (and allow user to shoot additional boxes)
 	private static final int MAX_PROXIES = (ARRAY_SIZE_X * ARRAY_SIZE_Y * ARRAY_SIZE_Z + 1024 * 4);
 
-	// keep track of the shapes, we release memory at exit.
-	// make sure to re-use collision shapes among rigid bodies whenever
-	// possible!
-	private final ObjectArrayList<CollisionShape> collisionShapes = new ObjectArrayList<CollisionShape>();
 	private DiscreteDynamicsWorld dynamicsWorld;
 
 	private class CharPhysics {
@@ -65,7 +60,6 @@ public class JavaPhysics implements Physics {
 	private long nextCharacterId = 1;
 
 	private final float matrixArray[] = new float[16];
-
 
 	@Override
 	public void initialize(float gravity, float chunkSize) {
@@ -117,6 +111,7 @@ public class JavaPhysics implements Physics {
 		mesh.triangleIndexStride = indexBytes * 3;
 		mesh.vertexBase = vertices;
 		mesh.vertexStride = 4 * 3;
+
 /*
 		System.out.printf("coordBytes %d, numTriangles %d, numVert %d, triangleIndexStride %d, vertexStride %d\n",
 				indexBytes, mesh.numTriangles, mesh.numVertices,
@@ -155,7 +150,6 @@ public class JavaPhysics implements Physics {
 		if (0 == meshId)
 			return;
 		RigidBody body = rigidBodyMap.get(meshId);
-		collisionShapes.add(body.getCollisionShape());
 		dynamicsWorld.addRigidBody(body);
 	}
 
@@ -164,7 +158,6 @@ public class JavaPhysics implements Physics {
 		if (0 == meshId)
 			return;
 		RigidBody body = rigidBodyMap.remove(meshId);
-		collisionShapes.remove(body.getCollisionShape());
 		dynamicsWorld.removeRigidBody(body);
 	}
 
@@ -188,9 +181,6 @@ public class JavaPhysics implements Physics {
 		character.setJumpSpeed(PLAYER_JUMP_SPEED);
 
 		dynamicsWorld.addCollisionObject(ghostObject);
-		// CollisionFilterGroups.CHARACTER_FILTER,
-		// (short) (CollisionFilterGroups.STATIC_FILTER |
-		// CollisionFilterGroups.DEFAULT_FILTER));
 		dynamicsWorld.addAction(character);
 
 		long newCharacterId = nextCharacterId++;

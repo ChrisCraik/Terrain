@@ -85,13 +85,21 @@ public class Game {
 
 			while (!done) {
 				//System.out.println("----------");
+				GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+
 				PROFILE("GL draw");
 				updateDelta();
 				PROFILE("updateDelta");
 				pollVideo();
 				PROFILE("pollVideo");
 				camera.pollInput();
+				PROFILE("pollInput");
+
+				switchGL3d();
+				render();
+
 				if (inputProcessor != null) {
+					switchGL2d();
 					if (inputProcessor.processInput()) {
 						// TODO: connect or host. game is starting.
 						collision.createCharacter();
@@ -99,8 +107,6 @@ public class Game {
 						inputProcessor = null;
 					}
 				}
-				PROFILE("pollInput");
-				render();
 				Display.update();
 				PROFILE("Display update");
 				Display.sync(Config.FRAME_CAP);
@@ -158,12 +164,9 @@ public class Game {
 		chunkManager.updateWithPosition(0, 0, 0);
 		PROFILE("Update pos");
 
-
-		GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT); // Clear the screen and the depth buffer
 		GL11.glLoadIdentity(); // Reset The Current Modelview Matrix
 		camera.apply();
 		PROFILE("Cam stuff");
-
 
 		// re-apply the light each frame, after the camera transformations
 		GL11.glLight(GL11.GL_LIGHT0, GL11.GL_POSITION,
@@ -201,7 +204,8 @@ public class Game {
 					.normalize();
 
 		System.out.println("have the threads!");
-		initGL();
+		initGL3d();
+		initGL2d();
 	}
 
 	public static FloatBuffer makeFB(float[] floatarray) {
@@ -210,14 +214,23 @@ public class Game {
 		return fb;
 	}
 
-	private void initGL() {
-		GL11.glEnable(GL11.GL_TEXTURE_2D); // Enable Texture Mapping
-		GL11.glShadeModel(GL11.GL_SMOOTH); // Enable Smooth Shading
-		GL11.glClearColor(0.6f, 0.6f, 0.9f, 0.0f); // Black Background
-		GL11.glClearDepth(1.0); // Depth Buffer Setup
-		GL11.glEnable(GL11.GL_DEPTH_TEST); // Enables Depth Testing
-		GL11.glDepthFunc(GL11.GL_LEQUAL); // The Type Of Depth Testing To Do
-		GL11.glEnable(GL11.GL_CULL_FACE); // Don't render the backs of triangles
+	private void switchGL2d() {
+		GL11.glDisable(GL11.GL_LIGHTING);
+		GL11.glEnable(GL11.GL_BLEND);
+		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+
+		GL11.glMatrixMode(GL11.GL_PROJECTION);
+		GL11.glLoadIdentity();
+		GL11.glOrtho(0, Config.RESOLUTION_X, Config.RESOLUTION_Y, 0, 1, -1);
+		GL11.glMatrixMode(GL11.GL_MODELVIEW);
+	}
+
+	private void initGL2d() {
+	}
+
+	private void switchGL3d() {
+		GL11.glEnable(GL11.GL_LIGHTING);
+		GL11.glDisable(GL11.GL_BLEND);
 
 		GL11.glMatrixMode(GL11.GL_PROJECTION); // Select The Projection Matrix
 		GL11.glLoadIdentity(); // Reset The Projection Matrix
@@ -226,6 +239,17 @@ public class Game {
 		org.lwjgl.util.glu.GLU.gluPerspective(Camera.FOV,
 				(float) displayMode.getWidth() / (float) displayMode.getHeight(), 0.1f, Camera.farD);
 		GL11.glMatrixMode(GL11.GL_MODELVIEW); // Select The Modelview Matrix
+	}
+
+	private void initGL3d() {
+		GL11.glEnable(GL11.GL_TEXTURE_2D); // Enable Texture Mapping
+		GL11.glShadeModel(GL11.GL_SMOOTH); // Enable Smooth Shading
+		GL11.glClearColor(0.6f, 0.6f, 0.9f, 0.0f); // Sky
+		GL11.glClearDepth(1.0); // Depth Buffer Setup
+		GL11.glEnable(GL11.GL_DEPTH_TEST); // Enables Depth Testing
+		GL11.glDepthFunc(GL11.GL_LEQUAL); // The Type Of Depth Testing To Do
+		GL11.glEnable(GL11.GL_CULL_FACE); // Don't render the backs of triangles
+
 
 		// Really Nice Perspective Calculations
 		GL11.glHint(GL11.GL_PERSPECTIVE_CORRECTION_HINT, GL11.GL_NICEST);
