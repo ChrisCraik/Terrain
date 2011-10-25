@@ -229,10 +229,8 @@ public class Camera {
 	public void apply() {
 		calculateViewFrustum();
 
-		/*
 		GL11.glRotatef(mPitchAngle, -1, 0, 0);
 		GL11.glRotatef(mHeadingAngle, 0, -1, 0);
 		GL11.glTranslatef(-mPosition.x, -mPosition.y, -mPosition.z);
-		*/
 	}
 }

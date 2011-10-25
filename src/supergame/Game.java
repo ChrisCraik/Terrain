@@ -215,30 +215,38 @@ public class Game {
 	}
 
 	private void switchGL2d() {
+		GL11.glDisable(GL11.GL_DEPTH_TEST);
 		GL11.glDisable(GL11.GL_LIGHTING);
 		GL11.glEnable(GL11.GL_BLEND);
-		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 
+		// projection
 		GL11.glMatrixMode(GL11.GL_PROJECTION);
 		GL11.glLoadIdentity();
 		GL11.glOrtho(0, Config.RESOLUTION_X, Config.RESOLUTION_Y, 0, 1, -1);
+
+		// modelview
 		GL11.glMatrixMode(GL11.GL_MODELVIEW);
+		GL11.glLoadIdentity();
 	}
 
 	private void initGL2d() {
+		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 	}
 
 	private void switchGL3d() {
+		GL11.glEnable(GL11.GL_DEPTH_TEST);
 		GL11.glEnable(GL11.GL_LIGHTING);
 		GL11.glDisable(GL11.GL_BLEND);
 
-		GL11.glMatrixMode(GL11.GL_PROJECTION); // Select The Projection Matrix
-		GL11.glLoadIdentity(); // Reset The Projection Matrix
-
-		// Calculate The Aspect Ratio Of The Window
+		// projection
+		GL11.glMatrixMode(GL11.GL_PROJECTION);
+		GL11.glLoadIdentity();
 		org.lwjgl.util.glu.GLU.gluPerspective(Camera.FOV,
 				(float) displayMode.getWidth() / (float) displayMode.getHeight(), 0.1f, Camera.farD);
+
+		// modelview
 		GL11.glMatrixMode(GL11.GL_MODELVIEW); // Select The Modelview Matrix
+		GL11.glLoadIdentity();
 	}
 
 	private void initGL3d() {
