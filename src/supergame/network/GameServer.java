@@ -12,9 +12,10 @@ import com.esotericsoftware.kryonet.Server;
 public class GameServer extends GameEndPoint {
 	private int mNextEntityId = 1;
 
+	// TODO: 2 constructors, with and without buffer
+
 	public GameServer() {
-		super(new Server());
-		// TODO Auto-generated constructor stub
+		super(new Server(), null, null);
 	}
 
 	/**

@@ -10,10 +10,12 @@ import supergame.network.Structs.EntityData;
 import com.esotericsoftware.kryonet.Client;
 
 public class GameClient extends GameEndPoint {
-	Client mClient = new Client();
+
+	// TODO: 3 constructors, with and without write buffer, one with read (for
+	// playback)
 
 	public GameClient() {
-		super(new Client());
+		super(new Client(), null, null);
 	}
 
 	/**

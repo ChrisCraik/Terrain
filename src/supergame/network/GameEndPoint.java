@@ -1,5 +1,7 @@
 package supergame.network;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.util.Collection;
 import java.util.HashMap;
 
@@ -13,6 +15,9 @@ import com.esotericsoftware.kryonet.EndPoint;
 public abstract class GameEndPoint {
 	protected final HashMap<Integer, Entity> mEntityMap = new HashMap<Integer, Entity>();
 	private final EndPoint mEndPoint;
+	protected final BufferedWriter mWriter;
+	protected final BufferedReader mReader;
+	protected final Kryo mKryo;
 
 	public EndPoint getEndPoint() {
 		return mEndPoint;
@@ -25,18 +30,24 @@ public abstract class GameEndPoint {
 	 */
 	protected final HashMap<Class<? extends EntityData>, Class<? extends Entity>> mPacketToClassMap = new HashMap<Class<? extends EntityData>, Class<? extends Entity>>();
 
-	// This registers objects that are going to be sent over the network.
-	public GameEndPoint(EndPoint endPoint) {
+	public GameEndPoint(EndPoint endPoint, BufferedWriter writer, BufferedReader reader) {
 		mEndPoint = endPoint;
-		Kryo kryo = endPoint.getKryo();
+		mWriter = writer;
+		mReader = reader;
 
-		kryo.register(float[].class);
-		kryo.register(HashMap.class);
-		kryo.register(Structs.EntityData.class);
-		kryo.register(Structs.PositionData.class);
+		if (endPoint == null) {
+			mKryo = new Kryo();
+		} else {
+			mKryo = endPoint.getKryo();
+		}
+
+		mKryo.register(float[].class);
+		mKryo.register(HashMap.class);
+		mKryo.register(Structs.EntityData.class);
+		mKryo.register(Structs.PositionData.class);
 
 		// TODO: compress the State class
-		kryo.register(State.class);
+		mKryo.register(State.class);
 	}
 
 	public void registerEntityPacket(Class<? extends EntityData> dataClass,
