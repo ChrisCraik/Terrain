@@ -1,5 +1,7 @@
 package supergame.network;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -12,11 +14,24 @@ import com.esotericsoftware.kryonet.Server;
 public class GameServer extends GameEndPoint {
 	private int mNextEntityId = 1;
 
-	// TODO: 2 constructors, with and without buffer
-
+	/**
+	 * Normal game server constructor.
+	 */
 	public GameServer() {
 		super(new Server(), null, null);
 	}
+
+	/**
+	 * Game server that also saves sent packets for future playback to a virtual
+	 * client.
+	 *
+	 * @param w
+	 *            The server stores packets it sends in this.
+	 */
+	public GameServer(BufferedWriter w) {
+		super(new Server(), w, null);
+	}
+
 
 	/**
 	 * Get local changes server side, to be sent remotely
@@ -44,7 +59,11 @@ public class GameServer extends GameEndPoint {
 		registerEntity(entity, mNextEntityId++);
 	}
 
-	public Server getServer() {
-		return (Server)getEndPoint();
+	public void sendToAllTCP(Object o) {
+		((Server)mEndPoint).sendToAllTCP(o);
+	}
+
+	public void bind(int udp, int tcp) throws IOException {
+		((Server)mEndPoint).bind(udp, tcp);
 	}
 }

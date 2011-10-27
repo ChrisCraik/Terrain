@@ -11,17 +11,14 @@ import supergame.network.Structs.State;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryonet.EndPoint;
+import com.esotericsoftware.kryonet.Listener;
 
 public abstract class GameEndPoint {
 	protected final HashMap<Integer, Entity> mEntityMap = new HashMap<Integer, Entity>();
-	private final EndPoint mEndPoint;
+	protected final EndPoint mEndPoint;
 	protected final BufferedWriter mWriter;
 	protected final BufferedReader mReader;
 	protected final Kryo mKryo;
-
-	public EndPoint getEndPoint() {
-		return mEndPoint;
-	}
 
 	/**
 	 * Maps incoming network data types to the associated network entity
@@ -69,5 +66,18 @@ public abstract class GameEndPoint {
 	public <K extends Entity> void registerEntity(K entity, int id) {
 		assert (!mEntityMap.containsKey(id));
 		mEntityMap.put(id, entity);
+	}
+
+	public void start() {
+		mEndPoint.start();
+	}
+
+	public void close() {
+		mEndPoint.close();
+	}
+
+	public void addListener(Listener l) {
+		// TODO: virtualize this so that there's a simpler interface
+		mEndPoint.addListener(l);
 	}
 }

@@ -1,5 +1,8 @@
 package supergame.network;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -10,12 +13,33 @@ import supergame.network.Structs.EntityData;
 import com.esotericsoftware.kryonet.Client;
 
 public class GameClient extends GameEndPoint {
-
-	// TODO: 3 constructors, with and without write buffer, one with read (for
-	// playback)
-
+	/**
+	 * Normal game client constructor.
+	 */
 	public GameClient() {
 		super(new Client(), null, null);
+	}
+
+	/**
+	 * Game client that also saves received packets for future playback.
+	 *
+	 * @param w
+	 *            The client stores received packets from server in this.
+	 */
+	public GameClient(BufferedWriter w) {
+		super(new Client(), w, null);
+	}
+
+	/**
+	 * 'Virtual' Game client that connects to a BufferedReader instead of a server, for
+	 * playing back saved network transcripts.
+	 *
+	 * @param r
+	 *            Read by the client as though a stream of packets from the
+	 *            server.
+	 */
+	public GameClient(BufferedReader r) {
+		super(null, null, r);
 	}
 
 	/**
@@ -55,7 +79,7 @@ public class GameClient extends GameEndPoint {
 		}
 	}
 
-	public Client getClient() {
-		return (Client)getEndPoint();
+	public void connect(int timeout, String address, int udp, int tcp) throws IOException {
+		((Client)mEndPoint).connect(timeout, address, udp, tcp);
 	}
 }
