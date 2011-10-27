@@ -68,11 +68,8 @@ public abstract class GameEndPoint {
 		mEntityMap.put(id, entity);
 	}
 
-	public void start() {
-		mEndPoint.start();
-	}
-
 	public void close() {
+		mEndPoint.stop();
 		mEndPoint.close();
 	}
 

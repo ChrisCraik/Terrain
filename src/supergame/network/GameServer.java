@@ -64,6 +64,7 @@ public class GameServer extends GameEndPoint {
 	}
 
 	public void bind(int udp, int tcp) throws IOException {
+		((Server)mEndPoint).start(); // there's probably a reason not to do this here...
 		((Server)mEndPoint).bind(udp, tcp);
 	}
 }

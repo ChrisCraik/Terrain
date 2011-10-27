@@ -36,8 +36,6 @@ public class NetworkTest {
 			client.registerEntityPacket(TestInterpData.class, TestInterpEntity.class);
 			server.registerEntityPacket(TestSimpleData.class, TestSimpleEntity.class);
 			server.registerEntityPacket(TestInterpData.class, TestInterpEntity.class);
-			client.start();
-			server.start();
 
 			init();
 		}
@@ -115,11 +113,12 @@ public class NetworkTest {
 					}
 				}
 			} catch (InterruptedException e) {
+				fail("network wait");
 				e.printStackTrace();
-				fail("network wait ");
 			}
-			if (mClientState == null)
-				fail("transmission failed after 5000ms");
+			if (mClientState == null) {
+				fail("timeout, transmission failed");
+			}
 
 			client.applyEntityChanges(mClientState.timestamp, mClientState.data);
 			mClientState = null;

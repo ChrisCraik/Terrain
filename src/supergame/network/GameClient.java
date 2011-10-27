@@ -80,6 +80,7 @@ public class GameClient extends GameEndPoint {
 	}
 
 	public void connect(int timeout, String address, int udp, int tcp) throws IOException {
+		((Client)mEndPoint).start(); // there's probably a reason not to do this here...
 		((Client)mEndPoint).connect(timeout, address, udp, tcp);
 	}
 }
