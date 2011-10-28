@@ -4,21 +4,34 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import supergame.network.Structs.Entity;
 import supergame.network.Structs.EntityData;
 import supergame.network.Structs.State;
 
 import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.EndPoint;
 import com.esotericsoftware.kryonet.Listener;
 
 public abstract class GameEndPoint {
+	public static class TransmitPair {
+		public TransmitPair(Connection connection, Object object) {
+			this.connection = connection;
+			this.object = object;
+		}
+		public Connection connection;
+		public Object object;
+	}
+
 	protected final HashMap<Integer, Entity> mEntityMap = new HashMap<Integer, Entity>();
 	protected final EndPoint mEndPoint;
 	protected final BufferedWriter mWriter;
 	protected final BufferedReader mReader;
 	protected final Kryo mKryo;
+	private final LinkedBlockingQueue<TransmitPair> mQueue = new LinkedBlockingQueue<TransmitPair>();
 
 	/**
 	 * Maps incoming network data types to the associated network entity
@@ -32,10 +45,16 @@ public abstract class GameEndPoint {
 		mWriter = writer;
 		mReader = reader;
 
-		if (endPoint == null) {
+		if (mEndPoint == null) {
 			mKryo = new Kryo();
 		} else {
 			mKryo = endPoint.getKryo();
+			mEndPoint.addListener(new Listener() {
+				@Override
+				public void received(Connection connection, Object object) {
+					mQueue.add(new TransmitPair(connection, object));
+				}
+			});
 		}
 
 		mKryo.register(float[].class);
@@ -73,8 +92,13 @@ public abstract class GameEndPoint {
 		mEndPoint.close();
 	}
 
-	public void addListener(Listener l) {
-		// TODO: virtualize this so that there's a simpler interface
-		mEndPoint.addListener(l);
+	public TransmitPair pollHard(int timeInMS) {
+
+		try {
+			return mQueue.poll(timeInMS, TimeUnit.MILLISECONDS);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 }

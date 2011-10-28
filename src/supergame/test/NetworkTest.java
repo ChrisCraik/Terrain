@@ -8,15 +8,13 @@ import org.junit.Test;
 import org.lwjgl.Sys;
 
 import supergame.network.GameClient;
+import supergame.network.GameEndPoint.TransmitPair;
 import supergame.network.GameServer;
 import supergame.network.Structs.State;
 import supergame.test.NetworkTestHelpers.TestInterpData;
 import supergame.test.NetworkTestHelpers.TestInterpEntity;
 import supergame.test.NetworkTestHelpers.TestSimpleData;
 import supergame.test.NetworkTestHelpers.TestSimpleEntity;
-
-import com.esotericsoftware.kryonet.Connection;
-import com.esotericsoftware.kryonet.Listener;
 
 public class NetworkTest {
 	final static int MAX_TIME = 1000;
@@ -31,7 +29,7 @@ public class NetworkTest {
 			this.client = client;
 			this.server = server;
 
-			// TODO: better way to do this
+			// TODO: better way to do this - in constructor?
 			client.registerEntityPacket(TestSimpleData.class, TestSimpleEntity.class);
 			client.registerEntityPacket(TestInterpData.class, TestInterpEntity.class);
 			server.registerEntityPacket(TestSimpleData.class, TestSimpleEntity.class);
@@ -70,9 +68,6 @@ public class NetworkTest {
 			super(new GameClient(), new GameServer());
 		}
 
-		State mClientState = null;
-		Object mSync= new Object();
-
 		@Override
 		protected void init() {
 			try {
@@ -82,19 +77,6 @@ public class NetworkTest {
 				fail("connection issues");
 				e.printStackTrace();
 			}
-			client.addListener(new Listener.ThreadedListener(new Listener() {
-				@Override
-				public void received(Connection connection, Object object) {
-					synchronized (mSync) {
-						if (object instanceof State) {
-							mClientState = (State) object;
-							mSync.notify();
-						} else {
-							fail("incorrect data transmission format!");
-						}
-					}
-				}
-			}));
 		}
 
 		@Override
@@ -102,26 +84,14 @@ public class NetworkTest {
 			State serverState = new State();
 			serverState.timestamp = timestamp;
 			serverState.data = server.getEntityChanges();
-
-			// TODO: don't assume non-trivial time
 			server.sendToAllTCP(serverState);
 
-			try {
-				synchronized(mSync) {
-					if (mClientState == null) {
-						mSync.wait(WAIT_TIME);
-					}
-				}
-			} catch (InterruptedException e) {
-				fail("network wait");
-				e.printStackTrace();
-			}
-			if (mClientState == null) {
-				fail("timeout, transmission failed");
-			}
+			TransmitPair p = client.pollHard(WAIT_TIME);
+			if (p == null || !(p.object instanceof State))
+				fail("no data/wrong data type!");
 
-			client.applyEntityChanges(mClientState.timestamp, mClientState.data);
-			mClientState = null;
+			State state = ((State)p.object);
+			client.applyEntityChanges(state.timestamp, state.data);
 		}
 	};
 
