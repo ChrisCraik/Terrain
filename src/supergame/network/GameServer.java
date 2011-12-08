@@ -1,7 +1,7 @@
 package supergame.network;
 
-import java.io.BufferedWriter;
 import java.io.IOException;
+import java.nio.channels.WritableByteChannel;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -28,10 +28,9 @@ public class GameServer extends GameEndPoint {
 	 * @param w
 	 *            The server stores packets it sends in this.
 	 */
-	public GameServer(BufferedWriter w) {
+	public GameServer(WritableByteChannel w) {
 		super(new Server(), w, null);
 	}
-
 
 	/**
 	 * Get local changes server side, to be sent remotely

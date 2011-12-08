@@ -11,23 +11,25 @@ import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
 
 import supergame.modify.ChunkCastle;
+import supergame.network.GameEndPoint;
 
 public class Game {
+	private static final String WINDOW_TITLE = "SUPER VOXEL TEST";
 	public static final int FLOAT_SIZE = 4;
 
 	public static boolean isRunning() {
 		return !done;
 	}
 
-	public static Config config;
+	public static Config mConfig;
 
 	private static boolean done = false;
 	private boolean fullscreen = false;
 	private Camera camera = null;
-	private final String windowTitle = "SUPER VOXEL TEST";
 	private boolean f1 = false;
 
 	private DisplayMode displayMode;
+	private GameEndPoint mGameEndPoint;
 
 	private ChunkManager chunkManager;
 	private InputProcessor inputProcessor;
@@ -98,9 +100,12 @@ public class Game {
 				switchGL3d();
 				render();
 
+
 				if (inputProcessor != null) {
 					switchGL2d();
-					if (inputProcessor.processInput()) {
+					mGameEndPoint = inputProcessor.processInput();
+
+					if (mGameEndPoint != null) {
 						// TODO: connect or host. game is starting.
 						collision.createCharacter();
 						camera.setControllable(collision.character);
@@ -190,7 +195,7 @@ public class Game {
 			}
 		}
 		Display.setDisplayMode(displayMode);
-		Display.setTitle(windowTitle);
+		Display.setTitle(WINDOW_TITLE);
 		Display.create();
 	}
 

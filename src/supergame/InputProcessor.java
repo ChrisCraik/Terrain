@@ -11,6 +11,10 @@ import org.newdawn.slick.Color;
 import org.newdawn.slick.TrueTypeFont;
 import org.newdawn.slick.util.ResourceLoader;
 
+import supergame.network.GameClient;
+import supergame.network.GameEndPoint;
+import supergame.network.GameServer;
+
 @SuppressWarnings("deprecation")
 public class InputProcessor {
 	private TrueTypeFont mFont;
@@ -57,15 +61,34 @@ public class InputProcessor {
 
 	private final String DEFAULT_SERVER = "localhost:27000";
 
-	public String getName() {
-		return mName;
+	private GameEndPoint getEndPoint() {
+		int udp = 27000, tcp = 27000;
+		String[] serverParts = mServer.split(":");
+
+		if (serverParts.length == 2) {
+			udp = tcp = Integer.parseInt(serverParts[1]);
+		} else if (serverParts.length == 3) {
+			udp = Integer.parseInt(serverParts[1]);
+			tcp = Integer.parseInt(serverParts[2]);
+		}
+		try {
+			if (serverParts[0].equalsIgnoreCase("me")) {
+				System.out.println("creating server");
+				GameServer s = new GameServer();
+				s.bind(udp, tcp);
+				return s;
+			} else {
+				GameClient c = new GameClient();
+				c.connect(1000, serverParts[0], udp, tcp);
+				return c;
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 
-	public String getServer() {
-		return mServer;
-	}
-
-	public boolean processInput() {
+	public GameEndPoint processInput() {
 		if (mName != null) {
 			mFont.drawString(100, 100, "Name = " + mName);
 			if (mServer != null) {
@@ -89,13 +112,13 @@ public class InputProcessor {
 						mServer = mCurrent;
 						mCurrent = null;
 					} else {
-						return true;
+						return getEndPoint();
 					}
 				} else if (!mIgnoredKeys.contains(Keyboard.getEventKey())){
 					mCurrent += Keyboard.getEventCharacter();
 				}
 			}
 		}
-		return false;
+		return null;
 	}
 }

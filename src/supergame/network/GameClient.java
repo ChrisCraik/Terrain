@@ -1,8 +1,8 @@
 package supergame.network;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -26,7 +26,7 @@ public class GameClient extends GameEndPoint {
 	 * @param w
 	 *            The client stores received packets from server in this.
 	 */
-	public GameClient(BufferedWriter w) {
+	public GameClient(WritableByteChannel w) {
 		super(new Client(), w, null);
 	}
 
@@ -38,7 +38,7 @@ public class GameClient extends GameEndPoint {
 	 *            Read by the client as though a stream of packets from the
 	 *            server.
 	 */
-	public GameClient(BufferedReader r) {
+	public GameClient(ReadableByteChannel r) {
 		super(null, null, r);
 	}
 
@@ -80,7 +80,9 @@ public class GameClient extends GameEndPoint {
 	}
 
 	public void connect(int timeout, String address, int udp, int tcp) throws IOException {
-		((Client)mEndPoint).start(); // there's probably a reason not to do this here...
-		((Client)mEndPoint).connect(timeout, address, udp, tcp);
+		if (mEndPoint != null) {
+			mEndPoint.start(); // there's probably a reason not to do this here...
+			((Client)mEndPoint).connect(timeout, address, udp, tcp);
+		}
 	}
 }

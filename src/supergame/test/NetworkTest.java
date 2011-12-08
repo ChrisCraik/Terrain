@@ -2,7 +2,13 @@ package supergame.test;
 
 import static org.junit.Assert.fail;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 
 import org.junit.Test;
 import org.lwjgl.Sys;
@@ -68,6 +74,14 @@ public class NetworkTest {
 			super(new GameClient(), new GameServer());
 		}
 
+		public LoopbackTransmit(WritableByteChannel writer) {
+			super(new GameClient(writer), new GameServer());
+		}
+
+		public LoopbackTransmit(ReadableByteChannel reader) {
+			super(new GameClient(reader), new GameServer());
+		}
+
 		@Override
 		protected void init() {
 			try {
@@ -86,7 +100,7 @@ public class NetworkTest {
 			serverState.data = server.getEntityChanges();
 			server.sendToAllTCP(serverState);
 
-			TransmitPair p = client.pollHard(WAIT_TIME);
+			TransmitPair p = client.pollHard(timestamp, WAIT_TIME);
 			if (p == null || !(p.object instanceof State))
 				fail("no data/wrong data type!");
 
@@ -108,5 +122,21 @@ public class NetworkTest {
 	@Test
 	public void testNetworkEntitySerialization() {
 		NetworkTestHelpers.testInterpEntityTransmit(new LoopbackTransmit());
+	}
+
+	@Test
+	public void testNetworkDiskEntitySerialization() throws FileNotFoundException {
+
+		// first time through, client saves a copy of everything it receives
+		File file = new File("filename");
+		boolean append = false;
+		WritableByteChannel wChannel = new FileOutputStream(file, append).getChannel();
+		NetworkTestHelpers.testInterpEntityTransmit(new LoopbackTransmit(wChannel));
+
+		// second time through, the client doesn't connect to a server at all,
+		// but instead reads old network transmission data from the buffered
+		// reader
+		ReadableByteChannel rChannel = new FileInputStream(file).getChannel();
+		NetworkTestHelpers.testInterpEntityTransmit(new LoopbackTransmit(rChannel));
 	}
 }
