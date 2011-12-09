@@ -81,7 +81,8 @@ public class Game {
 			collision = new Collision();
 			chunkManager = new ChunkManager(Collision.START_POS_X/Config.CHUNK_DIVISION,
 					Collision.START_POS_Y/Config.CHUNK_DIVISION,
-					Collision.START_POS_Z/Config.CHUNK_DIVISION);
+					Collision.START_POS_Z/Config.CHUNK_DIVISION,
+					Config.CHUNK_LOAD_DISTANCE);
 			camera = new Camera();
 			inputProcessor = new InputProcessor();
 

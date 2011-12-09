@@ -59,13 +59,15 @@ public class ChunkManager implements ChunkProvider, ChunkProcessor {
 	private final HashMap<ChunkIndex, Chunk> chunks;
 	private final LinkedBlockingQueue<Chunk> dirtyChunks;
 	private final LinkedHashSet<ChunkIndex> chunkCache;
+	private final int mLoadDistance;
 
 	public static long startTime;
 
-	ChunkManager(long x, long y, long z) {
+	public ChunkManager(long x, long y, long z, int loadDistance) {
 		chunks = new HashMap<ChunkIndex, Chunk>();
 		dirtyChunks = new LinkedBlockingQueue<Chunk>();
 		chunkCache = new LinkedHashSet<ChunkIndex>();
+		mLoadDistance = loadDistance;
 
 		lastx = x;
 		lasty = y;
@@ -79,7 +81,7 @@ public class ChunkManager implements ChunkProvider, ChunkProcessor {
 		startTime = Sys.getTime();
 
 		sweepNearby(x, y, z, 2, false);
-		sweepNearby(x, y, z, Config.CHUNK_LOAD_DISTANCE, false);
+		sweepNearby(x, y, z, mLoadDistance, false);
 	}
 
 	private void sweepNearby(long x, long y, long z, int limit, boolean stall) {
@@ -150,30 +152,30 @@ public class ChunkManager implements ChunkProvider, ChunkProcessor {
 
 		//prioritize chunks now within range, deprioritize those out of range
 		//moving chunks in one dimension means a 2d slice of chunks no longer in range.
-		for (int i = -Config.CHUNK_LOAD_DISTANCE; i <= Config.CHUNK_LOAD_DISTANCE; i++)
-			for (int j = -Config.CHUNK_LOAD_DISTANCE; j <= Config.CHUNK_LOAD_DISTANCE; j++) {
+		for (int i = -mLoadDistance; i <= mLoadDistance; i++)
+			for (int j = -mLoadDistance; j <= mLoadDistance; j++) {
 				if (dx == 1) {
-					prioritizeChunk(x + Config.CHUNK_LOAD_DISTANCE, y + i, z + j);
-					deprioritizeChunk(x - Config.CHUNK_LOAD_DISTANCE - 1, y + i, z + j);
+					prioritizeChunk(x + mLoadDistance, y + i, z + j);
+					deprioritizeChunk(x - mLoadDistance - 1, y + i, z + j);
 				} else if (dx == -1) {
-					prioritizeChunk(x - Config.CHUNK_LOAD_DISTANCE, y + i, z + j);
-					deprioritizeChunk(x + Config.CHUNK_LOAD_DISTANCE + 1, y + i, z + j);
+					prioritizeChunk(x - mLoadDistance, y + i, z + j);
+					deprioritizeChunk(x + mLoadDistance + 1, y + i, z + j);
 				}
 
 				if (dy == 1) {
-					prioritizeChunk(x + i, y + Config.CHUNK_LOAD_DISTANCE, z + j);
-					deprioritizeChunk(x + i, y - Config.CHUNK_LOAD_DISTANCE - 1, z + j);
+					prioritizeChunk(x + i, y + mLoadDistance, z + j);
+					deprioritizeChunk(x + i, y - mLoadDistance - 1, z + j);
 				} else if (dy == -1) {
-					prioritizeChunk(x + i, y - Config.CHUNK_LOAD_DISTANCE, z + j);
-					deprioritizeChunk(x + i, y + Config.CHUNK_LOAD_DISTANCE + 1, z + j);
+					prioritizeChunk(x + i, y - mLoadDistance, z + j);
+					deprioritizeChunk(x + i, y + mLoadDistance + 1, z + j);
 				}
 
 				if (dz == 1) {
-					prioritizeChunk(x + i, y + j, z + Config.CHUNK_LOAD_DISTANCE);
-					deprioritizeChunk(x + i, y + j, z - Config.CHUNK_LOAD_DISTANCE - 1);
+					prioritizeChunk(x + i, y + j, z + mLoadDistance);
+					deprioritizeChunk(x + i, y + j, z - mLoadDistance - 1);
 				} else if (dz == -1) {
-					prioritizeChunk(x + i, y + j, z - Config.CHUNK_LOAD_DISTANCE);
-					deprioritizeChunk(x + i, y + j, z + Config.CHUNK_LOAD_DISTANCE + 1);
+					prioritizeChunk(x + i, y + j, z - mLoadDistance);
+					deprioritizeChunk(x + i, y + j, z + mLoadDistance + 1);
 				}
 			}
 
@@ -190,8 +192,9 @@ public class ChunkManager implements ChunkProvider, ChunkProcessor {
 	}
 
 	public void renderChunks(Camera cam) {
-		GL11.glMaterial(GL11.GL_FRONT, GL11.GL_DIFFUSE,
-				Game.makeFB(new float[] { 0.4f, 0.3f, 0.0f, 1 }));
+		if (cam != null)
+			GL11.glMaterial(GL11.GL_FRONT, GL11.GL_DIFFUSE,
+					Game.makeFB(new float[] { 0.4f, 0.3f, 0.0f, 1 }));
 		int newRenders = 10; // only render this many NEW chunks
 		for (Chunk c : chunks.values())
 			if (c.serial_render(cam, newRenders > 0, true))
@@ -205,6 +208,10 @@ public class ChunkManager implements ChunkProvider, ChunkProcessor {
 			startTime = 0;
 		}
 		return dirtyChunks.take();
+	}
+
+	public boolean workRemains() {
+		return dirtyChunks.size() != 0;
 	}
 
 	@Override

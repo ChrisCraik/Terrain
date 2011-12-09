@@ -67,7 +67,7 @@ public class Chunk implements Frustrumable {
 	private static final int PARALLEL_PROCESSING = 1; // being processed by worker thread
 	private static final int PARALLEL_COMPLETE = 2; // Processing complete, render-able
 	private static final int PARALLEL_GARBAGE = 3; // Processing interrupted by chunk garbage collection
-	private AtomicInteger state = new AtomicInteger(SERIAL_INITIAL);
+	private final AtomicInteger state = new AtomicInteger(SERIAL_INITIAL);
 
 	private long meshId = 0;
 
@@ -95,17 +95,24 @@ public class Chunk implements Frustrumable {
 		if (empty)
 			return false;
 
-		if (display && cam.frustrumTest(this) == Inclusion.OUTSIDE)
+		if (display && cam != null && cam.frustrumTest(this) == Inclusion.OUTSIDE)
 			return false;
 
 		if (displayList >= 0) {
-			if (display) {
+			if (display && cam != null) {
 				GL11.glCallList(displayList);
 			}
 		} else if (allowBruteForceRender) {
 			if (Config.CHUNK_PHYSICS) {
 				// register the terrain chunk with the physics engine
 				Game.collision.physics.registerMesh(meshId);
+			}
+
+			if (cam == null) {
+				// Just for benchmarking
+				// TODO: clean up
+				displayList = 1;
+				return false;
 			}
 
 			displayList = GL11.glGenLists(1);
@@ -472,6 +479,7 @@ public class Chunk implements Frustrumable {
 		return index;
 	}
 
+	@Override
 	public Vec3 getVertexP(Vec3 n) {
 		Vec3 res = new Vec3(pos);
 
@@ -485,6 +493,7 @@ public class Chunk implements Frustrumable {
 		return res;
 	}
 
+	@Override
 	public Vec3 getVertexN(Vec3 n) {
 		Vec3 res = new Vec3(pos);
 

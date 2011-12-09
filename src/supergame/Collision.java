@@ -24,7 +24,7 @@ public class Collision {
 
 	ArrayList<Long> bodyList = new ArrayList<Long>();
 
-	Collision() {
+	public Collision() {
 		physics = Config.PHYSICS_USE_NATIVE ? new NativePhysics() : new JavaPhysics();
 		physics.initialize(Config.PHYSICS_GRAVITY, Config.CHUNK_DIVISION);
 
