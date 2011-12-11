@@ -3,7 +3,8 @@ package supergame;
 import javax.vecmath.Vector3f;
 
 public class TerrainGenerator {
-	public static Vec3 getNormal(float x, float y, float z) {
+
+	public static void getNormal(float x, float y, float z, Vec3 v) {
 		//first attempt: brute force
 		float delta = 0.01f, origin, deltaX, deltaY, deltaZ;
 		origin = getDensity(x, y, z);
@@ -11,7 +12,9 @@ public class TerrainGenerator {
 		deltaY = origin - getDensity(x, y + delta, z);
 		deltaZ = origin - getDensity(x, y, z + delta);
 
-		return new Vec3(deltaX, deltaY, deltaZ).normalize();
+		v.set(deltaX, deltaY, deltaZ);
+		v.scaleInto(1/v.length());
+		//return new Vec3(deltaX, deltaY, deltaZ).normalize();
 	}
 
 	public static float getDensity(Vector3f p) {

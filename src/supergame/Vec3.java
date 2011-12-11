@@ -110,4 +110,10 @@ public class Vec3 {
 	public void addInto(int index, float offset) {
 		mData[index] += offset;
 	}
+
+	public void scaleInto(float scale) {
+		mData[0] *= scale;
+		mData[1] *= scale;
+		mData[2] *= scale;
+	}
 }

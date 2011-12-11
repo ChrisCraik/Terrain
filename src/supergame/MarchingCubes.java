@@ -290,7 +290,12 @@ public class MarchingCubes {
 		float mu = (float) ((isolevel - valp1) / (valp2 - valp1));
 
 		// float mu = 0.5f;
-		return p1.multiply(1 - mu).add(p2.multiply(mu));
+		//return p1.multiply(1 - mu).add(p2.multiply(mu));
+
+		float mu_n = 1 - mu;
+		return new Vec3(p1.getX() * mu_n + p2.getX() * mu,
+				p1.getY() * mu_n + p2.getY() * mu,
+				p1.getZ() * mu_n + p2.getZ() * mu);
 	}
 
 	// ORDERING: 0 1 3 2, 4 5 7 6

@@ -19,7 +19,6 @@ public class ChunkGenTest {
 		long start = Sys.getTime();
 		double secondsTaken;
 		do {
-			chunkManager.renderChunks(null);
 			secondsTaken = ((Sys.getTime()-start)*1.0)/Sys.getTimerResolution();
 		} while (chunkManager.workRemains() && secondsTaken < MAX_TIME);
 

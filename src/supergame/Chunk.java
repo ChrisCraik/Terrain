@@ -241,12 +241,13 @@ public class Chunk implements Frustrumable {
 		buffers.indicesIntCount = 0;
 		buffers.verticesFloatCount = 0;
 		if (Config.CHUNK_REUSE_VERTS) {
+			Vec3 blockPos = new Vec3(0, 0, 0);
 			for (x = 0; x < Config.CHUNK_DIVISION + 1; x++)
 				for (y = 0; y < Config.CHUNK_DIVISION + 1; y++)
 					for (z = 0; z < Config.CHUNK_DIVISION + 1; z++)
 						if (MarchingCubes.cubeOccupied(x, y, z, buffers.weights)) {
 							//calculate vertices, populate vert buffer, vertIndexVolume buffer (NOTE some of these vertices wasted: reside in neighbor chunks)
-							Vec3 blockPos = new Vec3(pos.getX() + x * Config.METERS_PER_SUBCHUNK, pos.getY() + y
+							blockPos.set(pos.getX() + x * Config.METERS_PER_SUBCHUNK, pos.getY() + y
 									* Config.METERS_PER_SUBCHUNK, pos.getZ() + z * Config.METERS_PER_SUBCHUNK);
 							buffers.verticesFloatCount = MarchingCubes.writeLocalVertices(blockPos, x, y, z,
 									buffers.weights, buffers.vertices, buffers.verticesFloatCount,
@@ -320,6 +321,7 @@ public class Chunk implements Frustrumable {
 		chunkIntIndices = BufferUtils.createByteBuffer(buffers.indicesIntCount * 4);
 
 		if (Config.CHUNK_REUSE_VERTS) {
+			Vec3 normal = new Vec3(0,0,0);
 			for (int i = 0; i < buffers.verticesFloatCount; i += 3) {
 				float vx = buffers.vertices[i + 0];
 				float vy = buffers.vertices[i + 1];
@@ -329,11 +331,10 @@ public class Chunk implements Frustrumable {
 				chunkVertices.putFloat(vy);
 				chunkVertices.putFloat(vz);
 
-				Vec3 normal;
 				if (modifyComplete != null && modifyNormals.containsKey(i)) {
 					normal = modifyNormals.get(i).normalize();
 				} else {
-					normal = TerrainGenerator.getNormal(vx, vy, vz);
+					TerrainGenerator.getNormal(vx, vy, vz, normal);
 				}
 
 				chunkNormals.putFloat(normal.getX());
@@ -345,6 +346,7 @@ public class Chunk implements Frustrumable {
 				chunkIntIndices.putInt(buffers.indices[i] / 3);
 			}
 		} else {
+			Vec3 normal = new Vec3(0,0,0);
 			for (int i = 0; i < buffers.indicesIntCount; i++) {
 				Vec3 vert = triangles.get(i);
 				float vx = vert.getX();
@@ -355,7 +357,7 @@ public class Chunk implements Frustrumable {
 				chunkVertices.putFloat(vy);
 				chunkVertices.putFloat(vz);
 
-				Vec3 normal = TerrainGenerator.getNormal(vx, vy, vz);
+				TerrainGenerator.getNormal(vx, vy, vz, normal);
 
 				chunkNormals.putFloat(normal.getX());
 				chunkNormals.putFloat(normal.getY());
