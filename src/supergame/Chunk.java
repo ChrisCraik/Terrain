@@ -95,24 +95,17 @@ public class Chunk implements Frustrumable {
 		if (empty)
 			return false;
 
-		if (display && cam != null && cam.frustrumTest(this) == Inclusion.OUTSIDE)
+		if (display && cam.frustrumTest(this) == Inclusion.OUTSIDE)
 			return false;
 
 		if (displayList >= 0) {
-			if (display && cam != null) {
+			if (display) {
 				GL11.glCallList(displayList);
 			}
 		} else if (allowBruteForceRender) {
 			if (Config.CHUNK_PHYSICS) {
 				// register the terrain chunk with the physics engine
 				Game.collision.physics.registerMesh(meshId);
-			}
-
-			if (cam == null) {
-				// Just for benchmarking
-				// TODO: clean up
-				displayList = 1;
-				return false;
 			}
 
 			displayList = GL11.glGenLists(1);
