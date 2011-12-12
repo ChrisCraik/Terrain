@@ -196,12 +196,12 @@ public class JavaPhysics implements Physics {
 
 		Vector3f direction = new Vector3f(x,y,z);
 		if (character.onGround()) {
-
-		}
 			direction.scale(strengthIfJumping);
+		}
 		character.setWalkDirection(direction);
-		if (character.onGround() && jump)
+		if (character.onGround() && jump) {
 			character.jump();
+		}
 	}
 
 	@Override

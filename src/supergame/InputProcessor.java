@@ -102,7 +102,7 @@ public class InputProcessor {
 		while (Keyboard.next()) {
 			if (Keyboard.getEventKeyState()) {
 				if (Keyboard.getEventKey() == Keyboard.KEY_BACK
-						&& !mCurrent.isEmpty()) {
+						&& mCurrent != null && !mCurrent.isEmpty()) {
 					mCurrent = mCurrent.substring(0, mCurrent.length() - 1);
 				} else if (Keyboard.getEventKey() == Keyboard.KEY_RETURN) {
 					if (mName == null) {

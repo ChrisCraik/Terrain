@@ -193,13 +193,15 @@ JNIEXPORT jlong JNICALL Java_supergame_physics_NativePhysics_nativeCreateCharact
 }
 
 JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeControlCharacter
-  (JNIEnv *env, jobject obj, jlong charPtr, jboolean applyIfJumping, jboolean jump, jfloat x, jfloat y, jfloat z)
+  (JNIEnv *env, jobject obj, jlong charPtr, jfloat strengthIfJumping, jboolean jump, jfloat x, jfloat y, jfloat z)
 {
 	fprintf(stderr,"controlling character, heading %f %f %f\n", x, y, z);
 	NativeCharacter* character = (NativeCharacter*) charPtr;
 
-	if (character->m_character.onGround() || applyIfJumping || true)
-		character->m_character.setWalkDirection(btVector3(x,y,z));
+	btVector3 walkDir(x, y, z);
+	if (!character->m_character.onGround())
+		walkDir *= strengthIfJumping;
+	character->m_character.setWalkDirection(walkDir);
 	if (character->m_character.onGround() && jump)
 		character->m_character.jump();
 }
