@@ -16,13 +16,12 @@
 #include "supergame_physics_NativePhysics.h"
 
 #define CHAR_GRAVITY 10.0f
-#define JUMP_SPEED 50
+#define JUMP_SPEED 10
 
 class NativePhysics
 {
 public:
 	NativePhysics();
-	//btRigidBody* addRigidBody(btScalar mass, const btTransform& startTransform, btCollisionShape* shape);
 	btDefaultCollisionConfiguration m_collisionConfiguration;
 	btCollisionDispatcher m_dispatcher;
 	btAxisSweep3 m_broadphase;
@@ -52,7 +51,7 @@ class NativeChunk
 public:
 	NativeChunk(int totalTriangles, void* indices, int indexStride,
 			int totalVertices, void* vertices, int vertexStride,
-			btMotionState &motion, btVector3 &inertia, btVector3 &aabbMin,
+			btVector3 &inertia, btVector3 &aabbMin,
 			btVector3 &aabbMax);
 
 	btTriangleIndexVertexArray m_indexVertexArrays;
@@ -63,11 +62,10 @@ public:
 
 NativeChunk::NativeChunk(int totalTriangles, void* indices, int indexStride,
 		int totalVertices, void* vertices, int vertexStride,
-		btMotionState &motion, btVector3 &inertia, btVector3 &aabbMin,
-		btVector3 &aabbMax) :
+		btVector3 &inertia, btVector3 &aabbMin, btVector3 &aabbMax) :
 		m_indexVertexArrays(totalTriangles, (int*) indices, indexStride, totalVertices, (btScalar*) vertices, vertexStride),
 		m_shape(&m_indexVertexArrays, true, aabbMin, aabbMax),
-		m_info((btScalar) 0, &motion, &m_shape, inertia),
+		m_info((btScalar) 0, 0, &m_shape, inertia),
 		m_body(m_info)
 {
 }
@@ -80,10 +78,16 @@ public:
 			m_character(&m_ghostObject, &m_shape, btScalar(0.5))
 	{
 		m_ghostObject.setWorldTransform(transform);
+		//physics.m_broadphase.getOverlappingPairCache()->setInternalGhostPairCallback(new btGhostPairCallback());
+
 		m_ghostObject.setCollisionShape(&m_shape);
+		m_ghostObject.setCollisionFlags (btCollisionObject::CF_CHARACTER_OBJECT);
 		m_character.setGravity(CHAR_GRAVITY);
 		m_character.setJumpSpeed(JUMP_SPEED);
-		physics.m_dynamicsWorld.addCollisionObject(&m_ghostObject);
+		//physics.m_dynamicsWorld.addCollisionObject(&m_ghostObject);
+		physics.m_dynamicsWorld.addCollisionObject(&m_ghostObject,
+				btBroadphaseProxy::CharacterFilter,
+				btBroadphaseProxy::StaticFilter|btBroadphaseProxy::DefaultFilter);
 		physics.m_dynamicsWorld.addAction(&m_character);
 	}
 	btPairCachingGhostObject m_ghostObject;
@@ -98,7 +102,7 @@ public:
 			btMotionState &motion, btVector3 &inertia) :
 				m_shape(btVector3(size,size,size)),
 				m_state(transform),
-				m_info(mass, &m_state, &m_shape, inertia),
+				m_info(mass, mass == 0.f ? 0 : &m_state, &m_shape, inertia),
 				m_body(m_info)
 	{
 		fprintf(stderr, "mass is %f\n", mass);
@@ -150,7 +154,7 @@ JNIEXPORT jlong JNICALL Java_supergame_physics_NativePhysics_nativeCreateMesh(
 			3*indexScalarSize, 3*4);
 
 	return (jlong) new NativeChunk(tris, indices, 3 * indexScalarSize, verts,
-			vertices, 3 * 4, motion, inertia, aabbMin, aabbMax);
+			vertices, 3 * 4, inertia, aabbMin, aabbMax);
 }
 
 JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeRegisterMesh(
@@ -164,7 +168,6 @@ JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeRegisterMesh(
 				"WARNING: native layer passed null ptr for registry.\n");
 		return;
 	}
-	//collisionShapes.add(body.getCollisionShape());
 	physics.m_dynamicsWorld.addRigidBody(&(chunk->m_body));
 }
 
