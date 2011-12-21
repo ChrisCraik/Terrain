@@ -16,7 +16,8 @@
 #include "supergame_physics_NativePhysics.h"
 
 #define CHAR_GRAVITY 10.0f
-#define JUMP_SPEED 10
+#define CHAR_JUMP_SPEED 10
+#define CHAR_MAX_SLOPE 2 //Radians
 
 class NativePhysics
 {
@@ -74,16 +75,17 @@ class NativeCharacter
 {
 public:
 	NativeCharacter(btTransform &transform) :
-			m_shape(1.0, 1.5),
+			m_shape(1, 1.5),
 			m_character(&m_ghostObject, &m_shape, btScalar(0.5))
 	{
 		m_ghostObject.setWorldTransform(transform);
 		//physics.m_broadphase.getOverlappingPairCache()->setInternalGhostPairCallback(new btGhostPairCallback());
 
 		m_ghostObject.setCollisionShape(&m_shape);
-		m_ghostObject.setCollisionFlags (btCollisionObject::CF_CHARACTER_OBJECT);
+		m_ghostObject.setCollisionFlags(btCollisionObject::CF_CHARACTER_OBJECT);
 		m_character.setGravity(CHAR_GRAVITY);
-		m_character.setJumpSpeed(JUMP_SPEED);
+		m_character.setJumpSpeed(CHAR_JUMP_SPEED);
+                m_character.setMaxSlope(CHAR_MAX_SLOPE);
 		//physics.m_dynamicsWorld.addCollisionObject(&m_ghostObject);
 		physics.m_dynamicsWorld.addCollisionObject(&m_ghostObject,
 				btBroadphaseProxy::CharacterFilter,
@@ -93,6 +95,8 @@ public:
 	btPairCachingGhostObject m_ghostObject;
 	btCapsuleShape m_shape;
 	btKinematicCharacterController m_character;
+
+	bool m_onGroundLastFrame;
 };
 
 class NativeCube
@@ -201,12 +205,24 @@ JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeControlCharact
 	fprintf(stderr,"controlling character, heading %f %f %f\n", x, y, z);
 	NativeCharacter* character = (NativeCharacter*) charPtr;
 
+        bool onGround = character->m_character.onGround();
 	btVector3 walkDir(x, y, z);
-	if (!character->m_character.onGround())
+	if (!onGround)
 		walkDir *= strengthIfJumping;
 	character->m_character.setWalkDirection(walkDir);
-	if (character->m_character.onGround() && jump)
+	if (onGround && jump) {
+		character->m_character.setJumpSpeed(CHAR_JUMP_SPEED);
 		character->m_character.jump();
+	}
+
+/*
+        // NOTE: the below is a workaround for characters falling immediatly at max speed
+        if (!onGround && character->m_onGroundLastFrame) {
+            character->m_character.setJumpSpeed(CHAR_JUMP_SPEED);
+            character->m_character.jump();
+        }
+	character->m_onGroundLastFrame = character->m_character.onGround() && !jump;
+*/
 }
 
 JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeQueryCharacterPosition
