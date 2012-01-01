@@ -59,7 +59,7 @@ public class InputProcessor {
 		mIgnoredKeys.add(Keyboard.KEY_END);
 	}
 
-	private final String DEFAULT_SERVER = "localhost:27000";
+	private final String DEFAULT_SERVER = "me";//"localhost:27000";
 
 	private GameEndPoint getEndPoint() {
 		int udp = 27000, tcp = 27000;

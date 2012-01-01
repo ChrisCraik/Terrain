@@ -38,7 +38,7 @@ public class Config {
 
 	//PHYSICS
 	public static float PHYSICS_GRAVITY = -10;
-	public static final boolean PHYSICS_USE_NATIVE = false;
+	public static final boolean PHYSICS_USE_NATIVE = true;
 
 	public static void setOption(String fieldname, String value) {
 		try {
