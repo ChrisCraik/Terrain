@@ -1,4 +1,17 @@
+
 package supergame.network;
+
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryonet.Client;
+import com.esotericsoftware.kryonet.Connection;
+import com.esotericsoftware.kryonet.EndPoint;
+import com.esotericsoftware.kryonet.Listener;
+
+import org.lwjgl.BufferUtils;
+
+import supergame.network.Structs.Entity;
+import supergame.network.Structs.EntityData;
+import supergame.network.Structs.State;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -10,146 +23,135 @@ import java.util.HashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import org.lwjgl.BufferUtils;
-
-import supergame.network.Structs.Entity;
-import supergame.network.Structs.EntityData;
-import supergame.network.Structs.State;
-
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryonet.Client;
-import com.esotericsoftware.kryonet.Connection;
-import com.esotericsoftware.kryonet.EndPoint;
-import com.esotericsoftware.kryonet.Listener;
-
 public abstract class GameEndPoint {
-	public static class TransmitPair {
-		public TransmitPair(Connection connection, Object object) {
-			this.connection = connection;
-			this.object = object;
-		}
-		public Connection connection;
-		public Object object;
-	}
+    public static class TransmitPair {
+        public TransmitPair(Connection connection, Object object) {
+            this.connection = connection;
+            this.object = object;
+        }
 
-	protected final HashMap<Integer, Entity> mEntityMap = new HashMap<Integer, Entity>();
-	protected final EndPoint mEndPoint;
-	protected final WritableByteChannel mWriter;
-	protected final ReadableByteChannel mReader;
-	protected final Kryo mKryo;
-	private final LinkedBlockingQueue<TransmitPair> mQueue = new LinkedBlockingQueue<TransmitPair>();
-	private double mMostRecentFrameTime = 0;
+        public Connection connection;
+        public Object object;
+    }
 
-	// TODO: consider non-native ordering, so files can be shared
-	private final ByteBuffer mBuffer = BufferUtils.createByteBuffer(4096);
+    protected final HashMap<Integer, Entity> mEntityMap = new HashMap<Integer, Entity>();
+    protected final EndPoint mEndPoint;
+    protected final WritableByteChannel mWriter;
+    protected final ReadableByteChannel mReader;
+    protected final Kryo mKryo;
+    private final LinkedBlockingQueue<TransmitPair> mQueue = new LinkedBlockingQueue<TransmitPair>();
+    private double mMostRecentFrameTime = 0;
 
-	/**
-	 * Maps incoming network data types to the associated network entity
-	 * classes. If a new object update of type K shows up, the client should
-	 * create an object of type mPacketToClassMap.get(K)
-	 */
-	protected final HashMap<Class<? extends EntityData>, Class<? extends Entity>> mPacketToClassMap = new HashMap<Class<? extends EntityData>, Class<? extends Entity>>();
+    // TODO: consider non-native ordering, so files can be shared
+    private final ByteBuffer mBuffer = BufferUtils.createByteBuffer(4096);
 
-	public GameEndPoint(EndPoint endPoint, WritableByteChannel writer, ReadableByteChannel reader) {
-		mEndPoint = endPoint;
-		mWriter = writer;
-		mReader = reader;
+    /**
+     * Maps incoming network data types to the associated network entity
+     * classes. If a new object update of type K shows up, the client should
+     * create an object of type mPacketToClassMap.get(K)
+     */
+    protected final HashMap<Class<? extends EntityData>, Class<? extends Entity>> mPacketToClassMap = new HashMap<Class<? extends EntityData>, Class<? extends Entity>>();
 
-		if (mEndPoint == null) {
-			mKryo = new Kryo();
-		} else {
-			mKryo = endPoint.getKryo();
-			mEndPoint.addListener(new Listener() {
-				@Override
-				public void received(Connection connection, Object object) {
-					TransmitPair pair = new TransmitPair(connection, object);
-					mQueue.add(pair);
+    public GameEndPoint(EndPoint endPoint, WritableByteChannel writer, ReadableByteChannel reader) {
+        mEndPoint = endPoint;
+        mWriter = writer;
+        mReader = reader;
 
-					if (mWriter != null) {
-						mBuffer.clear();
+        if (mEndPoint == null) {
+            mKryo = new Kryo();
+        } else {
+            mKryo = endPoint.getKryo();
+            mEndPoint.addListener(new Listener() {
+                @Override
+                public void received(Connection connection, Object object) {
+                    TransmitPair pair = new TransmitPair(connection, object);
+                    mQueue.add(pair);
 
-						// write contents of packet to buffer
-						mBuffer.position(12);
-						mKryo.writeObject(mBuffer, object);
+                    if (mWriter != null) {
+                        mBuffer.clear();
 
-						// write position to head of buffer
-						int objectSize = mBuffer.position() - 12;
-						mBuffer.asDoubleBuffer().put(0, mMostRecentFrameTime);
-						mBuffer.asIntBuffer().put(2, objectSize);
-						try {
-							mWriter.write(mBuffer);
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-					}
-				}
-			});
-		}
+                        // write contents of packet to buffer
+                        mBuffer.position(12);
+                        mKryo.writeObject(mBuffer, object);
 
-		mKryo.register(float[].class);
-		mKryo.register(HashMap.class);
-		mKryo.register(Structs.EntityData.class);
+                        // write position to head of buffer
+                        int objectSize = mBuffer.position() - 12;
+                        mBuffer.asDoubleBuffer().put(0, mMostRecentFrameTime);
+                        mBuffer.asIntBuffer().put(2, objectSize);
+                        try {
+                            mWriter.write(mBuffer);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            });
+        }
 
-		//used for saving
-		mKryo.register(TransmitPair.class);
-		mKryo.register(Connection.class);
-		mKryo.register(Client.class);
-		mKryo.register(Inet4Address.class);
+        mKryo.register(float[].class);
+        mKryo.register(HashMap.class);
+        mKryo.register(Structs.EntityData.class);
 
-		System.out.println("");
+        // used for saving
+        mKryo.register(TransmitPair.class);
+        mKryo.register(Connection.class);
+        mKryo.register(Client.class);
+        mKryo.register(Inet4Address.class);
 
-		// TODO: compress the State class
-		mKryo.register(State.class);
-	}
+        System.out.println("");
 
-	public void registerEntityPacket(Class<? extends EntityData> dataClass,
-			Class<? extends Entity> entityClass) {
-		mKryo.register(dataClass);
-		mPacketToClassMap.put(dataClass, entityClass);
-	}
+        // TODO: compress the State class
+        mKryo.register(State.class);
+    }
 
-	public Collection<Entity> getEntities() {
-		return mEntityMap.values();
-	}
+    public void registerEntityPacket(Class<? extends EntityData> dataClass,
+            Class<? extends Entity> entityClass) {
+        mKryo.register(dataClass);
+        mPacketToClassMap.put(dataClass, entityClass);
+    }
 
-	/**
-	 * Client/Server-side registration of network entities
-	 *
-	 * @param entity
-	 * @param id
-	 */
-	public <K extends Entity> void registerEntity(K entity, int id) {
-		assert (!mEntityMap.containsKey(id));
-		mEntityMap.put(id, entity);
-	}
+    public Collection<Entity> getEntities() {
+        return mEntityMap.values();
+    }
 
-	public void close() {
-		if (mEndPoint != null) {
-			mEndPoint.stop();
-			mEndPoint.close();
-		}
-		try {
-			if (mReader != null) {
-				mReader.close();
-			}
-			if (mWriter != null) {
-				mWriter.close();
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
+    /**
+     * Client/Server-side registration of network entities
+     *
+     * @param entity
+     * @param id
+     */
+    public <K extends Entity> void registerEntity(K entity, int id) {
+        assert (!mEntityMap.containsKey(id));
+        mEntityMap.put(id, entity);
+    }
 
-	public TransmitPair pollHard(double frameTime, int timeInMS) {
-		mMostRecentFrameTime = frameTime;
+    public void close() {
+        if (mEndPoint != null) {
+            mEndPoint.stop();
+            mEndPoint.close();
+        }
+        try {
+            if (mReader != null) {
+                mReader.close();
+            }
+            if (mWriter != null) {
+                mWriter.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
-		// TODO: read objects from file! hooray!
+    public TransmitPair pollHard(double frameTime, int timeInMS) {
+        mMostRecentFrameTime = frameTime;
 
-		try {
-			return mQueue.poll(timeInMS, TimeUnit.MILLISECONDS);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
+        // TODO: read objects from file! hooray!
+
+        try {
+            return mQueue.poll(timeInMS, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 }

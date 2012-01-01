@@ -1,10 +1,5 @@
+
 package supergame.physics;
-
-import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Map;
-
-import javax.vecmath.Vector3f;
 
 import com.bulletphysics.collision.broadphase.AxisSweep3;
 import com.bulletphysics.collision.dispatch.CollisionConfiguration;
@@ -28,237 +23,255 @@ import com.bulletphysics.dynamics.constraintsolver.SequentialImpulseConstraintSo
 import com.bulletphysics.linearmath.DefaultMotionState;
 import com.bulletphysics.linearmath.Transform;
 
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.vecmath.Vector3f;
+
 public class JavaPhysics implements Physics {
 
-	// create 125 (5x5x5) dynamic object
-	private static final int ARRAY_SIZE_X = 3;
-	private static final int ARRAY_SIZE_Y = 3;
-	private static final int ARRAY_SIZE_Z = 3;
+    // create 125 (5x5x5) dynamic object
+    private static final int ARRAY_SIZE_X = 3;
+    private static final int ARRAY_SIZE_Y = 3;
+    private static final int ARRAY_SIZE_Z = 3;
 
-	private static final int PLAYER_GRAVITY = 10;
-	private static final int PLAYER_JUMP_SPEED = 10;
+    private static final int PLAYER_GRAVITY = 10;
+    private static final int PLAYER_JUMP_SPEED = 10;
 
-	// maximum number of objects (and allow user to shoot additional boxes)
-	private static final int MAX_PROXIES = (ARRAY_SIZE_X * ARRAY_SIZE_Y * ARRAY_SIZE_Z + 1024 * 4);
+    // maximum number of objects (and allow user to shoot additional boxes)
+    private static final int MAX_PROXIES = (ARRAY_SIZE_X * ARRAY_SIZE_Y * ARRAY_SIZE_Z + 1024 * 4);
 
-	private DiscreteDynamicsWorld dynamicsWorld;
+    private DiscreteDynamicsWorld mDynamicsWorld;
 
-	private class CharPhysics {
-		public CharPhysics(KinematicCharacterController controller, PairCachingGhostObject ghostObject) {
-			mController = controller;
-			mGhostObject = ghostObject;
-			mMoveDirection = new Vector3f(); // TODO: use this for smoother air control
-		}
-		public KinematicCharacterController mController;
-		public PairCachingGhostObject mGhostObject;
-		public Vector3f mMoveDirection;
-	}
+    private final Map<Long, RigidBody> mRigidBodyMap = new HashMap<Long, RigidBody>();
+    private long mNextRigidBodyId = 1;
+    private final Map<Long, CharPhysics> mCharacterMap = new HashMap<Long, CharPhysics>();
+    private long mNextCharacterId = 1;
 
-	private final Map<Long, RigidBody> rigidBodyMap = new HashMap<Long, RigidBody>();
-	private long nextRigidBodyId = 1;
-	private final Map<Long, CharPhysics> characterMap = new HashMap<Long, CharPhysics>();
-	private long nextCharacterId = 1;
+    private final float mMatrixArray[] = new float[16];
 
-	private final float matrixArray[] = new float[16];
+    private class CharPhysics {
+        public CharPhysics(KinematicCharacterController controller,
+                PairCachingGhostObject ghostObject) {
+            mController = controller;
+            mGhostObject = ghostObject;
+            mMoveDirection = new Vector3f(); // TODO: use this for smoother air
+                                             // control
+        }
 
-	@Override
-	public void initialize(float gravity, float chunkSize) {
-		// collision configuration contains default setup for memory, collision
-		// setup. Advanced users can create their own configuration.
-		CollisionConfiguration collisionConfiguration = new DefaultCollisionConfiguration();
+        public KinematicCharacterController mController;
+        public PairCachingGhostObject mGhostObject;
+        public Vector3f mMoveDirection;
+    }
 
-		// use the default collision dispatcher. For parallel processing you
-		// can use a different dispatcher (see Extras/BulletMultiThreaded)
-		CollisionDispatcher dispatcher = new CollisionDispatcher(collisionConfiguration);
+    @Override
+    public void initialize(float gravity, float chunkSize) {
+        // collision configuration contains default setup for memory, collision
+        // setup. Advanced users can create their own configuration.
+        CollisionConfiguration collisionConfiguration = new DefaultCollisionConfiguration();
 
-		// the maximum size of the collision world. Make sure objects stay
-		// within these boundaries
-		// Don't make the world AABB size too large, it will harm simulation
-		// quality and performance
-		Vector3f worldAabbMin = new Vector3f(-10000, -10000, -10000);
-		Vector3f worldAabbMax = new Vector3f(10000, 10000, 10000);
-		AxisSweep3 overlappingPairCache = new AxisSweep3(worldAabbMin, worldAabbMax, MAX_PROXIES);
-		overlappingPairCache.getOverlappingPairCache().setInternalGhostPairCallback(new GhostPairCallback());
+        // use the default collision dispatcher. For parallel processing you
+        // can use a different dispatcher (see Extras/BulletMultiThreaded)
+        CollisionDispatcher dispatcher = new CollisionDispatcher(collisionConfiguration);
 
-		// the default constraint solver. For parallel processing you can use a
-		// different solver (see Extras/BulletMultiThreaded)
-		SequentialImpulseConstraintSolver solver = new SequentialImpulseConstraintSolver();
+        // the maximum size of the collision world. Make sure objects stay
+        // within these boundaries
+        // Don't make the world AABB size too large, it will harm simulation
+        // quality and performance
+        Vector3f worldAabbMin = new Vector3f(-10000, -10000, -10000);
+        Vector3f worldAabbMax = new Vector3f(10000, 10000, 10000);
+        AxisSweep3 overlappingPairCache = new AxisSweep3(worldAabbMin, worldAabbMax, MAX_PROXIES);
+        overlappingPairCache.getOverlappingPairCache().setInternalGhostPairCallback(
+                new GhostPairCallback());
 
-		dynamicsWorld = new DiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
+        // the default constraint solver. For parallel processing you can use a
+        // different solver (see Extras/BulletMultiThreaded)
+        SequentialImpulseConstraintSolver solver = new SequentialImpulseConstraintSolver();
 
-		dynamicsWorld.setGravity(new Vector3f(0, gravity, 0));
+        mDynamicsWorld = new DiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver,
+                collisionConfiguration);
 
-	}
+        mDynamicsWorld.setGravity(new Vector3f(0, gravity, 0));
 
-	@Override
-	public void stepSimulation(float timeStep, int maxSubSteps) {
-		dynamicsWorld.stepSimulation(timeStep, maxSubSteps);
-	}
+    }
 
-	@Override
-	public long createMesh(ByteBuffer vertices, int indexBytes, ByteBuffer indices) {
-		vertices.rewind();
-		indices.rewind();
+    @Override
+    public void stepSimulation(float timeStep, int maxSubSteps) {
+        mDynamicsWorld.stepSimulation(timeStep, maxSubSteps);
+    }
 
-		TriangleIndexVertexArray indexVertexArrays;
-		indexVertexArrays = new TriangleIndexVertexArray();
+    @Override
+    public long createMesh(ByteBuffer vertices, int indexBytes, ByteBuffer indices) {
+        vertices.rewind();
+        indices.rewind();
 
-		IndexedMesh mesh = new IndexedMesh();
-		mesh.indexType = (indexBytes == 2) ? ScalarType.SHORT : ScalarType.INTEGER;
-		mesh.numTriangles = indices.capacity() / (indexBytes * 3);
-		mesh.numVertices = vertices.capacity() / (4 * 3);
-		mesh.triangleIndexBase = indices;
-		mesh.triangleIndexStride = indexBytes * 3;
-		mesh.vertexBase = vertices;
-		mesh.vertexStride = 4 * 3;
+        TriangleIndexVertexArray indexVertexArrays;
+        indexVertexArrays = new TriangleIndexVertexArray();
+
+        IndexedMesh mesh = new IndexedMesh();
+        mesh.indexType = (indexBytes == 2) ? ScalarType.SHORT : ScalarType.INTEGER;
+        mesh.numTriangles = indices.capacity() / (indexBytes * 3);
+        mesh.numVertices = vertices.capacity() / (4 * 3);
+        mesh.triangleIndexBase = indices;
+        mesh.triangleIndexStride = indexBytes * 3;
+        mesh.vertexBase = vertices;
+        mesh.vertexStride = 4 * 3;
 
 /*
-		System.out.printf("coordBytes %d, numTriangles %d, numVert %d, triangleIndexStride %d, vertexStride %d\n",
-				indexBytes, mesh.numTriangles, mesh.numVertices,
-				mesh.triangleIndexStride, mesh.vertexStride);
+        System.out.printf("coordBytes %d, numTriangles %d, numVert %d, triangleIndexStride %d, vertexStride %d\n",
+                indexBytes, mesh.numTriangles, mesh.numVertices,
+                mesh.triangleIndexStride, mesh.vertexStride);
 
-		System.out.printf("indices cap %d, indices lim %d,    vert cap %d, vert lim %d\n",
-				indices.capacity(), indices.limit(),
-				vertices.capacity(), vertices.limit());
+        System.out.printf("indices cap %d, indices lim %d,    vert cap %d, vert lim %d\n",
+                indices.capacity(), indices.limit(),
+                vertices.capacity(), vertices.limit());
 */
-		indexVertexArrays.addIndexedMesh(mesh, (indexBytes == 2) ? ScalarType.SHORT : ScalarType.INTEGER);
+        indexVertexArrays.addIndexedMesh(mesh, (indexBytes == 2) ? ScalarType.SHORT
+                : ScalarType.INTEGER);
 
-		boolean useQuantizedAabbCompression = true;
-		BvhTriangleMeshShape trimeshShape = new BvhTriangleMeshShape(indexVertexArrays, useQuantizedAabbCompression);
+        boolean useQuantizedAabbCompression = true;
+        BvhTriangleMeshShape trimeshShape = new BvhTriangleMeshShape(indexVertexArrays,
+                useQuantizedAabbCompression);
 
-		Transform groundTransform = new Transform();
-		groundTransform.setIdentity();
-		groundTransform.origin.set(new Vector3f(0, 0, 0));
+        Transform groundTransform = new Transform();
+        groundTransform.setIdentity();
+        groundTransform.origin.set(new Vector3f(0, 0, 0));
 
-		float mass = 0f;
-		Vector3f localInertia = new Vector3f(0, 0, 0);
+        float mass = 0f;
+        Vector3f localInertia = new Vector3f(0, 0, 0);
 
-		// using motionstate is recommended, it provides interpolation
-		// capabilities, and only synchronizes 'active' objects
-		DefaultMotionState myMotionState = new DefaultMotionState(groundTransform);
-		RigidBodyConstructionInfo rbInfo = new RigidBodyConstructionInfo(mass, myMotionState, trimeshShape,
-				localInertia);
+        // using motionstate is recommended, it provides interpolation
+        // capabilities, and only synchronizes 'active' objects
+        DefaultMotionState myMotionState = new DefaultMotionState(groundTransform);
+        RigidBodyConstructionInfo rbInfo = new RigidBodyConstructionInfo(mass, myMotionState,
+                trimeshShape,
+                localInertia);
 
-		// store the new rigid body in a map so that it can be accessed with a unique long id
-		long newRigidBodyId = nextRigidBodyId++;
-		rigidBodyMap.put(newRigidBodyId, new RigidBody(rbInfo));
-		return newRigidBodyId;
-	}
+        // store the new rigid body in a map so that it can be accessed with a
+        // unique long id
+        long newRigidBodyId = mNextRigidBodyId++;
+        mRigidBodyMap.put(newRigidBodyId, new RigidBody(rbInfo));
+        return newRigidBodyId;
+    }
 
-	@Override
-	public void registerMesh(long meshId) {
-		if (0 == meshId)
-			return;
-		RigidBody body = rigidBodyMap.get(meshId);
-		dynamicsWorld.addRigidBody(body);
-	}
+    @Override
+    public void registerMesh(long meshId) {
+        if (0 == meshId)
+            return;
+        RigidBody body = mRigidBodyMap.get(meshId);
+        mDynamicsWorld.addRigidBody(body);
+    }
 
-	@Override
-	public void unregisterMesh(long meshId) {
-		if (0 == meshId)
-			return;
-		RigidBody body = rigidBodyMap.remove(meshId);
-		dynamicsWorld.removeRigidBody(body);
-	}
+    @Override
+    public void unregisterMesh(long meshId) {
+        if (0 == meshId)
+            return;
+        RigidBody body = mRigidBodyMap.remove(meshId);
+        mDynamicsWorld.removeRigidBody(body);
+    }
 
-	@Override
-	public long createCharacter(float x, float y, float z) {
+    @Override
+    public long createCharacter(float x, float y, float z) {
 
-		Transform startTransform = new Transform();
-		startTransform.setIdentity();
-		startTransform.origin.set(x,y,z);
+        Transform startTransform = new Transform();
+        startTransform.setIdentity();
+        startTransform.origin.set(x, y, z);
 
-		PairCachingGhostObject ghostObject = new PairCachingGhostObject();
-		ghostObject.setWorldTransform(startTransform);
-		ConvexShape ghostShape = new CapsuleShape(1f, 1.5f);
-		ghostObject.setCollisionShape(ghostShape);
-		//ghostObject.setCollisionFlags(CollisionFlags.CHARACTER_OBJECT);
+        PairCachingGhostObject ghostObject = new PairCachingGhostObject();
+        ghostObject.setWorldTransform(startTransform);
+        ConvexShape ghostShape = new CapsuleShape(1f, 1.5f);
+        ghostObject.setCollisionShape(ghostShape);
+        // ghostObject.setCollisionFlags(CollisionFlags.CHARACTER_OBJECT);
 
-		float stepHeight = 0.5f;
-		KinematicCharacterController character = new KinematicCharacterController(ghostObject, ghostShape,
-				stepHeight);
-		character.setGravity(PLAYER_GRAVITY);
-		character.setJumpSpeed(PLAYER_JUMP_SPEED);
+        float stepHeight = 0.5f;
+        KinematicCharacterController character = new KinematicCharacterController(ghostObject,
+                ghostShape,
+                stepHeight);
+        character.setGravity(PLAYER_GRAVITY);
+        character.setJumpSpeed(PLAYER_JUMP_SPEED);
 
-		dynamicsWorld.addCollisionObject(ghostObject);
-		dynamicsWorld.addAction(character);
+        mDynamicsWorld.addCollisionObject(ghostObject);
+        mDynamicsWorld.addAction(character);
 
-		long newCharacterId = nextCharacterId++;
+        long newCharacterId = mNextCharacterId++;
 
-		characterMap.put(newCharacterId, new CharPhysics(character, ghostObject));
-		return newCharacterId;
-	}
+        mCharacterMap.put(newCharacterId, new CharPhysics(character, ghostObject));
+        return newCharacterId;
+    }
 
-	@Override
-	public void controlCharacter(long characterId, float strengthIfJumping, boolean jump,
-			float x, float y, float z) {
-		KinematicCharacterController character = characterMap.get(characterId).mController;
+    @Override
+    public void controlCharacter(long characterId, float strengthIfJumping, boolean jump,
+            float x, float y, float z) {
+        KinematicCharacterController character = mCharacterMap.get(characterId).mController;
 
-		Vector3f direction = new Vector3f(x,y,z);
-		if (character.onGround()) {
-			direction.scale(strengthIfJumping);
-		}
-		character.setWalkDirection(direction);
-		if (character.onGround() && jump) {
-			character.jump();
-		}
-	}
+        Vector3f direction = new Vector3f(x, y, z);
+        if (character.onGround()) {
+            direction.scale(strengthIfJumping);
+        }
+        character.setWalkDirection(direction);
+        if (character.onGround() && jump) {
+            character.jump();
+        }
+    }
 
-	@Override
-	public void queryCharacterPosition(long characterId, Vector3f position) {
-		PairCachingGhostObject ghostObject = characterMap.get(characterId).mGhostObject;
-		Transform world = new Transform();
-		ghostObject.getWorldTransform(world);
+    @Override
+    public void queryCharacterPosition(long characterId, Vector3f position) {
+        PairCachingGhostObject ghostObject = mCharacterMap.get(characterId).mGhostObject;
+        Transform world = new Transform();
+        ghostObject.getWorldTransform(world);
 
-		//System.out.println("Querying character" + characterId + world.origin);
+        // System.out.println("Querying character" + characterId + world.origin);
 
-		position.x = world.origin.x;
-		position.y = world.origin.y;
-		position.z = world.origin.z;
-		//world.getOpenGLMatrix(matrixArray);
-		//matrix.asFloatBuffer().put(matrixArray).flip();
-	}
+        position.x = world.origin.x;
+        position.y = world.origin.y;
+        position.z = world.origin.z;
+        // world.getOpenGLMatrix(matrixArray);
+        // matrix.asFloatBuffer().put(matrixArray).flip();
+    }
 
-	private static final Vector3f inertia = new Vector3f(0,0,0);
-	private final Map<Float, CollisionShape> boxShapes = new HashMap<Float, CollisionShape>();
+    private static final Vector3f inertia = new Vector3f(0, 0, 0);
+    private final Map<Float, CollisionShape> boxShapes = new HashMap<Float, CollisionShape>();
 
-	@Override
-	public long createCube(float size, float mass, float x, float y, float z) {
-		//System.out.println("Creating cube:" + x + " " + y  + " " + z);
-		Transform startTransform = new Transform();
-		startTransform.setIdentity();
-		startTransform.origin.set(x,y,z);
+    @Override
+    public long createCube(float size, float mass, float x, float y, float z) {
+        // System.out.println("Creating cube:" + x + " " + y + " " + z);
+        Transform startTransform = new Transform();
+        startTransform.setIdentity();
+        startTransform.origin.set(x, y, z);
 
-		//re-use the same collision shape when possible for performance
-		if (!boxShapes.containsKey(size))
-			boxShapes.put(size, new BoxShape(new Vector3f(size, size, size)));
+        // re-use the same collision shape when possible for performance
+        if (!boxShapes.containsKey(size))
+            boxShapes.put(size, new BoxShape(new Vector3f(size, size, size)));
 
-		// using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
-		DefaultMotionState myMotionState = new DefaultMotionState(startTransform);
-		RigidBodyConstructionInfo rbInfo = new RigidBodyConstructionInfo(mass, myMotionState, boxShapes.get(size), inertia);
-		RigidBody body = new RigidBody(rbInfo);
-		//body.setActivationState(RigidBody.ISLAND_SLEEPING);
+        // using motionstate is recommended, it provides interpolation
+        // capabilities, and only synchronizes 'active' objects
+        DefaultMotionState myMotionState = new DefaultMotionState(startTransform);
+        RigidBodyConstructionInfo rbInfo = new RigidBodyConstructionInfo(mass, myMotionState,
+                boxShapes.get(size), inertia);
+        RigidBody body = new RigidBody(rbInfo);
+        // body.setActivationState(RigidBody.ISLAND_SLEEPING);
 
-		dynamicsWorld.addRigidBody(body);
-		long newObjectId = nextRigidBodyId++;
-		rigidBodyMap.put(newObjectId, body);
-		return newObjectId;
-	}
+        mDynamicsWorld.addRigidBody(body);
+        long newObjectId = mNextRigidBodyId++;
+        mRigidBodyMap.put(newObjectId, body);
+        return newObjectId;
+    }
 
-	@Override
-	public void queryObject(long objectId, ByteBuffer matrix) {
-		RigidBody body = rigidBodyMap.get(objectId);
+    @Override
+    public void queryObject(long objectId, ByteBuffer matrix) {
+        RigidBody body = mRigidBodyMap.get(objectId);
 
-		if (body != null && body.getMotionState() != null) {
-			Transform world = new Transform();
-			body.getWorldTransform(world);
+        if (body != null && body.getMotionState() != null) {
+            Transform world = new Transform();
+            body.getWorldTransform(world);
 
-			//System.out.println("Querying object" + objectId + world.origin);
+            // System.out.println("Querying object" + objectId + world.origin);
 
-			world.getOpenGLMatrix(matrixArray);
-			matrix.asFloatBuffer().put(matrixArray).flip();
-		} else {
-			System.err.println("Warning: failed to get matrix for obj " + objectId);
-		}
-	}
+            world.getOpenGLMatrix(mMatrixArray);
+            matrix.asFloatBuffer().put(mMatrixArray).flip();
+        } else {
+            System.err.println("Warning: failed to get matrix for obj " + objectId);
+        }
+    }
 }
