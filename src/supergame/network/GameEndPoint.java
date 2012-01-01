@@ -89,7 +89,6 @@ public abstract class GameEndPoint {
 		mKryo.register(float[].class);
 		mKryo.register(HashMap.class);
 		mKryo.register(Structs.EntityData.class);
-		mKryo.register(Structs.PositionData.class);
 
 		//used for saving
 		mKryo.register(TransmitPair.class);
