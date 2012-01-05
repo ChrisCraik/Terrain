@@ -197,6 +197,10 @@ public class ChunkManager implements ChunkProvider, ChunkProcessor {
     }
 
     public void renderChunks(Camera cam) {
+        GL11.glMaterial(GL11.GL_FRONT, GL11.GL_DIFFUSE, Game.makeFB(new float[] {
+                0.4f, 0.3f, 0.0f, 1
+        }));
+
         if (cam != null)
             GL11.glMaterial(GL11.GL_FRONT, GL11.GL_DIFFUSE,
                     Game.makeFB(new float[] {0.4f, 0.3f, 0.0f, 1}));

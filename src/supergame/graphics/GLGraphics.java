@@ -63,9 +63,6 @@ public class GLGraphics extends Graphics {
         })); // from above!
         GL11.glEnable(light);
         GL11.glEnable(GL11.GL_NORMALIZE);
-        GL11.glMaterial(GL11.GL_FRONT, GL11.GL_DIFFUSE, makeFB(new float[] {
-                0.4f, 0.3f, 0.0f, 1
-        }));
         // GL11.glMaterial(GL11.GL_FRONT, GL11.GL_DIFFUSE, makeFB(new float[] {
         // 0, 0, 0, 1 }));
         GL11.glMaterial(GL11.GL_FRONT, GL11.GL_SPECULAR, makeFB(new float[] {

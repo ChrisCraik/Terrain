@@ -123,6 +123,10 @@ public class Collision {
             ByteOrder.nativeOrder());
 
     public void render() {
+        GL11.glMaterial(GL11.GL_FRONT, GL11.GL_DIFFUSE,
+                Game.makeFB(new float[] {
+                        0.5f, 0.5f, 0.5f, 0.5f
+                }));
         if (mCharacter != null) {
             mCharacter.render();
         }

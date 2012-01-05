@@ -169,7 +169,7 @@ public class Game {
         /*
         Vector3f center = collision.character.getPos();
         chunkManager.updatePosition((long)Math.floor(center.x/Config.CHUNK_DIVISION),
-                (long)Math.floor(center.y/Config.CH    NK_DIVISION),
+                (long)Math.floor(center.y/Config.CHUNK_DIVISION),
                 (long)Math.floor(center.z/Config.CHUNK_DIVISION));
                 */
         mChunkManager.updateWithPosition(0, 0, 0);

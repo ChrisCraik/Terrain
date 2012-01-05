@@ -27,11 +27,6 @@ public class Character implements CameraControllable {
     }
 
     void render() {
-        GL11.glMaterial(GL11.GL_FRONT, GL11.GL_DIFFUSE,
-                Game.makeFB(new float[] {
-                        0.5f, 0.5f, 0.5f, 0.5f
-                }));
-
         Game.collision.getPhysics().queryCharacterPosition(mCharacterId, mPosition);
         GL11.glPushMatrix();
         GL11.glTranslatef(mPosition.x, mPosition.y, mPosition.z);
