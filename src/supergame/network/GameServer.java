@@ -4,9 +4,11 @@ package supergame.network;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Server;
 
+import supergame.Game;
 import supergame.character.Character;
 import supergame.network.Structs.Entity;
 import supergame.network.Structs.EntityData;
+import supergame.network.Structs.StartMessage;
 import supergame.network.Structs.StateMessage;
 
 import java.io.IOException;
@@ -57,7 +59,7 @@ public class GameServer extends GameEndPoint {
      *
      * @param entity
      */
-    public <K extends Entity> void registerEntity(K entity) {
+    public void registerEntity(Entity entity) {
         registerEntity(entity, mNextEntityId++);
     }
 
@@ -70,35 +72,84 @@ public class GameServer extends GameEndPoint {
         ((Server) mEndPoint).bind(tcp, udp);
     }
 
+    // map connection id to character's entity id
+    HashMap<Integer, Integer> mCharControlMap = new HashMap<Integer, Integer>();
 
-    HashMap<Integer, Integer> mCharControlMap = new HashMap<Integer, Integer>(); // maps connection to character
+    private int getEntityId(Entity e) {
+        for (Integer id : mEntityMap.keySet()) {
+            if (mEntityMap.get(id) == e)
+                return id;
+        }
+        // FIXME: proper error handling
+        return -1;
+    }
 
     @Override
-    public void stepWorld(double frameTime) {
+    public void setupMove(double frameTime) {
         // if a connection doesn't remain, delete the char
         for (Integer connectionId : mCharControlMap.keySet()) {
-            for (Connection c : ((Server) mEndPoint).getConnections()) {
-                if (c.getID() == connectionId)
-                    continue;
+            if (connectionId == 0) {
+                continue;
             }
 
-            Integer charId = mCharControlMap.remove(connectionId);
-            // TODO: check null
+            // TODO: skip this loop iteration if connection exists
+            /*
+            for (Connection c : ((Server) mEndPoint).getConnections()) {
+                if (c.getID() == connectionId) {
+                    break;
+                }
+            }
+            */
+
+            int charId = mCharControlMap.remove(connectionId);
+            // FIXME: check null
             mEntityMap.remove(charId);
+        }
+
+        // create a local char, if it hasn't been done yet
+        if (!mCharControlMap.containsKey(0)) {
+            System.err.println("creating char for local connection " + 0);
+            // FIXME: this assumes 0 isn't a valid connection. is that guaranteed?
+            Character local = new Character();
+            registerEntity(local);
+            local.setController(Game.mCamera);
+            mCharControlMap.put(0, getEntityId(local));
         }
 
         // new connection: create a character
         for (Connection c : ((Server) mEndPoint).getConnections()) {
             if (!mCharControlMap.containsKey(c.getID())) {
+                System.err.println("creating char for connection " + c.getID());
+                // create new character in entity map (TODO: added automatically)
                 Character newChar = new Character();
-                // TODO: create new character in entity map (added automatically)
-                // TODO: add new character id to mCharControlMap
+                registerEntity(newChar);
+
+                // add new character id to mCharControlMap
+                int charId = getEntityId(newChar);
+                mCharControlMap.put(c.getID(), charId);
+
+                // tell client their character ID
+                StartMessage m = new StartMessage();
+                m.characterEntity = charId;
+                ((Server)mEndPoint).sendToTCP(c.getID(), m);
+            }
+        }
+
+        for (Entity e : mEntityMap.values()) {
+            if (e instanceof Character) {
+                ((Character)e).setupMove(frameTime);
             }
         }
     }
 
     @Override
-    public void postCollide(double frameTime) {
+    public void postMove(double frameTime) {
+        for (Entity e : mEntityMap.values()) {
+            if (e instanceof Character) {
+                ((Character)e).postMove();
+            }
+        }
+
         StateMessage serverState = new StateMessage();
         serverState.timestamp = frameTime;
         serverState.data = getEntityChanges();

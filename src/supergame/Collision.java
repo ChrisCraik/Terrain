@@ -3,7 +3,6 @@ package supergame;
 
 import org.lwjgl.opengl.GL11;
 
-import supergame.character.Character;
 import supergame.physics.JavaPhysics;
 import supergame.physics.NativePhysics;
 import supergame.physics.Physics;
@@ -21,7 +20,6 @@ public class Collision {
     private static final int ARRAY_SIZE_Y = 3;
     private static final int ARRAY_SIZE_Z = 3;
 
-    public Character mCharacter;
     public Physics mPhysics;
 
     ArrayList<Long> mBodyList = new ArrayList<Long>();
@@ -126,9 +124,6 @@ public class Collision {
                 Game.makeFB(new float[] {
                         0.5f, 0.5f, 0.5f, 0.5f
                 }));
-        if (mCharacter != null) {
-            mCharacter.render();
-        }
         for (int i = 0; i < mBodyList.size(); i++) {
             int size = (i == 0) ? 15 : 1;
             mPhysics.queryObject(mBodyList.get(i), matrix);
@@ -138,9 +133,5 @@ public class Collision {
             drawCube(size, size, size);
             GL11.glPopMatrix();
         }
-    }
-
-    public void createCharacter() {
-        mCharacter = new Character();
     }
 }

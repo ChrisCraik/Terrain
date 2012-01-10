@@ -3,6 +3,7 @@ package supergame.network;
 
 import com.esotericsoftware.kryonet.Client;
 
+import supergame.Game;
 import supergame.character.Character;
 import supergame.network.Structs.Entity;
 import supergame.network.Structs.EntityData;
@@ -90,10 +91,11 @@ public class GameClient extends GameEndPoint {
     }
 
     @Override
-    public void stepWorld(double frameTime) {
+    public void setupMove(double frameTime) {
         // send control info to server
         if (mEntityMap.containsKey(mLocalCharId)) {
             Character localChar = (Character)mEntityMap.get(mLocalCharId);
+            localChar.setController(Game.mCamera);
             ((Client)mEndPoint).sendTCP(localChar.getControl()); // TODO: UDP
         }
 
@@ -111,13 +113,12 @@ public class GameClient extends GameEndPoint {
             } else if (pair.object instanceof StartMessage) {
                 // Server tells client which character the player controls
                 mLocalCharId = ((StartMessage) pair.object).characterEntity;
-                // TODO: map camera to local char
             }
         }
     }
 
     @Override
-    public void postCollide(double frameTime) {
+    public void postMove(double frameTime) {
         // for each character, sample interpolation window
         for (Integer key : mEntityMap.keySet()) {
             Entity value = mEntityMap.get(key);

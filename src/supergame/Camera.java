@@ -7,20 +7,17 @@ import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
 
+import supergame.character.Controller;
+import supergame.network.Structs.ControlMessage;
+
 import javax.vecmath.Vector3f;
 
-public class Camera {
+public class Camera extends Controller {
     private final Vector3f mPosition;
     private float mPitchAngle = -64, mHeadingAngle = 56;
     private final Vector3f mForwardDir = new Vector3f();
     private final Vector3f mStrafeDir = new Vector3f();
-    private CameraControllable mControllable;
     private final Plane mFrustumPlanes[];
-
-    public interface CameraControllable {
-        void move(float heading, float pitch, Vector3f walkDirection, boolean isJumping);
-        void getPos(Vector3f pos);
-    }
 
     /*package*/ Camera() {
         mPosition = new Vector3f(15, 40, 8);
@@ -34,10 +31,6 @@ public class Camera {
         int height = dm.getHeight();
         int width = dm.getWidth();
         Mouse.setCursorPosition(width / 2, height / 2);
-    }
-
-    public void setControllable(CameraControllable controllable) {
-        mControllable = controllable;
     }
 
     private final int TOP = 0;
@@ -159,15 +152,8 @@ public class Camera {
      * Process input from the mouse and keyboard, adjusting the heading and pitch of the
      * camera, and any character under direct control.
      */
-    public void pollInput() {
-        float speed = (float) (0.01 * Game.delta);
-
-        Vec3 deltaPos = new Vec3(-mHeadingAngle, -mPitchAngle).multiply(speed);
-        Vector3f d = new Vector3f(deltaPos.getX(), deltaPos.getY(), deltaPos.getZ());
-
-        if (Game.heartbeatFrame)
-            System.out.println("Pos = " + mPosition);
-
+    @Override
+    public void control(double frameTime, ControlMessage message) {
         DisplayMode dm = Display.getDisplayMode();
         int height = dm.getHeight();
         int width = dm.getWidth();
@@ -180,39 +166,40 @@ public class Camera {
         mPitchAngle = Math.min(mPitchAngle, 90);
         mPitchAngle = Math.max(mPitchAngle, -90);
 
-        if (Config.PLAYER_CONTROLS_CAMERA) {
-            if (null != mControllable) {
-                // calculate absolute forward/strafe
-                Vec3.HPVector(mForwardDir, 180 - mHeadingAngle, 0);
-                Vec3.HPVector(mStrafeDir, 90 - mHeadingAngle, 0);
+        // calculate absolute forward/strafe
+        Vec3.HPVector(mForwardDir, 180 - mHeadingAngle, 0);
+        Vec3.HPVector(mStrafeDir, 90 - mHeadingAngle, 0);
 
-                // set walkDirection for character
-                Vector3f walkDirection = new Vector3f(0, 0, 0);
-                if (Keyboard.isKeyDown(Keyboard.KEY_W))
-                    walkDirection.add(mForwardDir);
-                if (Keyboard.isKeyDown(Keyboard.KEY_S))
-                    walkDirection.sub(mForwardDir);
-                if (Keyboard.isKeyDown(Keyboard.KEY_A))
-                    walkDirection.add(mStrafeDir);
-                if (Keyboard.isKeyDown(Keyboard.KEY_D))
-                    walkDirection.sub(mStrafeDir);
-                mControllable.move(mHeadingAngle, mPitchAngle, walkDirection,
-                        Keyboard.isKeyDown(Keyboard.KEY_SPACE));
-                mControllable.getPos(mPosition);
-            }
-        } else {
-            if (Mouse.isButtonDown(0))
-                mPosition.sub(d);
-            if (Mouse.isButtonDown(1))
-                mPosition.add(d);
-        }
+        // set walkDirection for character
+        Vector3f walkDirection = new Vector3f(0, 0, 0);
+        if (Keyboard.isKeyDown(Keyboard.KEY_W))
+            walkDirection.add(mForwardDir);
+        if (Keyboard.isKeyDown(Keyboard.KEY_S))
+            walkDirection.sub(mForwardDir);
+        if (Keyboard.isKeyDown(Keyboard.KEY_A))
+            walkDirection.add(mStrafeDir);
+        if (Keyboard.isKeyDown(Keyboard.KEY_D))
+            walkDirection.sub(mStrafeDir);
+
+        message.x = walkDirection.x;
+        message.z = walkDirection.z;
+        message.heading = mHeadingAngle;
+        message.pitch = mPitchAngle;
+        message.jump = Keyboard.isKeyDown(Keyboard.KEY_SPACE);
+
+        // TODO: movement when no char attached
 
         Mouse.setCursorPosition(width / 2, height / 2);
 
         if (Game.heartbeatFrame) {
-            System.out.println("pos:" + mPosition + ", pitch:" + mPitchAngle + ", heading:"
+            System.out.println("dir:" + walkDirection + ", pitch:" + mPitchAngle + ", heading:"
                     + mHeadingAngle);
         }
+    }
+
+    @Override
+    public void response(Vector3f pos) {
+        mPosition.set(pos);
     }
 
     public static enum Inclusion {

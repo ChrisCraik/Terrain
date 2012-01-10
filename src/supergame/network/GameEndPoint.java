@@ -157,6 +157,6 @@ public abstract class GameEndPoint {
 
     protected int mLocalCharId = -1;
 
-    public abstract void stepWorld(double frameTime);
-    public abstract void postCollide(double frameTime);
+    public abstract void setupMove(double frameTime);
+    public abstract void postMove(double frameTime);
 }

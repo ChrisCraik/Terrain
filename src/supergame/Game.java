@@ -34,7 +34,7 @@ public class Game {
     private static int msSinceLastHeartbeat = 0;
 
     private boolean mIsFullscreen = false;
-    private Camera mCamera = null;
+    public static Camera mCamera;
     private boolean mF1 = false;
 
     private DisplayMode mDisplayMode;
@@ -86,8 +86,8 @@ public class Game {
                     Collision.START_POS_Y / Config.CHUNK_DIVISION,
                     Collision.START_POS_Z / Config.CHUNK_DIVISION,
                     Config.CHUNK_LOAD_DISTANCE);
-            mCamera = new Camera();
             mInputProcessor = new InputProcessor();
+            mCamera = new Camera();
 
             while (!done) {
                 // System.out.println("----------");
@@ -98,17 +98,15 @@ public class Game {
                 PROFILE("updateDelta");
                 pollVideo();
                 PROFILE("pollVideo");
-                mCamera.pollInput();
-                PROFILE("pollInput");
                 if (mGameEndPoint != null) {
-                    mGameEndPoint.stepWorld(mLastFrame);
+                    mGameEndPoint.setupMove(mLastFrame);
                 }
 
                 collision.stepSimulation(delta / 1000f);
                 PROFILE("Collision");
 
                 if (mGameEndPoint != null) {
-                    mGameEndPoint.postCollide(mLastFrame);
+                    mGameEndPoint.postMove(mLastFrame);
                 }
 
                 Graphics.instance.switchTo3d((float) mDisplayMode.getWidth()
@@ -121,8 +119,6 @@ public class Game {
 
                     if (mGameEndPoint != null) {
                         // TODO: connect or host. game is starting.
-                        collision.createCharacter();
-                        mCamera.setControllable(collision.mCharacter);
                         mInputProcessor = null;
                     }
                 }

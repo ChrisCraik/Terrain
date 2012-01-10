@@ -16,7 +16,9 @@ public class Structs {
     public static class ControlMessage {
         public double timestamp;
         public float x;
-        public float y;
+        public float z;
+        public float heading;
+        public float pitch;
         public boolean jump;
     }
 
