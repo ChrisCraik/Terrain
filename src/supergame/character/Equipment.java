@@ -1,10 +1,12 @@
 
-package supergame;
+package supergame.character;
 
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 
+import supergame.Game;
+import supergame.Vec3;
 import supergame.modify.BlockChunkModifier;
 import supergame.modify.SphereChunkModifier;
 

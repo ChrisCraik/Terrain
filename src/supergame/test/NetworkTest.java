@@ -9,7 +9,7 @@ import org.lwjgl.Sys;
 import supergame.network.GameClient;
 import supergame.network.GameEndPoint.TransmitPair;
 import supergame.network.GameServer;
-import supergame.network.Structs.State;
+import supergame.network.Structs.StateMessage;
 import supergame.test.NetworkTestHelpers.TestInterpData;
 import supergame.test.NetworkTestHelpers.TestInterpEntity;
 import supergame.test.NetworkTestHelpers.TestSimpleData;
@@ -99,16 +99,16 @@ public class NetworkTest {
 
         @Override
         public void transmitServerToClient(double timestamp) {
-            State serverState = new State();
+            StateMessage serverState = new StateMessage();
             serverState.timestamp = timestamp;
             serverState.data = server.getEntityChanges();
             server.sendToAllTCP(serverState);
 
             TransmitPair p = client.pollHard(timestamp, WAIT_TIME);
-            if (p == null || !(p.object instanceof State))
+            if (p == null || !(p.object instanceof StateMessage))
                 fail("no data/wrong data type!");
 
-            State state = ((State) p.object);
+            StateMessage state = ((StateMessage) p.object);
             client.applyEntityChanges(state.timestamp, state.data);
         }
     };

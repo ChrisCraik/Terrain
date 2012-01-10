@@ -11,7 +11,7 @@ import org.lwjgl.BufferUtils;
 
 import supergame.network.Structs.Entity;
 import supergame.network.Structs.EntityData;
-import supergame.network.Structs.State;
+import supergame.network.Structs.StateMessage;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -101,7 +101,7 @@ public abstract class GameEndPoint {
         System.out.println("");
 
         // TODO: compress the State class
-        mKryo.register(State.class);
+        mKryo.register(StateMessage.class);
     }
 
     public void registerEntityPacket(Class<? extends EntityData> dataClass,
@@ -154,4 +154,9 @@ public abstract class GameEndPoint {
         }
         return null;
     }
+
+    protected int mLocalCharId = -1;
+
+    public abstract void stepWorld(double frameTime);
+    public abstract void postCollide(double frameTime);
 }

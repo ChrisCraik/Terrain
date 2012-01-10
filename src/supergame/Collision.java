@@ -3,6 +3,7 @@ package supergame;
 
 import org.lwjgl.opengl.GL11;
 
+import supergame.character.Character;
 import supergame.physics.JavaPhysics;
 import supergame.physics.NativePhysics;
 import supergame.physics.Physics;
@@ -113,9 +114,7 @@ public class Collision {
     }
 
     public void stepSimulation(float duration) {
-        if (mCharacter != null) {
-            mCharacter.move();
-        }
+        // TODO: set all character move vectors
         mPhysics.stepSimulation(duration, 10);
     }
 
@@ -142,7 +141,6 @@ public class Collision {
     }
 
     public void createCharacter() {
-        mCharacter = new Character(mPhysics.createCharacter(START_POS_X, START_POS_Y + 40,
-                START_POS_Z));
+        mCharacter = new Character();
     }
 }

@@ -44,6 +44,8 @@ public interface Physics {
 
     public void queryCharacterPosition(long characterId, Vector3f position);
 
+    public void setCharacterPosition(long mCharacterId, Vector3f pos, float bias);
+
     long createCube(float size, float mass, float x, float y, float z);
 
     void queryObject(long object, ByteBuffer matrix);

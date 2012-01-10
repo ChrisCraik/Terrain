@@ -3,8 +3,11 @@ package supergame.network;
 
 import com.esotericsoftware.kryonet.Client;
 
+import supergame.character.Character;
 import supergame.network.Structs.Entity;
 import supergame.network.Structs.EntityData;
+import supergame.network.Structs.StartMessage;
+import supergame.network.Structs.StateMessage;
 
 import java.io.IOException;
 import java.nio.channels.ReadableByteChannel;
@@ -78,11 +81,51 @@ public class GameClient extends GameEndPoint {
         }
     }
 
-    public void connect(int timeout, String address, int udp, int tcp) throws IOException {
+    public void connect(int timeout, String address, int tcp, int udp) throws IOException {
         if (mEndPoint != null) {
             mEndPoint.start(); // there's probably a reason not to do this
                                // here...
-            ((Client) mEndPoint).connect(timeout, address, udp, tcp);
+            ((Client) mEndPoint).connect(timeout, address, tcp, udp);
+        }
+    }
+
+    @Override
+    public void stepWorld(double frameTime) {
+        // send control info to server
+        if (mEntityMap.containsKey(mLocalCharId)) {
+            Character localChar = (Character)mEntityMap.get(mLocalCharId);
+            ((Client)mEndPoint).sendTCP(localChar.getControl()); // TODO: UDP
+        }
+
+        // receive world state from server
+        TransmitPair pair;
+        for (;;) {
+            pair = pollHard(frameTime, 0);
+            if (pair == null)
+                break;
+
+            if (pair.object instanceof StateMessage) {
+                // Server updates client with state of all entities
+                StateMessage state = ((StateMessage) pair.object);
+                applyEntityChanges(state.timestamp, state.data);
+            } else if (pair.object instanceof StartMessage) {
+                // Server tells client which character the player controls
+                mLocalCharId = ((StartMessage) pair.object).characterEntity;
+                // TODO: map camera to local char
+            }
+        }
+    }
+
+    @Override
+    public void postCollide(double frameTime) {
+        // for each character, sample interpolation window
+        for (Integer key : mEntityMap.keySet()) {
+            Entity value = mEntityMap.get(key);
+            if (value instanceof Character) {
+                float bias = (key == mLocalCharId) ? 1.0f : 0.5f;
+                // TODO: time is now for local, past for remote?
+                ((Character)value).sample(frameTime, bias);
+            }
         }
     }
 }

@@ -1,10 +1,13 @@
 
 package supergame.network;
 
+import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Server;
 
+import supergame.character.Character;
 import supergame.network.Structs.Entity;
 import supergame.network.Structs.EntityData;
+import supergame.network.Structs.StateMessage;
 
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
@@ -62,8 +65,43 @@ public class GameServer extends GameEndPoint {
         ((Server) mEndPoint).sendToAllTCP(o);
     }
 
-    public void bind(int udp, int tcp) throws IOException {
+    public void bind(int tcp, int udp) throws IOException {
         ((Server) mEndPoint).start(); // there's probably a reason not to do this here...
-        ((Server) mEndPoint).bind(udp, tcp);
+        ((Server) mEndPoint).bind(tcp, udp);
+    }
+
+
+    HashMap<Integer, Integer> mCharControlMap = new HashMap<Integer, Integer>(); // maps connection to character
+
+    @Override
+    public void stepWorld(double frameTime) {
+        // if a connection doesn't remain, delete the char
+        for (Integer connectionId : mCharControlMap.keySet()) {
+            for (Connection c : ((Server) mEndPoint).getConnections()) {
+                if (c.getID() == connectionId)
+                    continue;
+            }
+
+            Integer charId = mCharControlMap.remove(connectionId);
+            // TODO: check null
+            mEntityMap.remove(charId);
+        }
+
+        // new connection: create a character
+        for (Connection c : ((Server) mEndPoint).getConnections()) {
+            if (!mCharControlMap.containsKey(c.getID())) {
+                Character newChar = new Character();
+                // TODO: create new character in entity map (added automatically)
+                // TODO: add new character id to mCharControlMap
+            }
+        }
+    }
+
+    @Override
+    public void postCollide(double frameTime) {
+        StateMessage serverState = new StateMessage();
+        serverState.timestamp = frameTime;
+        serverState.data = getEntityChanges();
+        sendToAllTCP(serverState); // TODO: UDP
     }
 }

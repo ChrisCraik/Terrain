@@ -138,7 +138,7 @@ public class NetworkTestHelpers {
 
         @Override
         public EntityData getState() {
-            // TODO: avoid allocation, pass in object to populate
+            // FIXME: avoid allocation, pass in object to populate
             TestInterpData t = new TestInterpData();
             mPosition.sampleLatest(t.pos);
             return t;
@@ -149,7 +149,7 @@ public class NetworkTestHelpers {
         }
 
         public void update(double timestamp, float x, float y) {
-            // TODO: avoid the allocation, but make more clear that it's just
+            // FIXME: avoid the allocation, but make more clear that it's just
             // doing a store underneath, not a copy of the array
             mPosition.addSample(timestamp, new float[] {
                     x, y

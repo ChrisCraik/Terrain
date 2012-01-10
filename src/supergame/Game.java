@@ -100,6 +100,16 @@ public class Game {
                 PROFILE("pollVideo");
                 mCamera.pollInput();
                 PROFILE("pollInput");
+                if (mGameEndPoint != null) {
+                    mGameEndPoint.stepWorld(mLastFrame);
+                }
+
+                collision.stepSimulation(delta / 1000f);
+                PROFILE("Collision");
+
+                if (mGameEndPoint != null) {
+                    mGameEndPoint.postCollide(mLastFrame);
+                }
 
                 Graphics.instance.switchTo3d((float) mDisplayMode.getWidth()
                         / mDisplayMode.getHeight());
@@ -163,9 +173,6 @@ public class Game {
     }
 
     private boolean render() {
-        collision.stepSimulation(delta / 1000f);
-        PROFILE("Collision");
-
         /*
         Vector3f center = collision.character.getPos();
         chunkManager.updatePosition((long)Math.floor(center.x/Config.CHUNK_DIVISION),

@@ -21,6 +21,8 @@ public class NativePhysics implements Physics {
 
     public native void nativeQueryCharacterPosition(long character, Vector3f position);
 
+    public native void nativeSetCharacterPosition(long character, Vector3f position, float bias);
+
     public native void nativeControlCharacter(long character,
             float strengthIfJumping, boolean jump, float x, float y, float z);
 
@@ -79,6 +81,11 @@ public class NativePhysics implements Physics {
     @Override
     public void queryCharacterPosition(long character, Vector3f position) {
         nativeQueryCharacterPosition(character, position);
+    }
+
+    @Override
+    public void setCharacterPosition(long mCharacterId, Vector3f pos, float bias) {
+        nativeSetCharacterPosition(mCharacterId, pos, bias);
     }
 
     @Override

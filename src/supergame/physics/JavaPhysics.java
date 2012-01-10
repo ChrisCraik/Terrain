@@ -230,6 +230,11 @@ public class JavaPhysics implements Physics {
         // matrix.asFloatBuffer().put(matrixArray).flip();
     }
 
+    @Override
+    public void setCharacterPosition(long mCharacterId, Vector3f pos, float bias) {
+        // TODO Auto-generated method stub
+    }
+
     private static final Vector3f inertia = new Vector3f(0, 0, 0);
     private final Map<Float, CollisionShape> boxShapes = new HashMap<Float, CollisionShape>();
 

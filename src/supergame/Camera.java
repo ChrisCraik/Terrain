@@ -1,6 +1,7 @@
 
 package supergame;
 
+import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
@@ -11,12 +12,13 @@ import javax.vecmath.Vector3f;
 public class Camera {
     private final Vector3f mPosition;
     private float mPitchAngle = -64, mHeadingAngle = 56;
+    private final Vector3f mForwardDir = new Vector3f();
+    private final Vector3f mStrafeDir = new Vector3f();
     private CameraControllable mControllable;
     private final Plane mFrustumPlanes[];
 
     public interface CameraControllable {
-        void setHeadingPitch(float heading, float pitch);
-
+        void move(float heading, float pitch, Vector3f walkDirection, boolean isJumping);
         void getPos(Vector3f pos);
     }
 
@@ -154,8 +156,8 @@ public class Camera {
     }
 
     /**
-     * Process input from the mouse, adjusting the heading and pitch of the
-     * camera.
+     * Process input from the mouse and keyboard, adjusting the heading and pitch of the
+     * camera, and any character under direct control.
      */
     public void pollInput() {
         float speed = (float) (0.01 * Game.delta);
@@ -180,7 +182,22 @@ public class Camera {
 
         if (Config.PLAYER_CONTROLS_CAMERA) {
             if (null != mControllable) {
-                mControllable.setHeadingPitch(mHeadingAngle, mPitchAngle);
+                // calculate absolute forward/strafe
+                Vec3.HPVector(mForwardDir, 180 - mHeadingAngle, 0);
+                Vec3.HPVector(mStrafeDir, 90 - mHeadingAngle, 0);
+
+                // set walkDirection for character
+                Vector3f walkDirection = new Vector3f(0, 0, 0);
+                if (Keyboard.isKeyDown(Keyboard.KEY_W))
+                    walkDirection.add(mForwardDir);
+                if (Keyboard.isKeyDown(Keyboard.KEY_S))
+                    walkDirection.sub(mForwardDir);
+                if (Keyboard.isKeyDown(Keyboard.KEY_A))
+                    walkDirection.add(mStrafeDir);
+                if (Keyboard.isKeyDown(Keyboard.KEY_D))
+                    walkDirection.sub(mStrafeDir);
+                mControllable.move(mHeadingAngle, mPitchAngle, walkDirection,
+                        Keyboard.isKeyDown(Keyboard.KEY_SPACE));
                 mControllable.getPos(mPosition);
             }
         } else {
