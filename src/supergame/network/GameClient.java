@@ -96,7 +96,7 @@ public class GameClient extends GameEndPoint {
         if (mEntityMap.containsKey(mLocalCharId)) {
             Character localChar = (Character)mEntityMap.get(mLocalCharId);
             localChar.setController(Game.mCamera);
-            ((Client)mEndPoint).sendTCP(localChar.getControl()); // TODO: UDP
+            ((Client)mEndPoint).sendUDP(localChar.getControl());
         }
 
         // receive world state from server

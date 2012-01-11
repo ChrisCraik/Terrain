@@ -70,6 +70,10 @@ public class GameServer extends GameEndPoint {
         ((Server) mEndPoint).sendToAllTCP(o);
     }
 
+    public void sendToAllUDP(Object o) {
+        ((Server) mEndPoint).sendToAllUDP(o);
+    }
+
     public void bind(int tcp, int udp) throws IOException {
         ((Server) mEndPoint).start(); // there's probably a reason not to do this here...
         ((Server) mEndPoint).bind(tcp, udp);
@@ -88,7 +92,7 @@ public class GameServer extends GameEndPoint {
     }
 
     private boolean connectionIsValid(int connectionId) {
-        // TODO: skip this loop iteration if connection exists
+        // FIXME: do lookup instead
         for (Connection c : ((Server) mEndPoint).getConnections()) {
             if (c.getID() == connectionId) {
                 return true;
@@ -162,7 +166,6 @@ public class GameServer extends GameEndPoint {
                 Integer charId = mCharControlMap.get(pair.connection.getID());
                 Entity character = mEntityMap.get(charId);
                 if (character != null) {
-                    // FIXME: handle out of order messages
                     ControlMessage state = ((ControlMessage) pair.object);
                     ((Character)character).setControlMessage(state);
                 }
@@ -187,6 +190,6 @@ public class GameServer extends GameEndPoint {
         StateMessage serverState = new StateMessage();
         serverState.timestamp = frameTime;
         serverState.data = getEntityChanges();
-        sendToAllTCP(serverState); // TODO: UDP
+        sendToAllUDP(serverState);
     }
 }

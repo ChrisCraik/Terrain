@@ -60,6 +60,8 @@ public class Character extends Entity {
     }
 
     public void setControlMessage(ControlMessage message) {
+        // FIXME: handle out of order messages
+
         // FIXME: only allow on server side, for remote players
         mControlMessage = message;
     }

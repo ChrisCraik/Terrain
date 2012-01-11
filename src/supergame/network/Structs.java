@@ -20,6 +20,7 @@ public class Structs {
         public float heading;
         public float pitch;
         public boolean jump;
+        // TODO: event list
     }
 
     public static abstract class EntityData {
