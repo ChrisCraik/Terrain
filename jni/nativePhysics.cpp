@@ -247,6 +247,12 @@ JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeQueryCharacter
 	//world.getOpenGLMatrix(matrix);
 }
 
+JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeSetCharacterPosition
+  (JNIEnv *, jobject, jlong, jobject, jfloat)
+{
+	// TODO: set char position
+}
+
 JNIEXPORT jlong JNICALL Java_supergame_physics_NativePhysics_nativeCreateCube(
 		JNIEnv* env, jobject obj, jfloat size, jfloat mass, jfloat x, jfloat y, jfloat z)
 {

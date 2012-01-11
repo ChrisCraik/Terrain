@@ -8,6 +8,7 @@ import supergame.Collision;
 import supergame.Game;
 import supergame.character.Character;
 import supergame.character.NPCController;
+import supergame.network.Structs.ControlMessage;
 import supergame.network.Structs.Entity;
 import supergame.network.Structs.EntityData;
 import supergame.network.Structs.StartMessage;
@@ -146,6 +147,25 @@ public class GameServer extends GameEndPoint {
                 StartMessage m = new StartMessage();
                 m.characterEntity = charId;
                 ((Server)mEndPoint).sendToTCP(c.getID(), m);
+            }
+        }
+
+        // receive control messages from clients
+        TransmitPair pair;
+        for (;;) {
+            pair = pollHard(frameTime, 0);
+            if (pair == null)
+                break;
+
+            if (pair.object instanceof ControlMessage) {
+                // Client updates server with state
+                Integer charId = mCharControlMap.get(pair.connection.getID());
+                Entity character = mEntityMap.get(charId);
+                if (character != null) {
+                    // FIXME: handle out of order messages
+                    ControlMessage state = ((ControlMessage) pair.object);
+                    ((Character)character).setControlMessage(state);
+                }
             }
         }
 

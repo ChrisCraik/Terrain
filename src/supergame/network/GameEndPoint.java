@@ -10,8 +10,11 @@ import com.esotericsoftware.kryonet.Listener;
 import org.lwjgl.BufferUtils;
 
 import supergame.character.Character;
+import supergame.character.Character.CharacterData;
+import supergame.network.Structs.ControlMessage;
 import supergame.network.Structs.Entity;
 import supergame.network.Structs.EntityData;
+import supergame.network.Structs.StartMessage;
 import supergame.network.Structs.StateMessage;
 
 import java.io.IOException;
@@ -103,6 +106,10 @@ public abstract class GameEndPoint {
 
         // TODO: compress the State class
         mKryo.register(StateMessage.class);
+
+        mKryo.register(StartMessage.class);
+        mKryo.register(ControlMessage.class);
+        registerEntityPacket(CharacterData.class, Character.class);
     }
 
     public void registerEntityPacket(Class<? extends EntityData> dataClass,

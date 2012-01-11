@@ -113,7 +113,14 @@ public class GameClient extends GameEndPoint {
             } else if (pair.object instanceof StartMessage) {
                 // Server tells client which character the player controls
                 mLocalCharId = ((StartMessage) pair.object).characterEntity;
+                System.err.println("Client sees localid, " + mLocalCharId);
             }
+        }
+
+        // move local char
+        if (mEntityMap.containsKey(mLocalCharId)) {
+            Character localChar = (Character)mEntityMap.get(mLocalCharId);
+            localChar.setupMove(frameTime);
         }
     }
 
@@ -127,6 +134,12 @@ public class GameClient extends GameEndPoint {
                 // TODO: time is now for local, past for remote?
                 ((Character)value).sample(frameTime, bias);
             }
+        }
+
+        // update controller with local position
+        if (mEntityMap.containsKey(mLocalCharId)) {
+            Character localChar = (Character)mEntityMap.get(mLocalCharId);
+            localChar.postMove();
         }
     }
 }

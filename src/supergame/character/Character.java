@@ -22,7 +22,8 @@ public class Character extends Entity {
     }
 
     public final long mCharacterId;
-    private float mHeading, mPitch;
+    private float mHeading = 0;
+    private float mPitch = 0;
     private final Equipment mEquipment = new Equipment();
 
     private Controller mController = null;
@@ -33,10 +34,12 @@ public class Character extends Entity {
     // queried outside of the functions that set them.
     private final Vector3f mPosition = new Vector3f();
 
+    public Character() {
+        mCharacterId = Game.collision.mPhysics.createCharacter(0, 0, 0);
+    }
+
     public Character(float x, float y, float z) {
         mCharacterId = Game.collision.mPhysics.createCharacter(x, y, z);
-        mHeading = 0;
-        mPitch = 0;
     }
 
     public void render() {
