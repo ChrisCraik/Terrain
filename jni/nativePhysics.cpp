@@ -203,7 +203,7 @@ JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeControlCharact
 {
 	NativeCharacter* character = (NativeCharacter*) charPtr;
 
-        bool onGround = character->m_character.onGround();
+	bool onGround = character->m_character.onGround();
 	btVector3 walkDir(x, y, z);
 	if (!onGround)
 		walkDir *= strengthIfJumping;
@@ -248,9 +248,29 @@ JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeQueryCharacter
 }
 
 JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeSetCharacterPosition
-  (JNIEnv *, jobject, jlong, jobject, jfloat)
+  (JNIEnv *env, jobject obj, jlong charPtr, jobject position, jfloat bias)
 {
 	// TODO: set char position
+	NativeCharacter* character = (NativeCharacter*) charPtr;
+	btTransform world = character->m_ghostObject.getWorldTransform();
+
+	static jclass vectorclass = env->FindClass("javax/vecmath/Vector3f");
+	static jfieldID xfid = env->GetFieldID(vectorclass, "x", "F");
+	static jfieldID yfid = env->GetFieldID(vectorclass, "y", "F");
+	static jfieldID zfid = env->GetFieldID(vectorclass, "z", "F");
+
+	btVector3 newOrigin(
+		env->GetFloatField(position, xfid),
+		env->GetFloatField(position, yfid),
+		env->GetFloatField(position, zfid));
+
+	if (bias != 1.0f) {
+		btVector3 oldOrigin(world.getOrigin());
+		newOrigin *= bias;
+		newOrigin += oldOrigin * (1.0f - bias);
+	}
+	world.setOrigin(newOrigin);
+	character->m_ghostObject.setWorldTransform(world);
 }
 
 JNIEXPORT jlong JNICALL Java_supergame_physics_NativePhysics_nativeCreateCube(

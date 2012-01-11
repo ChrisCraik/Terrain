@@ -231,8 +231,13 @@ public class JavaPhysics implements Physics {
     }
 
     @Override
-    public void setCharacterPosition(long mCharacterId, Vector3f pos, float bias) {
-        // TODO Auto-generated method stub
+    public void setCharacterPosition(long characterId, Vector3f pos, float bias) {
+        PairCachingGhostObject ghostObject = mCharacterMap.get(characterId).mGhostObject;
+        Transform world = new Transform();
+        ghostObject.getWorldTransform(world);
+
+        world.origin.set(pos);
+        ghostObject.setWorldTransform(world);
     }
 
     private static final Vector3f inertia = new Vector3f(0, 0, 0);
