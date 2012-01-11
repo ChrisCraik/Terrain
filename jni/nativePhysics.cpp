@@ -133,7 +133,6 @@ JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeInitialize(
 JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeStepSimulation(
 		JNIEnv* env, jobject obj, jfloat timeStep, jint maxSubSteps)
 {
-	fprintf(stderr,"Stepping for %f\n", timeStep);
 	physics.m_dynamicsWorld.stepSimulation(timeStep, maxSubSteps);
 }
 
@@ -202,7 +201,6 @@ JNIEXPORT jlong JNICALL Java_supergame_physics_NativePhysics_nativeCreateCharact
 JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeControlCharacter
   (JNIEnv *env, jobject obj, jlong charPtr, jfloat strengthIfJumping, jboolean jump, jfloat x, jfloat y, jfloat z)
 {
-	fprintf(stderr,"controlling character, heading %f %f %f\n", x, y, z);
 	NativeCharacter* character = (NativeCharacter*) charPtr;
 
         bool onGround = character->m_character.onGround();

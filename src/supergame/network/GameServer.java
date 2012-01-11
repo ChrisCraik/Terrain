@@ -86,22 +86,23 @@ public class GameServer extends GameEndPoint {
         return -1;
     }
 
+    private boolean connectionIsValid(int connectionId) {
+        // TODO: skip this loop iteration if connection exists
+        for (Connection c : ((Server) mEndPoint).getConnections()) {
+            if (c.getID() == connectionId) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     public void setupMove(double frameTime) {
         // if a connection doesn't remain, delete the char
         for (Integer connectionId : mCharControlMap.keySet()) {
-            if (connectionId == 0) {
+            if (connectionId == 0 || connectionIsValid(connectionId)) {
                 continue;
             }
-
-            // TODO: skip this loop iteration if connection exists
-            /*
-            for (Connection c : ((Server) mEndPoint).getConnections()) {
-                if (c.getID() == connectionId) {
-                    break;
-                }
-            }
-            */
 
             int charId = mCharControlMap.remove(connectionId);
             // FIXME: check null
