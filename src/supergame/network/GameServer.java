@@ -7,6 +7,7 @@ import com.esotericsoftware.kryonet.Server;
 import supergame.Collision;
 import supergame.Game;
 import supergame.character.Character;
+import supergame.character.NPCController;
 import supergame.network.Structs.Entity;
 import supergame.network.Structs.EntityData;
 import supergame.network.Structs.StartMessage;
@@ -113,16 +114,17 @@ public class GameServer extends GameEndPoint {
             // FIXME: this assumes 0 isn't a valid connection. is that guaranteed?
             Character local = new Character(Collision.START_POS_X,
                     Collision.START_POS_Y + 40,
-                    Collision.START_POS_Z + 10);
+                    Collision.START_POS_Z);
             registerEntity(local);
             local.setController(Game.mCamera);
             mCharControlMap.put(0, getEntityId(local));
 
-
+            // Create NPC
             Character npc = new Character(Collision.START_POS_X,
                     Collision.START_POS_Y + 40,
-                    Collision.START_POS_Z);
+                    Collision.START_POS_Z + 10);
             registerEntity(npc);
+            npc.setController(new NPCController());
         }
 
         // new connection: create a character

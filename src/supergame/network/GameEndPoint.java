@@ -164,7 +164,6 @@ public abstract class GameEndPoint {
     public void render() {
         for (Entity e : mEntityMap.values()) {
             if (e instanceof Character) {
-                System.err.println("RENDERING CHAR");
                 ((Character)e).render();
             }
         }
