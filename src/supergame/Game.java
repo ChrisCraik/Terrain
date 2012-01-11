@@ -186,7 +186,13 @@ public class Game {
         Graphics.instance.createLight();
 
         collision.render();
-        PROFILE("Col rendr");
+        PROFILE("Col render");
+
+        if (mGameEndPoint != null) {
+            mGameEndPoint.render();
+            PROFILE("Entity render");
+        }
+
 
         mChunkManager.renderChunks(mCamera);
         PROFILE("chunk rdr");

@@ -4,6 +4,7 @@ package supergame.network;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Server;
 
+import supergame.Collision;
 import supergame.Game;
 import supergame.character.Character;
 import supergame.network.Structs.Entity;
@@ -110,10 +111,18 @@ public class GameServer extends GameEndPoint {
         if (!mCharControlMap.containsKey(0)) {
             System.err.println("creating char for local connection " + 0);
             // FIXME: this assumes 0 isn't a valid connection. is that guaranteed?
-            Character local = new Character();
+            Character local = new Character(Collision.START_POS_X,
+                    Collision.START_POS_Y + 40,
+                    Collision.START_POS_Z + 10);
             registerEntity(local);
             local.setController(Game.mCamera);
             mCharControlMap.put(0, getEntityId(local));
+
+
+            Character npc = new Character(Collision.START_POS_X,
+                    Collision.START_POS_Y + 40,
+                    Collision.START_POS_Z);
+            registerEntity(npc);
         }
 
         // new connection: create a character
@@ -121,7 +130,9 @@ public class GameServer extends GameEndPoint {
             if (!mCharControlMap.containsKey(c.getID())) {
                 System.err.println("creating char for connection " + c.getID());
                 // create new character in entity map (TODO: added automatically)
-                Character newChar = new Character();
+                Character newChar = new Character(Collision.START_POS_X,
+                        Collision.START_POS_Y + 40,
+                        Collision.START_POS_Z);
                 registerEntity(newChar);
 
                 // add new character id to mCharControlMap

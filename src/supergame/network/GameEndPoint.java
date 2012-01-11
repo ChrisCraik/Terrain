@@ -9,6 +9,7 @@ import com.esotericsoftware.kryonet.Listener;
 
 import org.lwjgl.BufferUtils;
 
+import supergame.character.Character;
 import supergame.network.Structs.Entity;
 import supergame.network.Structs.EntityData;
 import supergame.network.Structs.StateMessage;
@@ -159,4 +160,13 @@ public abstract class GameEndPoint {
 
     public abstract void setupMove(double frameTime);
     public abstract void postMove(double frameTime);
+
+    public void render() {
+        for (Entity e : mEntityMap.values()) {
+            if (e instanceof Character) {
+                System.err.println("RENDERING CHAR");
+                ((Character)e).render();
+            }
+        }
+    }
 }

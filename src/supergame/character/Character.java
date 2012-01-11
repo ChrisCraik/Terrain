@@ -3,7 +3,6 @@ package supergame.character;
 
 import org.lwjgl.opengl.GL11;
 
-import supergame.Collision;
 import supergame.Config;
 import supergame.Game;
 import supergame.network.PiecewiseLerp;
@@ -34,10 +33,8 @@ public class Character extends Entity {
     // queried outside of the functions that set them.
     private final Vector3f mPosition = new Vector3f();
 
-    public Character() {
-        mCharacterId = Game.collision.mPhysics.createCharacter(Collision.START_POS_X,
-                Collision.START_POS_Y + 40,
-                Collision.START_POS_Z);
+    public Character(float x, float y, float z) {
+        mCharacterId = Game.collision.mPhysics.createCharacter(x, y, z);
         mHeading = 0;
         mPitch = 0;
     }
