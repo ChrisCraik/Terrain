@@ -186,6 +186,8 @@ public class Camera extends Controller {
         message.heading = mHeadingAngle;
         message.pitch = mPitchAngle;
         message.jump = Keyboard.isKeyDown(Keyboard.KEY_SPACE);
+        message.duck = Keyboard.isKeyDown(Keyboard.KEY_LSHIFT);
+        message.sprint = Keyboard.isKeyDown(Keyboard.KEY_LCONTROL);
 
         // TODO: movement when no char attached
 

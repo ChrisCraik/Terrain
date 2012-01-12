@@ -56,13 +56,10 @@ public class JavaPhysics implements Physics {
                 PairCachingGhostObject ghostObject) {
             mController = controller;
             mGhostObject = ghostObject;
-            mMoveDirection = new Vector3f(); // TODO: use this for smoother air
-                                             // control
         }
 
         public KinematicCharacterController mController;
         public PairCachingGhostObject mGhostObject;
-        public Vector3f mMoveDirection;
     }
 
     @Override

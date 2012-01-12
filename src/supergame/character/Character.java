@@ -48,7 +48,7 @@ public class Character extends Entity {
         GL11.glTranslatef(mPosition.x, mPosition.y, mPosition.z);
         GL11.glRotatef(mHeading, 0, 1, 0);
         GL11.glRotatef(mPitch, 1, 0, 0);
-        Game.collision.drawCube(2, 2, 2);
+        Game.collision.drawCube(1, 1.5f, 1);
         GL11.glPopMatrix();
 
         mEquipment.updatePositionLook(mPosition, mHeading, mPitch);
@@ -78,7 +78,9 @@ public class Character extends Entity {
         Vector3f walkDirection = new Vector3f(mControlMessage.x, 0, mControlMessage.z);
         if (walkDirection.length() > 1f)
             walkDirection.normalize();
-        walkDirection.scale(0.15f);
+
+        // scale by frame time, since btKinematicCharacterController doesn't
+        walkDirection.scale(Game.delta / 100f);
 
         float strengthIfJumping = Config.PLAYER_MIDAIR_CONTROL;
         Game.collision.getPhysics().controlCharacter(mCharacterId, strengthIfJumping,

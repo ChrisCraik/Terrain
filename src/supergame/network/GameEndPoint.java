@@ -8,7 +8,9 @@ import com.esotericsoftware.kryonet.EndPoint;
 import com.esotericsoftware.kryonet.Listener;
 
 import org.lwjgl.BufferUtils;
+import org.lwjgl.opengl.GL11;
 
+import supergame.Game;
 import supergame.character.Character;
 import supergame.character.Character.CharacterData;
 import supergame.network.Structs.ControlMessage;
@@ -169,6 +171,10 @@ public abstract class GameEndPoint {
     public abstract void postMove(double frameTime);
 
     public void render() {
+        GL11.glMaterial(GL11.GL_FRONT, GL11.GL_DIFFUSE,
+                Game.makeFB(new float[] {
+                        0.5f, 0, 0.5f, 0.5f
+                }));
         for (Entity e : mEntityMap.values()) {
             if (e instanceof Character) {
                 ((Character)e).render();
