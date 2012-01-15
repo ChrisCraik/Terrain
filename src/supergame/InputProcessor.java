@@ -18,12 +18,44 @@ import java.util.HashSet;
 
 @SuppressWarnings("deprecation")
 public class InputProcessor {
+    private static final HashSet<Integer> IGNORED_KEYS = new HashSet<Integer>();
+    static {
+        IGNORED_KEYS.add(Keyboard.KEY_LEFT);
+        IGNORED_KEYS.add(Keyboard.KEY_RIGHT);
+        IGNORED_KEYS.add(Keyboard.KEY_UP);
+        IGNORED_KEYS.add(Keyboard.KEY_DOWN);
+
+        IGNORED_KEYS.add(Keyboard.KEY_LCONTROL);
+        IGNORED_KEYS.add(Keyboard.KEY_LMENU);
+        IGNORED_KEYS.add(Keyboard.KEY_LMETA);
+        IGNORED_KEYS.add(Keyboard.KEY_LSHIFT);
+
+        IGNORED_KEYS.add(Keyboard.KEY_RCONTROL);
+        IGNORED_KEYS.add(Keyboard.KEY_RMENU);
+        IGNORED_KEYS.add(Keyboard.KEY_RMETA);
+        IGNORED_KEYS.add(Keyboard.KEY_RSHIFT);
+
+        IGNORED_KEYS.add(Keyboard.KEY_HOME);
+        IGNORED_KEYS.add(Keyboard.KEY_END);
+    };
+
+    public static boolean PollKeyboard() {
+        // poll for the next key down event, not in ignore list
+        while (Keyboard.next()) {
+            if (Keyboard.getEventKeyState()) {
+                if (!IGNORED_KEYS.contains(Keyboard.getEventKey())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private TrueTypeFont mFont;
 
     private String mName = null;
     private String mServer = null;
     private String mCurrent = "";
-    private final HashSet<Integer> mIgnoredKeys = new HashSet<Integer>();
 
     public InputProcessor() {
         InputStream inputStream = ResourceLoader
@@ -40,24 +72,6 @@ public class InputProcessor {
 
         Font awtFont = new Font("Times New Roman", Font.BOLD, 24);
         mFont = new TrueTypeFont(awtFont, true);
-
-        mIgnoredKeys.add(Keyboard.KEY_LEFT);
-        mIgnoredKeys.add(Keyboard.KEY_RIGHT);
-        mIgnoredKeys.add(Keyboard.KEY_UP);
-        mIgnoredKeys.add(Keyboard.KEY_DOWN);
-
-        mIgnoredKeys.add(Keyboard.KEY_LCONTROL);
-        mIgnoredKeys.add(Keyboard.KEY_LMENU);
-        mIgnoredKeys.add(Keyboard.KEY_LMETA);
-        mIgnoredKeys.add(Keyboard.KEY_LSHIFT);
-
-        mIgnoredKeys.add(Keyboard.KEY_RCONTROL);
-        mIgnoredKeys.add(Keyboard.KEY_RMENU);
-        mIgnoredKeys.add(Keyboard.KEY_RMETA);
-        mIgnoredKeys.add(Keyboard.KEY_RSHIFT);
-
-        mIgnoredKeys.add(Keyboard.KEY_HOME);
-        mIgnoredKeys.add(Keyboard.KEY_END);
     }
 
     private final String DEFAULT_SERVER = "me";// "localhost:27000";
@@ -76,11 +90,11 @@ public class InputProcessor {
             if (serverParts[0].equalsIgnoreCase("me")) {
                 System.out.println("creating server");
                 GameServer s = new GameServer();
-                s.bind(udp, tcp);
+                s.bind(tcp, udp);
                 return s;
             } else {
                 GameClient c = new GameClient();
-                c.connect(1000, serverParts[0], udp, tcp);
+                c.connect(1000, serverParts[0], tcp, udp);
                 return c;
             }
         } catch (IOException e) {
@@ -115,7 +129,7 @@ public class InputProcessor {
                     } else {
                         return getEndPoint();
                     }
-                } else if (!mIgnoredKeys.contains(Keyboard.getEventKey())) {
+                } else if (!IGNORED_KEYS.contains(Keyboard.getEventKey())) {
                     mCurrent += Keyboard.getEventCharacter();
                 }
             }

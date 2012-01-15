@@ -24,6 +24,10 @@ public class Structs {
     static final short OP_TOOL7 = 107;
     static final short OP_TOOL8 = 108;
 
+    public static class ChatMessage {
+        public String s = null;
+    }
+
     public static class ControlMessage {
         public double timestamp;
         public float x;

@@ -8,6 +8,7 @@ import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
 
 import supergame.character.Controller;
+import supergame.network.Structs.ChatMessage;
 import supergame.network.Structs.ControlMessage;
 
 import javax.vecmath.Vector3f;
@@ -153,7 +154,7 @@ public class Camera extends Controller {
      * camera, and any character under direct control.
      */
     @Override
-    public void control(double frameTime, ControlMessage message) {
+    public void control(double frameTime, ControlMessage control, ChatMessage chat) {
         DisplayMode dm = Display.getDisplayMode();
         int height = dm.getHeight();
         int width = dm.getWidth();
@@ -162,13 +163,20 @@ public class Camera extends Controller {
 
         mHeadingAngle -= (Mouse.getX() - width / 2) / 10.0;
         mPitchAngle += (Mouse.getY() - height / 2) / 10.0;
-
         mPitchAngle = Math.min(mPitchAngle, 90);
         mPitchAngle = Math.max(mPitchAngle, -90);
 
         // calculate absolute forward/strafe
         Vec3.HPVector(mForwardDir, 180 - mHeadingAngle, 0);
         Vec3.HPVector(mStrafeDir, 90 - mHeadingAngle, 0);
+
+        control.heading = mHeadingAngle;
+        control.pitch = mPitchAngle;
+
+        if (tryChat(chat)) {
+            // still chatting, so ignore keys for movement
+            return;
+        }
 
         // set walkDirection for character
         Vector3f walkDirection = new Vector3f(0, 0, 0);
@@ -181,13 +189,11 @@ public class Camera extends Controller {
         if (Keyboard.isKeyDown(Keyboard.KEY_D))
             walkDirection.sub(mStrafeDir);
 
-        message.x = walkDirection.x;
-        message.z = walkDirection.z;
-        message.heading = mHeadingAngle;
-        message.pitch = mPitchAngle;
-        message.jump = Keyboard.isKeyDown(Keyboard.KEY_SPACE);
-        message.duck = Keyboard.isKeyDown(Keyboard.KEY_LSHIFT);
-        message.sprint = Keyboard.isKeyDown(Keyboard.KEY_LCONTROL);
+        control.x = walkDirection.x;
+        control.z = walkDirection.z;
+        control.jump = Keyboard.isKeyDown(Keyboard.KEY_SPACE);
+        control.duck = Keyboard.isKeyDown(Keyboard.KEY_LSHIFT);
+        control.sprint = Keyboard.isKeyDown(Keyboard.KEY_LCONTROL);
 
         // TODO: movement when no char attached
 
@@ -197,6 +203,36 @@ public class Camera extends Controller {
             System.out.println("dir:" + walkDirection + ", pitch:" + mPitchAngle + ", heading:"
                     + mHeadingAngle);
         }
+    }
+
+    private String mCurrent = null;
+    private boolean tryChat(ChatMessage chat) {
+        if (mCurrent == null) {
+            while (InputProcessor.PollKeyboard()) {
+                if (Keyboard.getEventKey() == Keyboard.KEY_RETURN) {
+                    mCurrent = "";
+                    break;
+                }
+            }
+        }
+
+        if (mCurrent == null)
+            return false;
+
+        // build up the string the player is typing until a 'return'
+        while (InputProcessor.PollKeyboard()) {
+            if (Keyboard.getEventKey() == Keyboard.KEY_BACK
+                    && !mCurrent.isEmpty()) {
+                mCurrent = mCurrent.substring(0, mCurrent.length() - 1);
+            } else if (Keyboard.getEventKey() == Keyboard.KEY_RETURN) {
+                chat.s = mCurrent;
+                mCurrent = null;
+                return true;
+            } else {
+                mCurrent += Keyboard.getEventCharacter();
+            }
+        }
+        return true;
     }
 
     @Override

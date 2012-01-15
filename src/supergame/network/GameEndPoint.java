@@ -10,9 +10,12 @@ import com.esotericsoftware.kryonet.Listener;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 
+import supergame.ChatDisplay;
 import supergame.Game;
 import supergame.character.Character;
 import supergame.character.Character.CharacterData;
+import supergame.graphics.Graphics;
+import supergame.network.Structs.ChatMessage;
 import supergame.network.Structs.ControlMessage;
 import supergame.network.Structs.Entity;
 import supergame.network.Structs.EntityData;
@@ -95,6 +98,8 @@ public abstract class GameEndPoint {
         }
 
         mKryo.register(float[].class);
+        mKryo.register(double[].class);
+        mKryo.register(short[].class);
         mKryo.register(HashMap.class);
         mKryo.register(Structs.EntityData.class);
 
@@ -110,6 +115,7 @@ public abstract class GameEndPoint {
         mKryo.register(StateMessage.class);
 
         mKryo.register(StartMessage.class);
+        mKryo.register(ChatMessage.class);
         mKryo.register(ControlMessage.class);
         registerEntityPacket(CharacterData.class, Character.class);
     }
@@ -166,11 +172,12 @@ public abstract class GameEndPoint {
     }
 
     protected int mLocalCharId = -1;
+    protected final ChatDisplay mChatDisplay = new ChatDisplay();
 
     public abstract void setupMove(double frameTime);
     public abstract void postMove(double frameTime);
 
-    public void render() {
+    public void render(double frameTime) {
         GL11.glMaterial(GL11.GL_FRONT, GL11.GL_DIFFUSE,
                 Game.makeFB(new float[] {
                         0.5f, 0, 0.5f, 0.5f
@@ -180,5 +187,8 @@ public abstract class GameEndPoint {
                 ((Character)e).render();
             }
         }
+
+        Graphics.instance.switchTo2d();
+        mChatDisplay.render(frameTime);
     }
 }

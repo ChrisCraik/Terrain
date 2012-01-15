@@ -6,6 +6,7 @@ import org.lwjgl.opengl.GL11;
 import supergame.Config;
 import supergame.Game;
 import supergame.network.PiecewiseLerp;
+import supergame.network.Structs.ChatMessage;
 import supergame.network.Structs.ControlMessage;
 import supergame.network.Structs.Entity;
 import supergame.network.Structs.EntityData;
@@ -28,6 +29,7 @@ public class Character extends Entity {
 
     private Controller mController = null;
     private ControlMessage mControlMessage = new ControlMessage();
+    private final ChatMessage mChatMessage = new ChatMessage();
     private final PiecewiseLerp mStateLerp = new PiecewiseLerp(5);
 
     // temporary vectors used for intermediate calculations. should not be
@@ -66,10 +68,14 @@ public class Character extends Entity {
         mControlMessage = message;
     }
 
+    public void setChatMessage(ChatMessage chat) {
+        mChatMessage.s = chat.s;
+    }
+
     public void setupMove(double frameTime) {
         if (mController != null) {
             // local controller
-            mController.control(frameTime, mControlMessage);
+            mController.control(frameTime, mControlMessage, mChatMessage);
             mEquipment.pollInput();
         }
         mHeading = mControlMessage.heading;
@@ -129,5 +135,9 @@ public class Character extends Entity {
 
     public ControlMessage getControl() {
         return mControlMessage;
+    }
+
+    public ChatMessage getChat() {
+        return mChatMessage;
     }
 }

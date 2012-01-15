@@ -3,8 +3,11 @@ package supergame.network;
 
 import com.esotericsoftware.kryonet.Client;
 
+import org.newdawn.slick.Color;
+
 import supergame.Game;
 import supergame.character.Character;
+import supergame.network.Structs.ChatMessage;
 import supergame.network.Structs.Entity;
 import supergame.network.Structs.EntityData;
 import supergame.network.Structs.StartMessage;
@@ -97,6 +100,13 @@ public class GameClient extends GameEndPoint {
             Character localChar = (Character)mEntityMap.get(mLocalCharId);
             localChar.setController(Game.mCamera);
             ((Client)mEndPoint).sendUDP(localChar.getControl());
+
+            ChatMessage chat = localChar.getChat();
+            if (chat != null && chat.s != null) {
+                System.err.println("Sending chat to server:" + chat.s);
+                ((Client)mEndPoint).sendTCP(chat);
+                chat.s = null;
+            }
         }
 
         // receive world state from server
@@ -108,12 +118,15 @@ public class GameClient extends GameEndPoint {
 
             if (pair.object instanceof StateMessage) {
                 // Server updates client with state of all entities
-                StateMessage state = ((StateMessage) pair.object);
+                StateMessage state = (StateMessage) pair.object;
                 applyEntityChanges(state.timestamp, state.data);
             } else if (pair.object instanceof StartMessage) {
                 // Server tells client which character the player controls
                 mLocalCharId = ((StartMessage) pair.object).characterEntity;
                 System.err.println("Client sees localid, " + mLocalCharId);
+            } else if (pair.object instanceof ChatMessage) {
+                ChatMessage chat = (ChatMessage) pair.object;
+                mChatDisplay.addChat(frameTime, chat.s, Color.white);
             }
         }
 

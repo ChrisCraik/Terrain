@@ -41,6 +41,11 @@ public class Config {
     public static float PHYSICS_GRAVITY = -10;
     public static final boolean PHYSICS_USE_NATIVE = true;
 
+    // CHATTING
+    public static int CHAT_HISTORY = 10;
+    public static float CHAT_FADE = 10000;
+    public static int CHAT_SPACING = 25;
+
     public static void setOption(String fieldname, String value) {
         try {
             Field f = Config.class.getField(fieldname);

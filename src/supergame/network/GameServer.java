@@ -4,10 +4,13 @@ package supergame.network;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Server;
 
+import org.newdawn.slick.Color;
+
 import supergame.Collision;
 import supergame.Game;
 import supergame.character.Character;
 import supergame.character.NPCController;
+import supergame.network.Structs.ChatMessage;
 import supergame.network.Structs.ControlMessage;
 import supergame.network.Structs.Entity;
 import supergame.network.Structs.EntityData;
@@ -101,6 +104,27 @@ public class GameServer extends GameEndPoint {
         return false;
     }
 
+    private void processChatMessage(double frameTime, ChatMessage chat) {
+        if (chat == null || chat.s == null) {
+            return;
+        }
+
+        String s = chat.s;
+
+        if (s.isEmpty()) {
+            chat.s = null;
+            return;
+        }
+
+        // TODO: chat filtration, command parsing
+        // TODO: add name to string
+
+        ((Server)mEndPoint).sendToAllTCP(chat);
+
+        mChatDisplay.addChat(frameTime, s, Color.white);
+        chat.s = null; // clear string to mark as processed for local reuse
+    }
+
     @Override
     public void setupMove(double frameTime) {
         // if a connection doesn't remain, delete the char
@@ -146,6 +170,7 @@ public class GameServer extends GameEndPoint {
                 // add new character id to mCharControlMap
                 int charId = getEntityId(newChar);
                 mCharControlMap.put(c.getID(), charId);
+                System.err.println("creating char is " + newChar);
 
                 // tell client their character ID
                 StartMessage m = new StartMessage();
@@ -169,12 +194,23 @@ public class GameServer extends GameEndPoint {
                     ControlMessage state = ((ControlMessage) pair.object);
                     ((Character)character).setControlMessage(state);
                 }
+            } else if (pair.object instanceof ChatMessage) {
+                Integer charId = mCharControlMap.get(pair.connection.getID());
+                Entity character = mEntityMap.get(charId);
+                if (character != null) {
+                    ChatMessage chat = ((ChatMessage) pair.object);
+                    ((Character)character).setChatMessage(chat);
+                }
             }
         }
 
+        // process charater move intent, and chats
         for (Entity e : mEntityMap.values()) {
             if (e instanceof Character) {
-                ((Character)e).setupMove(frameTime);
+                Character c = (Character)e;
+                c.setupMove(frameTime);
+
+                processChatMessage(frameTime, c.getChat());
             }
         }
     }

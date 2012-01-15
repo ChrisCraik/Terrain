@@ -188,14 +188,13 @@ public class Game {
         collision.render();
         PROFILE("Col render");
 
-        if (mGameEndPoint != null) {
-            mGameEndPoint.render();
-            PROFILE("Entity render");
-        }
-
-
         mChunkManager.renderChunks(mCamera);
         PROFILE("chunk rdr");
+
+        if (mGameEndPoint != null) {
+            mGameEndPoint.render(mLastFrame);
+            PROFILE("Entity render");
+        }
 
         return true;
     }
