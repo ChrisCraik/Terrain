@@ -121,7 +121,7 @@ public class GLGraphics extends Graphics {
     public void createLight() {
         GL11.glLight(GL11.GL_LIGHT0, GL11.GL_POSITION,
                 makeFB(new float[] {
-                        0, 1, 0.5f, 0
+                        0.3f, 1, 0.5f, 0
                 })); // from above!
     }
 }
