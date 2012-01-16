@@ -114,24 +114,22 @@ public class InputProcessor {
         } else {
             mFont.drawString(100, 300, "ENTER NAME: " + mCurrent, Color.green);
         }
-        while (Keyboard.next()) {
-            if (Keyboard.getEventKeyState()) {
-                if (Keyboard.getEventKey() == Keyboard.KEY_BACK
-                        && mCurrent != null && !mCurrent.isEmpty()) {
-                    mCurrent = mCurrent.substring(0, mCurrent.length() - 1);
-                } else if (Keyboard.getEventKey() == Keyboard.KEY_RETURN) {
-                    if (mName == null) {
-                        mName = mCurrent;
-                        mCurrent = DEFAULT_SERVER;
-                    } else if (mServer == null) {
-                        mServer = mCurrent;
-                        mCurrent = null;
-                    } else {
-                        return getEndPoint();
-                    }
-                } else if (!IGNORED_KEYS.contains(Keyboard.getEventKey())) {
-                    mCurrent += Keyboard.getEventCharacter();
+        while (PollKeyboard()) {
+            if (Keyboard.getEventKey() == Keyboard.KEY_BACK
+                    && mCurrent != null && !mCurrent.isEmpty()) {
+                mCurrent = mCurrent.substring(0, mCurrent.length() - 1);
+            } else if (Keyboard.getEventKey() == Keyboard.KEY_RETURN) {
+                if (mName == null) {
+                    mName = mCurrent;
+                    mCurrent = DEFAULT_SERVER;
+                } else if (mServer == null) {
+                    mServer = mCurrent;
+                    mCurrent = null;
+                } else {
+                    return getEndPoint();
                 }
+            } else {
+                mCurrent += Keyboard.getEventCharacter();
             }
         }
         return null;

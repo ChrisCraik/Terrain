@@ -30,7 +30,7 @@ public class Character extends Entity {
     private Controller mController = null;
     private ControlMessage mControlMessage = new ControlMessage();
     private final ChatMessage mChatMessage = new ChatMessage();
-    private final PiecewiseLerp mStateLerp = new PiecewiseLerp(5);
+    private final PiecewiseLerp mStateLerp = new PiecewiseLerp(Config.CHAR_STATE_SAMPLES);
 
     // temporary vectors used for intermediate calculations. should not be
     // queried outside of the functions that set them.

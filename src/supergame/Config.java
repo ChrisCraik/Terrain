@@ -46,6 +46,9 @@ public class Config {
     public static float CHAT_FADE = 10000;
     public static int CHAT_SPACING = 25;
 
+    // NETWORKING
+    public static int CHAR_STATE_SAMPLES = 20;
+
     public static void setOption(String fieldname, String value) {
         try {
             Field f = Config.class.getField(fieldname);
