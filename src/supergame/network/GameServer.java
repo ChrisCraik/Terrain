@@ -104,7 +104,7 @@ public class GameServer extends GameEndPoint {
         return false;
     }
 
-    private void processChatMessage(double frameTime, ChatMessage chat) {
+    private void processChatMessage(double localTime, ChatMessage chat) {
         if (chat == null || chat.s == null) {
             return;
         }
@@ -121,12 +121,12 @@ public class GameServer extends GameEndPoint {
 
         ((Server)mEndPoint).sendToAllTCP(chat);
 
-        mChatDisplay.addChat(frameTime, s, Color.white);
+        mChatDisplay.addChat(localTime, s, Color.white);
         chat.s = null; // clear string to mark as processed for local reuse
     }
 
     @Override
-    public void setupMove(double frameTime) {
+    public void setupMove(double localTime) {
         // if a connection doesn't remain, delete the char
         for (Integer connectionId : mCharControlMap.keySet()) {
             if (connectionId == 0 || connectionIsValid(connectionId)) {
@@ -182,7 +182,7 @@ public class GameServer extends GameEndPoint {
         // receive control messages from clients
         TransmitPair pair;
         for (;;) {
-            pair = pollHard(frameTime, 0);
+            pair = pollHard(localTime, 0);
             if (pair == null)
                 break;
 
@@ -208,15 +208,15 @@ public class GameServer extends GameEndPoint {
         for (Entity e : mEntityMap.values()) {
             if (e instanceof Character) {
                 Character c = (Character)e;
-                c.setupMove(frameTime);
+                c.setupMove(localTime);
 
-                processChatMessage(frameTime, c.getChat());
+                processChatMessage(localTime, c.getChat());
             }
         }
     }
 
     @Override
-    public void postMove(double frameTime) {
+    public void postMove(double localTime) {
         for (Entity e : mEntityMap.values()) {
             if (e instanceof Character) {
                 ((Character)e).postMove();
@@ -224,7 +224,7 @@ public class GameServer extends GameEndPoint {
         }
 
         StateMessage serverState = new StateMessage();
-        serverState.timestamp = frameTime;
+        serverState.timestamp = localTime;
         serverState.data = getEntityChanges();
         sendToAllUDP(serverState);
     }

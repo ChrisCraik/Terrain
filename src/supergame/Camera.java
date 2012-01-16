@@ -154,7 +154,7 @@ public class Camera extends Controller {
      * camera, and any character under direct control.
      */
     @Override
-    public void control(double frameTime, ControlMessage control, ChatMessage chat) {
+    public void control(double localTime, ControlMessage control, ChatMessage chat) {
         DisplayMode dm = Display.getDisplayMode();
         int height = dm.getHeight();
         int width = dm.getWidth();
@@ -227,11 +227,13 @@ public class Camera extends Controller {
             } else if (Keyboard.getEventKey() == Keyboard.KEY_RETURN) {
                 chat.s = mCurrent;
                 mCurrent = null;
+                ChatDisplay.current = null;
                 return true;
             } else {
                 mCurrent += Keyboard.getEventCharacter();
             }
         }
+        ChatDisplay.current = mCurrent;
         return true;
     }
 

@@ -158,8 +158,8 @@ public abstract class GameEndPoint {
         }
     }
 
-    public TransmitPair pollHard(double frameTime, int timeInMS) {
-        mMostRecentFrameTime = frameTime;
+    public TransmitPair pollHard(double localTime, int timeInMS) {
+        mMostRecentFrameTime = localTime;
 
         // TODO: read objects from file! hooray!
 
@@ -174,10 +174,10 @@ public abstract class GameEndPoint {
     protected int mLocalCharId = -1;
     protected final ChatDisplay mChatDisplay = new ChatDisplay();
 
-    public abstract void setupMove(double frameTime);
-    public abstract void postMove(double frameTime);
+    public abstract void setupMove(double localTime);
+    public abstract void postMove(double localTime);
 
-    public void render(double frameTime) {
+    public void render(double localTime) {
         GL11.glMaterial(GL11.GL_FRONT, GL11.GL_DIFFUSE,
                 Game.makeFB(new float[] {
                         0.5f, 0, 0.5f, 0.5f
@@ -189,6 +189,6 @@ public abstract class GameEndPoint {
         }
 
         Graphics.instance.switchTo2d();
-        mChatDisplay.render(frameTime);
+        mChatDisplay.render(localTime);
     }
 }

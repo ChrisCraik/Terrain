@@ -5,6 +5,7 @@ import com.esotericsoftware.kryonet.Client;
 
 import org.newdawn.slick.Color;
 
+import supergame.Config;
 import supergame.Game;
 import supergame.character.Character;
 import supergame.network.Structs.ChatMessage;
@@ -93,8 +94,13 @@ public class GameClient extends GameEndPoint {
         }
     }
 
+    /**
+     * Accounts for difference between local and server absolute timestamps
+     */
+    private double mClockCorrection = Double.MAX_VALUE;
+
     @Override
-    public void setupMove(double frameTime) {
+    public void setupMove(double localTime) {
         // send control info to server
         if (mEntityMap.containsKey(mLocalCharId)) {
             Character localChar = (Character)mEntityMap.get(mLocalCharId);
@@ -112,7 +118,7 @@ public class GameClient extends GameEndPoint {
         // receive world state from server
         TransmitPair pair;
         for (;;) {
-            pair = pollHard(frameTime, 0);
+            pair = pollHard(localTime, 0);
             if (pair == null)
                 break;
 
@@ -120,32 +126,40 @@ public class GameClient extends GameEndPoint {
                 // Server updates client with state of all entities
                 StateMessage state = (StateMessage) pair.object;
                 applyEntityChanges(state.timestamp, state.data);
+
+                // update clock correction based on packet timestamp, arrival time
+                if (mClockCorrection == Double.MAX_VALUE) {
+                    mClockCorrection = state.timestamp - localTime;
+                } else {
+                    mClockCorrection = Config.CORRECTION_WEIGHT * (state.timestamp - localTime)
+                            + (1 - Config.CORRECTION_WEIGHT) * mClockCorrection;
+                }
             } else if (pair.object instanceof StartMessage) {
                 // Server tells client which character the player controls
                 mLocalCharId = ((StartMessage) pair.object).characterEntity;
                 System.err.println("Client sees localid, " + mLocalCharId);
             } else if (pair.object instanceof ChatMessage) {
                 ChatMessage chat = (ChatMessage) pair.object;
-                mChatDisplay.addChat(frameTime, chat.s, Color.white);
+                mChatDisplay.addChat(localTime, chat.s, Color.white);
             }
         }
 
         // move local char
         if (mEntityMap.containsKey(mLocalCharId)) {
             Character localChar = (Character)mEntityMap.get(mLocalCharId);
-            localChar.setupMove(frameTime);
+            localChar.setupMove(localTime);
         }
     }
 
     @Override
-    public void postMove(double frameTime) {
+    public void postMove(double localTime) {
         // for each character, sample interpolation window
         for (Integer key : mEntityMap.keySet()) {
             Entity value = mEntityMap.get(key);
             if (value instanceof Character) {
                 float bias = (key == mLocalCharId) ? 1.0f : 0.5f;
-                // TODO: time is now for local, past for remote?
-                ((Character)value).sample(frameTime, bias);
+                Character c = (Character)value;
+                c.sample(localTime + mClockCorrection - Config.SAMPLE_DELAY, bias);
             }
         }
 

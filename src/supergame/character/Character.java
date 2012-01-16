@@ -72,10 +72,10 @@ public class Character extends Entity {
         mChatMessage.s = chat.s;
     }
 
-    public void setupMove(double frameTime) {
+    public void setupMove(double localTime) {
         if (mController != null) {
             // local controller
-            mController.control(frameTime, mControlMessage, mChatMessage);
+            mController.control(localTime, mControlMessage, mChatMessage);
             mEquipment.pollInput();
         }
         mHeading = mControlMessage.heading;
@@ -102,11 +102,11 @@ public class Character extends Entity {
     }
 
     @Override
-    public void apply(double timestamp, EntityData packet) {
+    public void apply(double serverTime, EntityData packet) {
         // store position / look angles into interpolation window
         assert (packet instanceof CharacterData);
         CharacterData data = (CharacterData) packet;
-        mStateLerp.addSample(timestamp, data.array);
+        mStateLerp.addSample(serverTime, data.array);
     }
 
     @Override
@@ -122,9 +122,9 @@ public class Character extends Entity {
     }
 
     private final float lerpFloats[] = new float[LERP_FIELDS];
-    public void sample(double frameTime, float bias) {
+    public void sample(double serverTime, float bias) {
         // sample interpolation window
-        mStateLerp.sample(frameTime, lerpFloats);
+        mStateLerp.sample(serverTime, lerpFloats);
 
         Vector3f pos = new Vector3f(lerpFloats[0], lerpFloats[1], lerpFloats[2]);
         mHeading = lerpFloats[3];

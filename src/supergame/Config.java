@@ -48,6 +48,8 @@ public class Config {
 
     // NETWORKING
     public static int CHAR_STATE_SAMPLES = 20;
+    public static double CORRECTION_WEIGHT = 0.125;
+    public static double SAMPLE_DELAY = 100;
 
     public static void setOption(String fieldname, String value) {
         try {
