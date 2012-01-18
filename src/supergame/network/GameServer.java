@@ -14,7 +14,6 @@ import supergame.network.Structs.ChatMessage;
 import supergame.network.Structs.ControlMessage;
 import supergame.network.Structs.Entity;
 import supergame.network.Structs.EntityData;
-import supergame.network.Structs.StartMessage;
 import supergame.network.Structs.StateMessage;
 
 import java.io.IOException;
@@ -65,8 +64,10 @@ public class GameServer extends GameEndPoint {
      *
      * @param entity
      */
-    public void registerEntity(Entity entity) {
-        registerEntity(entity, mNextEntityId++);
+    public int registerEntity(Entity entity) {
+        mNextEntityId++;
+        registerEntity(entity, mNextEntityId);
+        return mNextEntityId;
     }
 
     public void sendToAllTCP(Object o) {
@@ -82,17 +83,8 @@ public class GameServer extends GameEndPoint {
         ((Server) mEndPoint).bind(tcp, udp);
     }
 
-    // map connection id to character's entity id
-    HashMap<Integer, Integer> mCharControlMap = new HashMap<Integer, Integer>();
-
-    private int getEntityId(Entity e) {
-        for (Integer id : mEntityMap.keySet()) {
-            if (mEntityMap.get(id) == e)
-                return id;
-        }
-        // FIXME: proper error handling
-        return -1;
-    }
+    // map connection id to client/character structure
+    HashMap<Integer, ClientState> mClientStateMap = new HashMap<Integer, ClientState>();
 
     private boolean connectionIsValid(int connectionId) {
         // FIXME: do lookup instead
@@ -128,26 +120,22 @@ public class GameServer extends GameEndPoint {
     @Override
     public void setupMove(double localTime) {
         // if a connection doesn't remain, delete the char
-        for (Integer connectionId : mCharControlMap.keySet()) {
+        for (Integer connectionId : mClientStateMap.keySet()) {
             if (connectionId == 0 || connectionIsValid(connectionId)) {
                 continue;
             }
 
-            int charId = mCharControlMap.remove(connectionId);
-            // FIXME: check null
-            mEntityMap.remove(charId);
+            ClientState oldState = mClientStateMap.remove(connectionId);
+            mEntityMap.remove(oldState.mCharacterId);
         }
 
-        // create a local char, if it hasn't been done yet
-        if (!mCharControlMap.containsKey(0)) {
-            System.err.println("creating char for local connection " + 0);
+        // create a local ClientState/Char, if it hasn't been done yet
+        if (!mClientStateMap.containsKey(0)) {
             // FIXME: this assumes 0 isn't a valid connection. is that guaranteed?
-            Character local = new Character(Collision.START_POS_X,
-                    Collision.START_POS_Y + 40,
-                    Collision.START_POS_Z);
-            registerEntity(local);
-            local.setController(Game.mCamera);
-            mCharControlMap.put(0, getEntityId(local));
+            System.err.println("creating char for local connection " + 0);
+            ClientState localState = new ClientState(this, 0);
+            localState.mCharacter.setController(Game.mCamera);
+            mClientStateMap.put(0, localState);
 
             // Create NPC
             Character npc = new Character(Collision.START_POS_X,
@@ -157,25 +145,12 @@ public class GameServer extends GameEndPoint {
             npc.setController(new NPCController());
         }
 
-        // new connection: create a character
+        // new connection: create ClientState/Character
         for (Connection c : ((Server) mEndPoint).getConnections()) {
-            if (!mCharControlMap.containsKey(c.getID())) {
+            if (!mClientStateMap.containsKey(c.getID())) {
                 System.err.println("creating char for connection " + c.getID());
-                // create new character in entity map (TODO: added automatically)
-                Character newChar = new Character(Collision.START_POS_X,
-                        Collision.START_POS_Y + 40,
-                        Collision.START_POS_Z);
-                registerEntity(newChar);
 
-                // add new character id to mCharControlMap
-                int charId = getEntityId(newChar);
-                mCharControlMap.put(c.getID(), charId);
-                System.err.println("creating char is " + newChar);
-
-                // tell client their character ID
-                StartMessage m = new StartMessage();
-                m.characterEntity = charId;
-                ((Server)mEndPoint).sendToTCP(c.getID(), m);
+                mClientStateMap.put(c.getID(), new ClientState(this, c.getID()));
             }
         }
 
@@ -183,28 +158,27 @@ public class GameServer extends GameEndPoint {
         TransmitPair pair;
         for (;;) {
             pair = pollHard(localTime, 0);
-            if (pair == null)
+            if (pair == null){
                 break;
+            }
+
+            ClientState remoteClient = mClientStateMap.get(pair.connection.getID());
+            if (remoteClient == null) {
+                continue;
+            }
 
             if (pair.object instanceof ControlMessage) {
                 // Client updates server with state
-                Integer charId = mCharControlMap.get(pair.connection.getID());
-                Entity character = mEntityMap.get(charId);
-                if (character != null) {
-                    ControlMessage state = ((ControlMessage) pair.object);
-                    ((Character)character).setControlMessage(state);
-                }
+                ControlMessage state = ((ControlMessage) pair.object);
+                remoteClient.mCharacter.setControlMessage(state);
             } else if (pair.object instanceof ChatMessage) {
-                Integer charId = mCharControlMap.get(pair.connection.getID());
-                Entity character = mEntityMap.get(charId);
-                if (character != null) {
-                    ChatMessage chat = ((ChatMessage) pair.object);
-                    ((Character)character).setChatMessage(chat);
-                }
+                // Client updates server with state
+                ChatMessage state = ((ChatMessage) pair.object);
+                remoteClient.mCharacter.setChatMessage(state);
             }
         }
 
-        // process charater move intent, and chats
+        // process character move intent, and chats
         for (Entity e : mEntityMap.values()) {
             if (e instanceof Character) {
                 Character c = (Character)e;

@@ -136,7 +136,7 @@ public abstract class GameEndPoint {
      * @param entity
      * @param id
      */
-    public <K extends Entity> void registerEntity(K entity, int id) {
+    protected <K extends Entity> void registerEntity(K entity, int id) {
         assert (!mEntityMap.containsKey(id));
         mEntityMap.put(id, entity);
     }
