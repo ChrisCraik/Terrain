@@ -1,6 +1,8 @@
 
 package supergame.network;
 
+import supergame.ChunkIndex;
+
 import java.util.HashMap;
 
 public class Structs {
@@ -41,8 +43,12 @@ public class Structs {
         public short controlOps[];
     }
 
+    public static class ChunkMessage {
+        public ChunkIndex index;
+    }
+
     public static abstract class EntityData {
-    };
+    }
 
     public static abstract class Entity {
         PiecewiseLerp mLerp;

@@ -15,7 +15,22 @@ import java.util.concurrent.atomic.AtomicInteger;
  * requires only
  */
 public abstract class ChunkModifier implements ChunkModifierInterface {
-    private static LinkedList<ChunkModifier> changeList = new LinkedList<ChunkModifier>();
+    private static final LinkedList<ChunkModifier> sChangeList = new LinkedList<ChunkModifier>();
+
+    private static boolean sServerMode = false;
+    private static final LinkedList<Chunk> sChunksModifiedByServer = new LinkedList<Chunk>();
+
+    public static void setServerMode(boolean serverMode, ChunkProcessor cp) {
+        while (!sChangeList.isEmpty()) {
+            System.err.println("trying to step...");
+            step(cp);
+        }
+        sServerMode = serverMode;
+    }
+
+    public static LinkedList<Chunk> getServerModified() {
+        return sChunksModifiedByServer;
+    }
 
     private AtomicInteger mDirtyCount = null;
     private Vector<Chunk> mChunkList = null;
@@ -36,7 +51,7 @@ public abstract class ChunkModifier implements ChunkModifierInterface {
      * TODO: Multiple independent modifiers processing in parallel
      */
     public static void step(ChunkProcessor cp) {
-        ChunkModifier currentModifier = changeList.peekFirst();
+        ChunkModifier currentModifier = sChangeList.peekFirst();
 
         // no modifications, quick return
         if (currentModifier != null) {
@@ -46,19 +61,19 @@ public abstract class ChunkModifier implements ChunkModifierInterface {
             // if modifications are complete, swap them in and remove the
             // modification
             if (currentModifier.tryFinish(cp))
-                changeList.removeFirst();
+                sChangeList.removeFirst();
         }
     }
 
     public ChunkModifier() {
-        changeList.addLast(this);
+        sChangeList.addLast(this);
     }
 
     /**
      * Kick off re-generation of all modified chunks through the supplied
      * ChunkProcessor if generation had not already started.
      */
-    public void tryStart(ChunkProcessor cp) {
+    final public void tryStart(ChunkProcessor cp) {
         if (mState != State.CREATED)
             return;
 
@@ -67,8 +82,9 @@ public abstract class ChunkModifier implements ChunkModifierInterface {
         Vector<ChunkIndex> indexList = getIndexList();
         mChunkList = new Vector<Chunk>(indexList.size());
 
-        for (ChunkIndex index : indexList)
+        for (ChunkIndex index : indexList) {
             mChunkList.add(new Chunk(index, cp.getChunk(index), this));
+        }
 
         mDirtyCount = new AtomicInteger(mChunkList.size());
         cp.processChunks(mChunkList);
@@ -81,7 +97,7 @@ public abstract class ChunkModifier implements ChunkModifierInterface {
      * @param cp ChunkProcessor used to swap new chunks with old ones
      * @return true if the ChunkModifier has completed chunk generation
      */
-    public boolean tryFinish(ChunkProcessor cp) {
+    final public boolean tryFinish(ChunkProcessor cp) {
         if (mState != State.FINISHED)
             return false;
 
@@ -128,8 +144,13 @@ public abstract class ChunkModifier implements ChunkModifierInterface {
      * ChunkModifier.step() will swap in the new chunks.
      */
     @Override
-    public void chunkCompletion() {
-        if (0 == mDirtyCount.decrementAndGet())
+    public void chunkCompletion(Chunk c) {
+        if (mDirtyCount.decrementAndGet() == 0) {
             mState = State.FINISHED;
+        }
+
+        if (sServerMode) {
+            sChunksModifiedByServer.addLast(c);
+        }
     }
 }

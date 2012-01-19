@@ -4,6 +4,10 @@ package supergame;
 public class ChunkIndex {
     private final long mX, mY, mZ;
 
+    public ChunkIndex() {
+        mX = mY = mZ = 0;
+    }
+
     public ChunkIndex(long x, long y, long z) {
         mX = x;
         mY = y;

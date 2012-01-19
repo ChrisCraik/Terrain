@@ -6,10 +6,12 @@ import com.esotericsoftware.kryonet.Server;
 
 import org.newdawn.slick.Color;
 
+import supergame.Chunk;
 import supergame.Collision;
 import supergame.Game;
 import supergame.character.Character;
 import supergame.character.NPCController;
+import supergame.modify.ChunkModifier;
 import supergame.network.Structs.ChatMessage;
 import supergame.network.Structs.ControlMessage;
 import supergame.network.Structs.Entity;
@@ -20,6 +22,7 @@ import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map;
 
 public class GameServer extends GameEndPoint {
@@ -70,6 +73,10 @@ public class GameServer extends GameEndPoint {
         return mNextEntityId;
     }
 
+    public void unregisterEntity(int entityId) {
+        mEntityMap.remove(entityId);
+    }
+
     public void sendToAllTCP(Object o) {
         ((Server) mEndPoint).sendToAllTCP(o);
     }
@@ -117,8 +124,7 @@ public class GameServer extends GameEndPoint {
         chat.s = null; // clear string to mark as processed for local reuse
     }
 
-    @Override
-    public void setupMove(double localTime) {
+    private void updateConnections() {
         // if a connection doesn't remain, delete the char
         for (Integer connectionId : mClientStateMap.keySet()) {
             if (connectionId == 0 || connectionIsValid(connectionId)) {
@@ -126,7 +132,7 @@ public class GameServer extends GameEndPoint {
             }
 
             ClientState oldState = mClientStateMap.remove(connectionId);
-            mEntityMap.remove(oldState.mCharacterId);
+            oldState.disconnect(this);
         }
 
         // create a local ClientState/Char, if it hasn't been done yet
@@ -153,6 +159,11 @@ public class GameServer extends GameEndPoint {
                 mClientStateMap.put(c.getID(), new ClientState(this, c.getID()));
             }
         }
+    }
+
+    @Override
+    public void setupMove(double localTime) {
+        updateConnections();
 
         // receive control messages from clients
         TransmitPair pair;
@@ -201,5 +212,14 @@ public class GameServer extends GameEndPoint {
         serverState.timestamp = localTime;
         serverState.data = getEntityChanges();
         sendToAllUDP(serverState);
+
+        LinkedList<Chunk> newChunks = ChunkModifier.getServerModified();
+
+        for (Chunk c : newChunks) {
+            sendToAllTCP(c.getChunkPacket());
+        }
+        newChunks.clear();
     }
+
+
 }

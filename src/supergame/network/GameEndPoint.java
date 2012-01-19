@@ -11,11 +11,13 @@ import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 
 import supergame.ChatDisplay;
+import supergame.ChunkIndex;
 import supergame.Game;
 import supergame.character.Character;
 import supergame.character.Character.CharacterData;
 import supergame.graphics.Graphics;
 import supergame.network.Structs.ChatMessage;
+import supergame.network.Structs.ChunkMessage;
 import supergame.network.Structs.ControlMessage;
 import supergame.network.Structs.Entity;
 import supergame.network.Structs.EntityData;
@@ -117,6 +119,9 @@ public abstract class GameEndPoint {
         mKryo.register(StartMessage.class);
         mKryo.register(ChatMessage.class);
         mKryo.register(ControlMessage.class);
+
+        mKryo.register(ChunkIndex.class);
+        mKryo.register(ChunkMessage.class);
         registerEntityPacket(CharacterData.class, Character.class);
     }
 

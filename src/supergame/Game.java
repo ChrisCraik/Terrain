@@ -10,7 +10,9 @@ import org.lwjgl.opengl.DisplayMode;
 import supergame.graphics.GLGraphics;
 import supergame.graphics.Graphics;
 import supergame.modify.ChunkCastle;
+import supergame.modify.ChunkModifier;
 import supergame.network.GameEndPoint;
+import supergame.network.GameServer;
 
 import java.nio.FloatBuffer;
 import java.util.Random;
@@ -118,8 +120,13 @@ public class Game {
                     mGameEndPoint = mInputProcessor.processInput();
 
                     if (mGameEndPoint != null) {
-                        // TODO: connect or host. game is starting.
                         mInputProcessor = null;
+                        if (mGameEndPoint instanceof GameServer) {
+                            // TODO: avoid stall, just don't start calling
+                            // setup/post move until all chunks generated
+                            System.err.println("stalling until chunks complete...");
+                            ChunkModifier.setServerMode(true, mChunkManager);
+                        }
                     }
                 }
                 Display.update();

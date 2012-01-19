@@ -9,6 +9,7 @@ import supergame.Config;
 import supergame.Game;
 import supergame.character.Character;
 import supergame.network.Structs.ChatMessage;
+import supergame.network.Structs.ChunkMessage;
 import supergame.network.Structs.Entity;
 import supergame.network.Structs.EntityData;
 import supergame.network.Structs.StartMessage;
@@ -141,6 +142,9 @@ public class GameClient extends GameEndPoint {
             } else if (pair.object instanceof ChatMessage) {
                 ChatMessage chat = (ChatMessage) pair.object;
                 mChatDisplay.addChat(localTime, chat.s, Color.white);
+            } else if (pair.object instanceof ChunkMessage) {
+                ChunkMessage chunkMessage = (ChunkMessage) pair.object;
+                System.err.println("recieved chunk with index " + chunkMessage.index);
             }
         }
 

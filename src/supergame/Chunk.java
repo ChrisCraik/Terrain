@@ -7,6 +7,7 @@ import org.lwjgl.opengl.GL11;
 import supergame.Camera.Frustrumable;
 import supergame.Camera.Inclusion;
 import supergame.modify.ChunkModifierInterface;
+import supergame.network.Structs.ChunkMessage;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -418,7 +419,7 @@ public class Chunk implements Frustrumable {
             this.mModifiedWeights = buffers.weights;
             buffers.weights = new float[Config.CHUNK_DIVISION + 2][Config.CHUNK_DIVISION + 2][Config.CHUNK_DIVISION + 2];
 
-            mModifyComplete.chunkCompletion();
+            mModifyComplete.chunkCompletion(this);
         }
     }
 
@@ -521,5 +522,11 @@ public class Chunk implements Frustrumable {
         float ret[][][] = this.mModifiedWeights;
         this.mModifiedWeights = null;
         return ret;
+    }
+
+    public Object getChunkPacket() {
+        ChunkMessage m = new ChunkMessage();
+        m.index = mIndex;
+        return m;
     }
 }
