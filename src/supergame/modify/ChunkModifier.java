@@ -6,7 +6,9 @@ import supergame.ChunkIndex;
 import supergame.ChunkProcessor;
 import supergame.Config;
 
+import java.util.Collections;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -16,9 +18,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public abstract class ChunkModifier implements ChunkModifierInterface {
     private static final LinkedList<ChunkModifier> sChangeList = new LinkedList<ChunkModifier>();
-
     private static boolean sServerMode = false;
-    private static final LinkedList<Chunk> sChunksModifiedByServer = new LinkedList<Chunk>();
+    private static final List<Chunk> sChunksModifiedByServer = Collections.synchronizedList(new LinkedList<Chunk>());
 
     public static void setServerMode(boolean serverMode, ChunkProcessor cp) {
         while (!sChangeList.isEmpty()) {
@@ -172,7 +173,7 @@ public abstract class ChunkModifier implements ChunkModifierInterface {
         }
 
         if (sServerMode) {
-            sChunksModifiedByServer.addLast(c);
+            sChunksModifiedByServer.add(c);
         }
     }
 }
