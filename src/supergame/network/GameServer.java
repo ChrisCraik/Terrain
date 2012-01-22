@@ -8,6 +8,7 @@ import org.newdawn.slick.Color;
 
 import supergame.Chunk;
 import supergame.Collision;
+import supergame.Config;
 import supergame.Game;
 import supergame.character.Character;
 import supergame.character.NPCController;
@@ -22,7 +23,6 @@ import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.Map;
 
 public class GameServer extends GameEndPoint {
@@ -32,7 +32,7 @@ public class GameServer extends GameEndPoint {
      * Normal game server constructor.
      */
     public GameServer() {
-        super(new Server(), null, null);
+        super(new Server(Config.WRITE_BUFFER_SIZE, Config.OBJECT_BUFFER_SIZE), null, null);
     }
 
     /**
@@ -42,7 +42,7 @@ public class GameServer extends GameEndPoint {
      * @param w The server stores packets it sends in this.
      */
     public GameServer(WritableByteChannel w) {
-        super(new Server(), w, null);
+        super(new Server(Config.WRITE_BUFFER_SIZE, Config.OBJECT_BUFFER_SIZE), w, null);
     }
 
     /**
@@ -208,17 +208,17 @@ public class GameServer extends GameEndPoint {
             }
         }
 
+        // send entity updates to clients
         StateMessage serverState = new StateMessage();
         serverState.timestamp = localTime;
         serverState.data = getEntityChanges();
         sendToAllUDP(serverState);
 
-        LinkedList<Chunk> newChunks = ChunkModifier.getServerModified();
-
-        for (Chunk c : newChunks) {
+        // send chunk updates to clients
+        for (Chunk c : ChunkModifier.getServerModified()) {
+            System.err.println("sending chunk " + c.getChunkIndex());
             sendToAllTCP(c.getChunkPacket());
         }
-        newChunks.clear();
     }
 
 
