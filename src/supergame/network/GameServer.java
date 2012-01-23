@@ -6,7 +6,6 @@ import com.esotericsoftware.kryonet.Server;
 
 import org.newdawn.slick.Color;
 
-import supergame.Chunk;
 import supergame.Collision;
 import supergame.Config;
 import supergame.Game;
@@ -14,6 +13,7 @@ import supergame.character.Character;
 import supergame.character.NPCController;
 import supergame.modify.ChunkModifier;
 import supergame.network.Structs.ChatMessage;
+import supergame.network.Structs.ChunkMessage;
 import supergame.network.Structs.ControlMessage;
 import supergame.network.Structs.Entity;
 import supergame.network.Structs.EntityData;
@@ -27,6 +27,9 @@ import java.util.Map;
 
 public class GameServer extends GameEndPoint {
     private int mNextEntityId = 1;
+
+    // FIXME: this assumes 0 isn't a valid connection. is that guaranteed?
+    private static final int LOCAL_CONN = 0;
 
     /**
      * Normal game server constructor.
@@ -127,7 +130,7 @@ public class GameServer extends GameEndPoint {
     private void updateConnections() {
         // if a connection doesn't remain, delete the char
         for (Integer connectionId : mClientStateMap.keySet()) {
-            if (connectionId == 0 || connectionIsValid(connectionId)) {
+            if (connectionId == LOCAL_CONN || connectionIsValid(connectionId)) {
                 continue;
             }
 
@@ -136,12 +139,11 @@ public class GameServer extends GameEndPoint {
         }
 
         // create a local ClientState/Char, if it hasn't been done yet
-        if (!mClientStateMap.containsKey(0)) {
-            // FIXME: this assumes 0 isn't a valid connection. is that guaranteed?
+        if (!mClientStateMap.containsKey(LOCAL_CONN)) {
             System.err.println("creating char for local connection " + 0);
-            ClientState localState = new ClientState(this, 0);
+            ClientState localState = new ClientState(this, LOCAL_CONN);
             localState.mCharacter.setController(Game.mCamera);
-            mClientStateMap.put(0, localState);
+            mClientStateMap.put(LOCAL_CONN, localState);
 
             // Create NPC
             Character npc = new Character(Collision.START_POS_X,
@@ -155,8 +157,11 @@ public class GameServer extends GameEndPoint {
         for (Connection c : ((Server) mEndPoint).getConnections()) {
             if (!mClientStateMap.containsKey(c.getID())) {
                 System.err.println("creating char for connection " + c.getID());
+                ClientState newClient = new ClientState(this, c.getID());
+                mClientStateMap.put(c.getID(), newClient);
 
-                mClientStateMap.put(c.getID(), new ClientState(this, c.getID()));
+                // enqueue all previously modified chunks to the new client
+                newClient.enqueueChunks(ChunkModifier.server_getAllModified());
             }
         }
     }
@@ -215,11 +220,27 @@ public class GameServer extends GameEndPoint {
         sendToAllUDP(serverState);
 
         // send chunk updates to clients
-        for (Chunk c : ChunkModifier.getServerModified()) {
-            System.err.println("sending chunk " + c.getChunkIndex());
-            sendToAllTCP(c.getChunkPacket());
+        ChunkMessage[] recentModified = ChunkModifier.server_getRecentModified();
+        for (ChunkMessage message : recentModified) {
+            System.err.println("sending chunk " + message.index);
+            sendToAllTCP(message);
+        }
+
+        // send chunk initialization to new clients
+        for (int connectionId : mClientStateMap.keySet()) {
+            if (connectionId == LOCAL_CONN) {
+                continue;
+            }
+
+            ClientState clientState = mClientStateMap.get(connectionId);
+            // clientState.enqueueChunks(recentModified);
+
+            ChunkMessage[] chunksToSend = clientState.dequeueChunks();
+            if (chunksToSend != null) {
+                for (ChunkMessage message : chunksToSend) {
+                    ((Server) mEndPoint).sendToTCP(connectionId, message);
+                }
+            }
         }
     }
-
-
 }

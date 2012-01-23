@@ -103,7 +103,7 @@ public class InputProcessor {
         return null;
     }
 
-    public GameEndPoint processInput() {
+    public GameEndPoint processInput(boolean allowCompletion) {
         if (mName != null) {
             mFont.drawString(100, 100, "Name = " + mName);
             if (mServer != null) {
@@ -125,7 +125,7 @@ public class InputProcessor {
                 } else if (mServer == null) {
                     mServer = mCurrent;
                     mCurrent = null;
-                } else {
+                } else if (allowCompletion){
                     return getEndPoint();
                 }
             } else {

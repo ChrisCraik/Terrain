@@ -5,7 +5,6 @@ import com.esotericsoftware.kryonet.Client;
 
 import org.newdawn.slick.Color;
 
-import supergame.Chunk;
 import supergame.Config;
 import supergame.Game;
 import supergame.character.Character;
@@ -146,7 +145,7 @@ public class GameClient extends GameEndPoint {
                 mChatDisplay.addChat(localTime, chat.s, Color.white);
             } else if (pair.object instanceof ChunkMessage) {
                 ChunkMessage chunkMessage = (ChunkMessage) pair.object;
-                ChunkModifier.addModifiedFromServer(new Chunk(chunkMessage));
+                ChunkModifier.client_putModified(chunkMessage);
             }
         }
 

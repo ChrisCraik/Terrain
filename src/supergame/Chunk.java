@@ -557,7 +557,7 @@ public class Chunk implements Frustrumable {
         return ret;
     }
 
-    public Object getChunkPacket() {
+    public ChunkMessage getChunkPacket() {
         ChunkMessage m = new ChunkMessage();
         m.index = mIndex;
         if (!mIsEmpty) {
