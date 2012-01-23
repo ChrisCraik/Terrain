@@ -39,8 +39,10 @@ public class Structs {
         public boolean jump;
         public boolean sprint;
         public boolean duck;
-        public double controlTimes[];
-        public short controlOps[];
+        public boolean use0;
+        public boolean use1;
+        public int toolSelection;
+        public float targetDistance;
     }
 
     public static class ChunkMessage {

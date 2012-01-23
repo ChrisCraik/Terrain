@@ -45,12 +45,12 @@ public class Game {
     private ChunkManager mChunkManager;
     private InputProcessor mInputProcessor;
 
-    private long mLastFrame = getTime();
+    private long mLastFrame = getTimeMillis();
     private int mFps = 0;
     private long mLastFPS = 0;
 
     private void updateDelta() {
-        long time = getTime();
+        long time = getTimeMillis();
         delta = (int) (time - mLastFrame);
         mLastFrame = time;
 
@@ -72,7 +72,7 @@ public class Game {
         mFps++;
     }
 
-    private static long getTime() {
+    private static long getTimeMillis() {
         return (Sys.getTime() * 1000) / Sys.getTimerResolution();
     }
 
@@ -163,13 +163,12 @@ public class Game {
         }
     }
 
-    private static long endTime;
-
+    private static long mLastProfMillis;
     public static void PROFILE(String label) {
-        long tempTime = getTime();
-        if (tempTime - endTime > 20)
-            System.out.printf("%20s: %d\n", label + " took", (tempTime - endTime));
-        endTime = tempTime;
+        long tempTime = getTimeMillis();
+        if (tempTime - mLastProfMillis > 20)
+            System.out.printf("%20s: %d\n", label + " took", (tempTime - mLastProfMillis));
+        mLastProfMillis = tempTime;
     }
 
     private boolean render() {

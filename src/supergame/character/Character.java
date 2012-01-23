@@ -25,6 +25,7 @@ public class Character extends Entity {
     public final long mCharacterId;
     private float mHeading = 0;
     private float mPitch = 0;
+
     private final Equipment mEquipment = new Equipment();
 
     private Controller mController = null;
@@ -44,17 +45,17 @@ public class Character extends Entity {
         mCharacterId = Game.collision.mPhysics.createCharacter(x, y, z);
     }
 
-    public void render() {
+    public void render(boolean localToolsAllowed) {
         Game.collision.getPhysics().queryCharacterPosition(mCharacterId, mPosition);
         GL11.glPushMatrix();
         GL11.glTranslatef(mPosition.x, mPosition.y, mPosition.z);
         GL11.glRotatef(mHeading, 0, 1, 0);
         GL11.glRotatef(mPitch, 1, 0, 0);
-        Game.collision.drawCube(1, 1.5f, 1);
+        float height = mControlMessage.duck ? 0.75f : 1.5f;
+        Game.collision.drawCube(1, height, 1);
         GL11.glPopMatrix();
 
-        mEquipment.updatePositionLook(mPosition, mHeading, mPitch);
-        mEquipment.render();
+        mEquipment.render(mPosition, mControlMessage, localToolsAllowed);
     }
 
     public void setController(Controller c) {
@@ -76,7 +77,6 @@ public class Character extends Entity {
         if (mController != null) {
             // local controller
             mController.control(localTime, mControlMessage, mChatMessage);
-            mEquipment.pollInput();
         }
         mHeading = mControlMessage.heading;
         mPitch = mControlMessage.pitch;

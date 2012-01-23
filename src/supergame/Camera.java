@@ -149,6 +149,37 @@ public class Camera extends Controller {
         mFrustumPlanes[RIGHT].setNormalAndPoint(Y.cross(aux), nc.add(X.multiply(nw)));
     }
 
+    private int mToolSelection = 0;
+    private int updateToolSelection() {
+        if (Keyboard.isKeyDown(Keyboard.KEY_0)) {
+            mToolSelection = 0;
+        } else if (Keyboard.isKeyDown(Keyboard.KEY_1)) {
+            mToolSelection = 1;
+        } else if (Keyboard.isKeyDown(Keyboard.KEY_2)) {
+            mToolSelection = 2;
+        }
+        return mToolSelection;
+    }
+
+    static final float MIN_TARGET = 3;
+    static final float MAX_TARGET = 10;
+    private float mTargetDistance = 5;
+    private float updateTargetDistance() {
+        while (Keyboard.next()) {
+            if (Keyboard.getEventKey() == Keyboard.KEY_UP
+                    && Keyboard.getEventKeyState()) {
+                mTargetDistance += 1;
+            } else if (Keyboard.getEventKey() == Keyboard.KEY_DOWN
+                    && Keyboard.getEventKeyState()) {
+                mTargetDistance -= 1;
+            }
+        }
+        mTargetDistance += Mouse.getDWheel() / 1000.0;
+        mTargetDistance = Math.min(mTargetDistance, MAX_TARGET);
+        mTargetDistance = Math.max(mTargetDistance, MIN_TARGET);
+        return mTargetDistance;
+    }
+
     /**
      * Process input from the mouse and keyboard, adjusting the heading and pitch of the
      * camera, and any character under direct control.
@@ -174,7 +205,7 @@ public class Camera extends Controller {
         control.pitch = mPitchAngle;
 
         if (tryChat(chat)) {
-            // still chatting, so ignore keys for movement
+            // still chatting, so ignore keys for movement, tool select
             return;
         }
 
@@ -195,6 +226,10 @@ public class Camera extends Controller {
         control.duck = Keyboard.isKeyDown(Keyboard.KEY_LSHIFT);
         control.sprint = Keyboard.isKeyDown(Keyboard.KEY_LCONTROL);
 
+        control.use0 = Mouse.isButtonDown(0);
+        control.use1 = Mouse.isButtonDown(1);
+        control.toolSelection = updateToolSelection();
+        control.targetDistance = updateTargetDistance();
         // TODO: movement when no char attached
 
         Mouse.setCursorPosition(width / 2, height / 2);

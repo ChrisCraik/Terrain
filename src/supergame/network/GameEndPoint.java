@@ -190,7 +190,9 @@ public abstract class GameEndPoint {
                 }));
         for (Entity e : mEntityMap.values()) {
             if (e instanceof Character) {
-                ((Character)e).render();
+                // only modify chunks/spawn entities on server
+                boolean allowTools = this instanceof GameServer;
+                ((Character)e).render(allowTools);
             }
         }
 
