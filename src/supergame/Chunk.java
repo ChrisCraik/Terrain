@@ -93,22 +93,6 @@ public class Chunk implements Frustrumable {
         mModifiedParent = other;
     }
 
-    public Chunk(ChunkMessage remoteData) {
-        mIndex = remoteData.index;
-        mModifyComplete = null;
-
-        mPosition = mIndex.getVec3();
-        mPosition = mPosition.multiply(Config.CHUNK_DIVISION * Config.METERS_PER_SUBCHUNK);
-
-        if (remoteData.vertices != null) {
-            mChunkVertices = BufferUtils.createByteBuffer(remoteData.vertices.length);
-            mChunkNormals = BufferUtils.createByteBuffer(remoteData.normals.length);
-            mChunkShortIndices = BufferUtils.createByteBuffer(remoteData.shortIndices.length);
-            mChunkIntIndices = BufferUtils.createByteBuffer(remoteData.intIndices.length);
-        }
-        mState.set(PARALLEL_COMPLETE);
-    }
-
     public boolean serial_render(Camera cam, boolean allowBruteForceRender, boolean display) {
         if (mIsEmpty)
             return false;
@@ -412,7 +396,7 @@ public class Chunk implements Frustrumable {
 
         WorkerBuffers buffers = (WorkerBuffers) workerBuffers;
 
-        mPosition = mIndex.getVec3();
+        mPosition = this.mIndex.getVec3();
         mPosition = mPosition.multiply(Config.CHUNK_DIVISION * Config.METERS_PER_SUBCHUNK);
 
         buffers.verticesFloatCount = 0;
@@ -543,17 +527,6 @@ public class Chunk implements Frustrumable {
     public Object getChunkPacket() {
         ChunkMessage m = new ChunkMessage();
         m.index = mIndex;
-        if (!mIsEmpty) {
-            m.shortIndices = new byte[mChunkShortIndices.limit()];
-            m.intIndices = new byte[mChunkIntIndices.limit()];
-            m.vertices = new byte[mChunkVertices.limit()];
-            m.normals = new byte[mChunkNormals.limit()];
-
-            mChunkShortIndices.get(m.shortIndices);
-            mChunkIntIndices.get(m.intIndices);
-            mChunkVertices.get(m.vertices);
-            mChunkNormals.get(m.normals);
-        }
         return m;
     }
 }

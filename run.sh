@@ -1,1 +1,0 @@
-java -Djava.library.path=.:lib:lib/native/macosx -cp bin:"lib/*" supergame.Game

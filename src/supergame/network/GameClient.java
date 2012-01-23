@@ -5,11 +5,9 @@ import com.esotericsoftware.kryonet.Client;
 
 import org.newdawn.slick.Color;
 
-import supergame.Chunk;
 import supergame.Config;
 import supergame.Game;
 import supergame.character.Character;
-import supergame.modify.ChunkModifier;
 import supergame.network.Structs.ChatMessage;
 import supergame.network.Structs.ChunkMessage;
 import supergame.network.Structs.Entity;
@@ -146,8 +144,7 @@ public class GameClient extends GameEndPoint {
                 mChatDisplay.addChat(localTime, chat.s, Color.white);
             } else if (pair.object instanceof ChunkMessage) {
                 ChunkMessage chunkMessage = (ChunkMessage) pair.object;
-                System.err.println("recieved chunk with index " + chunkMessage.index + ", verts: " + chunkMessage.vertices.length);
-                ChunkModifier.addModifiedFromServer(new Chunk(chunkMessage));
+                System.err.println("recieved chunk with index " + chunkMessage.index);
             }
         }
 

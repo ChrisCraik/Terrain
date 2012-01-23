@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map;
 
 public class GameServer extends GameEndPoint {
@@ -207,16 +208,17 @@ public class GameServer extends GameEndPoint {
             }
         }
 
-        // send entity updates to clients
         StateMessage serverState = new StateMessage();
         serverState.timestamp = localTime;
         serverState.data = getEntityChanges();
         sendToAllUDP(serverState);
 
-        // send chunk updates to clients
-        for (Chunk c : ChunkModifier.getServerModified()) {
+        LinkedList<Chunk> newChunks = ChunkModifier.getServerModified();
+
+        for (Chunk c : newChunks) {
             sendToAllTCP(c.getChunkPacket());
         }
+        newChunks.clear();
     }
 
 

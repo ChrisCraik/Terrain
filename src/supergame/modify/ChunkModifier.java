@@ -28,21 +28,8 @@ public abstract class ChunkModifier implements ChunkModifierInterface {
         sServerMode = serverMode;
     }
 
-    public static Chunk[] getServerModified() {
-        assert sServerMode;
-        return getModifiedArray();
-    }
-
-    public static void addModifiedFromServer(Chunk c) {
-        assert !sServerMode;
-        sChunksModifiedByServer.add(c);
-    }
-
-    private static Chunk[] getModifiedArray() {
-        Chunk swapArray[] = new Chunk[sChunksModifiedByServer.size()];
-        swapArray = sChunksModifiedByServer.toArray(swapArray);
-        sChunksModifiedByServer.clear();
-        return swapArray;
+    public static LinkedList<Chunk> getServerModified() {
+        return sChunksModifiedByServer;
     }
 
     private AtomicInteger mDirtyCount = null;
@@ -76,16 +63,6 @@ public abstract class ChunkModifier implements ChunkModifierInterface {
             if (currentModifier.tryFinish(cp))
                 sChangeList.removeFirst();
         }
-/*
-        if (!sServerMode) {
-            Chunk swapArray[] = getModifiedArray();
-            Vector<Chunk> swapVector = new Vector<Chunk>();
-            for (Chunk c : swapArray) {
-                swapVector.add(c);
-            }
-            cp.swapChunks(swapVector);
-        }
-        */
     }
 
     public ChunkModifier() {

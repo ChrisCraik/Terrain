@@ -16,12 +16,10 @@ public class ChunkIndex {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
+        if (this == o)
             return true;
-        }
-        if (!(o instanceof ChunkIndex)) {
+        if (!(o instanceof ChunkIndex))
             return false;
-        }
 
         ChunkIndex ci = (ChunkIndex) o;
 

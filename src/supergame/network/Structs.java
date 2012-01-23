@@ -45,10 +45,6 @@ public class Structs {
 
     public static class ChunkMessage {
         public ChunkIndex index;
-        public byte[] shortIndices;
-        public byte[] intIndices;
-        public byte[] vertices;
-        public byte[] normals;
     }
 
     public static abstract class EntityData {

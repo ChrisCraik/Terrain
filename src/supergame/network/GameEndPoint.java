@@ -101,7 +101,6 @@ public abstract class GameEndPoint {
 
         mKryo.register(float[].class);
         mKryo.register(double[].class);
-        mKryo.register(byte[].class);
         mKryo.register(short[].class);
         mKryo.register(HashMap.class);
         mKryo.register(Structs.EntityData.class);
