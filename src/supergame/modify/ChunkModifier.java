@@ -5,8 +5,12 @@ import supergame.Chunk;
 import supergame.ChunkIndex;
 import supergame.ChunkProcessor;
 import supergame.Config;
+import supergame.network.Structs.ChunkMessage;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -16,9 +20,24 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public abstract class ChunkModifier implements ChunkModifierInterface {
     private static final LinkedList<ChunkModifier> sChangeList = new LinkedList<ChunkModifier>();
-
     private static boolean sServerMode = false;
-    private static final LinkedList<Chunk> sChunksModifiedByServer = new LinkedList<Chunk>();
+
+    /**
+     * In server mode, contains all chunks modified since last call to getServerModified()
+     *
+     * In client mode, contains list of most recently received chunks modified by server.
+     */
+    private static final List<ChunkMessage> sChunksModifiedByServer = Collections.synchronizedList(new LinkedList<ChunkMessage>());
+
+    /**
+     * In server mode, a map of all chunks ever modified by the server. These
+     * chunks are enqueued to newly connecting clients
+     */
+    private static final HashMap<ChunkIndex, ChunkMessage> sOutputChunkMap = new HashMap<ChunkIndex, ChunkMessage>();
+
+    public static boolean isEmpty() {
+        return sChangeList.isEmpty();
+    }
 
     public static void setServerMode(boolean serverMode, ChunkProcessor cp) {
         while (!sChangeList.isEmpty()) {
@@ -28,12 +47,42 @@ public abstract class ChunkModifier implements ChunkModifierInterface {
         sServerMode = serverMode;
     }
 
-    public static LinkedList<Chunk> getServerModified() {
-        return sChunksModifiedByServer;
+    public static ChunkMessage[] server_getAllModified() {
+        assert sServerMode;
+
+        ChunkMessage[] array = new ChunkMessage[sOutputChunkMap.size()];
+        array = sOutputChunkMap.values().toArray(array);
+        return array;
     }
 
+    public static ChunkMessage[] server_getRecentModified() {
+        assert sServerMode;
+        ChunkMessage[] array = getModifiedArray();
+
+        for (ChunkMessage message : array) {
+            sOutputChunkMap.put(message.index, message);
+        }
+
+        return array;
+    }
+
+    public static void client_putModified(ChunkMessage c) {
+        assert !sServerMode;
+        sChunksModifiedByServer.add(c);
+    }
+
+    private static ChunkMessage[] getModifiedArray() {
+        ChunkMessage swapArray[] = new ChunkMessage[sChunksModifiedByServer.size()];
+        swapArray = sChunksModifiedByServer.toArray(swapArray);
+        sChunksModifiedByServer.clear();
+        return swapArray;
+    }
+
+    // Instance methods, variables
+
     private AtomicInteger mDirtyCount = null;
-    private Vector<Chunk> mChunkList = null;
+    private Vector<Chunk> mChunks = null;
+
     private State mState = State.CREATED;
 
     private enum State {
@@ -63,6 +112,15 @@ public abstract class ChunkModifier implements ChunkModifierInterface {
             if (currentModifier.tryFinish(cp))
                 sChangeList.removeFirst();
         }
+
+        if (!sServerMode) {
+            ChunkMessage swapArray[] = getModifiedArray();
+            Vector<Chunk> swapVector = new Vector<Chunk>();
+            for (ChunkMessage message : swapArray) {
+                swapVector.add(new Chunk(message));
+            }
+            cp.swapChunks(swapVector);
+        }
     }
 
     public ChunkModifier() {
@@ -80,14 +138,14 @@ public abstract class ChunkModifier implements ChunkModifierInterface {
         mState = State.STARTED;
 
         Vector<ChunkIndex> indexList = getIndexList();
-        mChunkList = new Vector<Chunk>(indexList.size());
+        mChunks = new Vector<Chunk>(indexList.size());
 
         for (ChunkIndex index : indexList) {
-            mChunkList.add(new Chunk(index, cp.getChunk(index), this));
+            mChunks.add(new Chunk(index, cp.getChunk(index), this));
         }
 
-        mDirtyCount = new AtomicInteger(mChunkList.size());
-        cp.processChunks(mChunkList);
+        mDirtyCount = new AtomicInteger(mChunks.size());
+        cp.processChunks(mChunks);
     }
 
     /**
@@ -101,7 +159,7 @@ public abstract class ChunkModifier implements ChunkModifierInterface {
         if (mState != State.FINISHED)
             return false;
 
-        cp.swapChunks(mChunkList);
+        cp.swapChunks(mChunks);
         return true;
     }
 
@@ -150,7 +208,7 @@ public abstract class ChunkModifier implements ChunkModifierInterface {
         }
 
         if (sServerMode) {
-            sChunksModifiedByServer.addLast(c);
+            sChunksModifiedByServer.add(c.getChunkPacket());
         }
     }
 }

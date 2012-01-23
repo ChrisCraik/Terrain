@@ -109,7 +109,9 @@ public:
 				m_info(mass, mass == 0.f ? 0 : &m_state, &m_shape, inertia),
 				m_body(m_info)
 	{
+#ifdef DEBUG
 		fprintf(stderr, "mass is %f\n", mass);
+#endif
 		physics.m_dynamicsWorld.addRigidBody(&m_body);
 	}
 	btBoxShape m_shape;
@@ -151,10 +153,12 @@ JNIEXPORT jlong JNICALL Java_supergame_physics_NativePhysics_nativeCreateMesh(
 	int tris = indicesCap / (3 * indexScalarSize);
 	int verts = verticesCap / (3 * 4);
 
+#ifdef DEBUG
 	fprintf(stderr, "Creating native mesh! %d tris, %d verts\n", tris, verts);
 	fprintf(stderr, "coordBytes %d, numTriangles %d, numVert %d, triangleIndexStride %d, vertexStride %d\n",
 			indexScalarSize, tris, verts,
 			3*indexScalarSize, 3*4);
+#endif
 
 	return (jlong) new NativeChunk(tris, indices, 3 * indexScalarSize, verts,
 			vertices, 3 * 4, inertia, aabbMin, aabbMax);
@@ -163,7 +167,9 @@ JNIEXPORT jlong JNICALL Java_supergame_physics_NativePhysics_nativeCreateMesh(
 JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeRegisterMesh(
 		JNIEnv* env, jobject obj, jlong meshPtr)
 {
+#ifdef DEBUG
 	fprintf(stderr, "Registering chunk...\n");
+#endif
 	NativeChunk* chunk = (NativeChunk*) meshPtr;
 	if (NULL == chunk)
 	{
@@ -180,8 +186,7 @@ JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeUnregisterMesh
 	NativeChunk* chunk = (NativeChunk*) meshPtr;
 	if (NULL == chunk)
 	{
-		fprintf(stderr,
-				"WARNING: native layer passed null ptr to unregister.\n");
+		fprintf(stderr, "WARNING: native layer passed null ptr to unregister.\n");
 		return;
 	}
 	physics.m_dynamicsWorld.removeRigidBody(&(chunk->m_body));
@@ -191,7 +196,9 @@ JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeUnregisterMesh
 JNIEXPORT jlong JNICALL Java_supergame_physics_NativePhysics_nativeCreateCharacter(
 		JNIEnv* env, jobject obj, jfloat x, jfloat y, jfloat z)
 {
+#ifdef DEBUG
 	fprintf(stderr,"creating character\n");
+#endif
 	btTransform startTransform;
 	startTransform.setIdentity();
 	startTransform.setOrigin(btVector3(x,y,z));
@@ -231,8 +238,10 @@ JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeQueryCharacter
 
 	btVector3 origin(world.getOrigin());
 
-	//fprintf(stderr,"querying character at %f %f %f\n",
-	//		world.getOrigin().getX(), world.getOrigin().getY(), world.getOrigin().getZ());
+#ifdef DEBUG
+	fprintf(stderr,"querying character at %f %f %f\n",
+			world.getOrigin().getX(), world.getOrigin().getY(), world.getOrigin().getZ());
+#endif
 
 	static jclass vectorclass = env->FindClass("javax/vecmath/Vector3f");
 	static jfieldID xfid = env->GetFieldID(vectorclass, "x", "F");
@@ -276,7 +285,9 @@ JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeSetCharacterPo
 JNIEXPORT jlong JNICALL Java_supergame_physics_NativePhysics_nativeCreateCube(
 		JNIEnv* env, jobject obj, jfloat size, jfloat mass, jfloat x, jfloat y, jfloat z)
 {
+#ifdef DEBUG
 	fprintf(stderr,"creating cube of size %f, mass %f, at %f %f %f!\n", size, mass, x, y, z);
+#endif
 	btTransform transform;
 	transform.setIdentity();
 	transform.setOrigin(btVector3(x,y,z));
@@ -289,8 +300,10 @@ JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeQueryObject
 	NativeCube* cube = (NativeCube*)cubePtr;
 	btTransform world = cube->m_body.getWorldTransform();
 
-	//fprintf(stderr,"querying cube at %f %f %f\n",
-	//		world.getOrigin().getX(), world.getOrigin().getY(), world.getOrigin().getZ());
+#ifdef DEBUG
+	fprintf(stderr,"querying cube at %f %f %f\n",
+			world.getOrigin().getX(), world.getOrigin().getY(), world.getOrigin().getZ());
+#endif
 
 	float* matrix = (float*) env->GetDirectBufferAddress(matrixBuffer);
 	world.getOpenGLMatrix(matrix);

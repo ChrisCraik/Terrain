@@ -50,6 +50,8 @@ public class Config {
     public static int CHAR_STATE_SAMPLES = 20;
     public static double CORRECTION_WEIGHT = 0.125;
     public static double SAMPLE_DELAY = 100;
+    public static int OBJECT_BUFFER_SIZE = 128*1024;
+    public static int WRITE_BUFFER_SIZE = OBJECT_BUFFER_SIZE * 4;
 
     public static void setOption(String fieldname, String value) {
         try {

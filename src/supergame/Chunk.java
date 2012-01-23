@@ -93,6 +93,39 @@ public class Chunk implements Frustrumable {
         mModifiedParent = other;
     }
 
+    private static ByteBuffer getByteBuffer(byte[] array) {
+        ByteBuffer buf = BufferUtils.createByteBuffer(array.length);
+        buf.put(array);
+        buf.flip();
+        return buf;
+    }
+
+    private static byte[] getByteArray(ByteBuffer buf) {
+        byte[] array = new byte[buf.limit()];
+        buf.get(array);
+        buf.flip();
+        return array;
+    }
+
+    public Chunk(ChunkMessage remoteData) {
+        mIndex = remoteData.index;
+        mModifyComplete = null;
+
+        mPosition = mIndex.getVec3();
+        mPosition = mPosition.multiply(Config.CHUNK_DIVISION * Config.METERS_PER_SUBCHUNK);
+
+        if (remoteData.vertices != null) {
+            mChunkShortIndices = getByteBuffer(remoteData.shortIndices);
+            mChunkIntIndices = getByteBuffer(remoteData.intIndices);
+            mChunkVertices = getByteBuffer(remoteData.vertices);
+            mChunkNormals = getByteBuffer(remoteData.normals);
+            parallel_processPhysics(); // TODO: not on UI thread!
+            mIsEmpty = false;
+        }
+
+        mState.set(PARALLEL_COMPLETE);
+    }
+
     public boolean serial_render(Camera cam, boolean allowBruteForceRender, boolean display) {
         if (mIsEmpty)
             return false;
@@ -396,7 +429,7 @@ public class Chunk implements Frustrumable {
 
         WorkerBuffers buffers = (WorkerBuffers) workerBuffers;
 
-        mPosition = this.mIndex.getVec3();
+        mPosition = mIndex.getVec3();
         mPosition = mPosition.multiply(Config.CHUNK_DIVISION * Config.METERS_PER_SUBCHUNK);
 
         buffers.verticesFloatCount = 0;
@@ -524,9 +557,15 @@ public class Chunk implements Frustrumable {
         return ret;
     }
 
-    public Object getChunkPacket() {
+    public ChunkMessage getChunkPacket() {
         ChunkMessage m = new ChunkMessage();
         m.index = mIndex;
+        if (!mIsEmpty) {
+            m.shortIndices = getByteArray(mChunkShortIndices);
+            m.intIndices = getByteArray(mChunkIntIndices);
+            m.vertices = getByteArray(mChunkVertices);
+            m.normals = getByteArray(mChunkNormals);
+        }
         return m;
     }
 }

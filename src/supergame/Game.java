@@ -117,16 +117,13 @@ public class Game {
 
                 if (mInputProcessor != null) {
                     Graphics.instance.switchTo2d();
-                    mGameEndPoint = mInputProcessor.processInput();
+                    boolean allowGameStart = ChunkModifier.isEmpty();
+                    mGameEndPoint = mInputProcessor.processInput(allowGameStart);
 
                     if (mGameEndPoint != null) {
                         mInputProcessor = null;
-                        if (mGameEndPoint instanceof GameServer) {
-                            // TODO: avoid stall, just don't start calling
-                            // setup/post move until all chunks generated
-                            System.err.println("stalling until chunks complete...");
-                            ChunkModifier.setServerMode(true, mChunkManager);
-                        }
+                        boolean isServer = mGameEndPoint instanceof GameServer;
+                        ChunkModifier.setServerMode(isServer, mChunkManager);
                     }
                 }
                 Display.update();
