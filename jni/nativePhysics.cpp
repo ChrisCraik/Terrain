@@ -85,7 +85,7 @@ public:
 		m_ghostObject.setCollisionFlags(btCollisionObject::CF_CHARACTER_OBJECT);
 		m_character.setGravity(CHAR_GRAVITY);
 		m_character.setJumpSpeed(CHAR_JUMP_SPEED);
-                m_character.setMaxSlope(CHAR_MAX_SLOPE);
+		m_character.setMaxSlope(CHAR_MAX_SLOPE);
 		//physics.m_dynamicsWorld.addCollisionObject(&m_ghostObject);
 		physics.m_dynamicsWorld.addCollisionObject(&m_ghostObject,
 				btBroadphaseProxy::CharacterFilter,
@@ -102,22 +102,28 @@ public:
 class NativeCube
 {
 public:
-	NativeCube(float size, float mass, btTransform &transform,
-			btMotionState &motion, btVector3 &inertia) :
-				m_shape(btVector3(size,size,size)),
-				m_state(transform),
-				m_info(mass, mass == 0.f ? 0 : &m_state, &m_shape, inertia),
-				m_body(m_info)
+	NativeCube(float size, float mass, btTransform &transform, btMotionState &motion) :
+		m_shape(btVector3(size,size,size)),
+		m_state(transform)
 	{
 #ifdef DEBUG
 		fprintf(stderr, "mass is %f\n", mass);
 #endif
-		physics.m_dynamicsWorld.addRigidBody(&m_body);
+		btVector3 localInertia(0,0,0);
+		if (mass != 0)
+			m_shape.calculateLocalInertia(mass, localInertia);
+		btRigidBody::btRigidBodyConstructionInfo info(mass, mass == 0.f ? 0 : &m_state, &m_shape, localInertia);
+		m_body = new btRigidBody(info);
+		physics.m_dynamicsWorld.addRigidBody(m_body);
 	}
+	~NativeCube()
+	{
+		delete m_body;
+	}
+
 	btBoxShape m_shape;
 	btDefaultMotionState m_state;
-	btRigidBody::btRigidBodyConstructionInfo m_info;
-	btRigidBody m_body;
+	btRigidBody* m_body;
 };
 
 static btTransform startTransform;
@@ -221,11 +227,11 @@ JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeControlCharact
 	}
 
 /*
-        // NOTE: the below is a workaround for characters falling immediatly at max speed
-        if (!onGround && character->m_onGroundLastFrame) {
-            character->m_character.setJumpSpeed(CHAR_JUMP_SPEED);
-            character->m_character.jump();
-        }
+	// NOTE: the below is a workaround for characters falling immediatly at max speed
+	if (!onGround && character->m_onGroundLastFrame) {
+		character->m_character.setJumpSpeed(CHAR_JUMP_SPEED);
+		character->m_character.jump();
+	}
 	character->m_onGroundLastFrame = character->m_character.onGround() && !jump;
 */
 }
@@ -291,14 +297,14 @@ JNIEXPORT jlong JNICALL Java_supergame_physics_NativePhysics_nativeCreateCube(
 	btTransform transform;
 	transform.setIdentity();
 	transform.setOrigin(btVector3(x,y,z));
-	return (jlong) new NativeCube(size, mass, transform, motion, inertia);
+	return (jlong) new NativeCube(size, mass, transform, motion);
 }
 
 JNIEXPORT void JNICALL Java_supergame_physics_NativePhysics_nativeQueryObject
   (JNIEnv *env, jobject obj, jlong cubePtr, jobject matrixBuffer)
 {
 	NativeCube* cube = (NativeCube*)cubePtr;
-	btTransform world = cube->m_body.getWorldTransform();
+	btTransform world = cube->m_body->getWorldTransform();
 
 #ifdef DEBUG
 	fprintf(stderr,"querying cube at %f %f %f\n",
